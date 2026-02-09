@@ -38,14 +38,14 @@ class TestPressRelease:
         mapping = _mapping("A", Modifier.SHIFT)
         sim.press(61, mapping)
         assert 61 in sim.active_notes
-        # Modifier down + key down = 2 calls
-        assert sim._mock_send.call_count == 2
+        # Modifier down + key down + modifier up = 1 batched call
+        assert sim._mock_send.call_count == 1
 
     def test_press_ctrl_key(self, sim):
         mapping = _mapping("D", Modifier.CTRL)
         sim.press(63, mapping)
         assert 63 in sim.active_notes
-        assert sim._mock_send.call_count == 2
+        assert sim._mock_send.call_count == 1
 
     def test_release_returns_mapping(self, sim):
         mapping = _mapping("A")
@@ -62,8 +62,8 @@ class TestPressRelease:
         sim.press(61, mapping)
         sim._mock_send.reset_mock()
         sim.release(61)
-        # Key up + modifier up = 2 calls
-        assert sim._mock_send.call_count == 2
+        # Only key up — modifier was already released in press()
+        assert sim._mock_send.call_count == 1
 
     def test_multiple_notes(self, sim):
         sim.press(60, _mapping("A"))

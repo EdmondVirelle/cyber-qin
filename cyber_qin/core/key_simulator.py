@@ -113,18 +113,25 @@ class KeySimulator:
     def press(self, midi_note: int, mapping: KeyMapping) -> None:
         """Execute key-down for a MIDI note.
 
-        Sequence: modifier_down → key_down
+        Sequence for modified keys: modifier_down → key_down → modifier_up
+        The modifier is "flashed" — only held for the instant of the key press.
+        This prevents Shift/Ctrl from leaking into subsequent chord notes.
         """
         mod_scan = _modifier_scan(mapping.modifier)
         if mod_scan is not None:
-            _send(_make_input(mod_scan, key_up=False))
-        _send(_make_input(mapping.scan_code, key_up=False))
+            _send(
+                _make_input(mod_scan, key_up=False),
+                _make_input(mapping.scan_code, key_up=False),
+                _make_input(mod_scan, key_up=True),
+            )
+        else:
+            _send(_make_input(mapping.scan_code, key_up=False))
         self._active[midi_note] = (mapping, time.monotonic())
 
     def release(self, midi_note: int) -> KeyMapping | None:
         """Execute key-up for a MIDI note.
 
-        Sequence: key_up → modifier_up
+        Only releases the base key — modifier was already released in press().
         Returns the released KeyMapping, or None if the note wasn't active.
         """
         entry = self._active.pop(midi_note, None)
@@ -132,9 +139,6 @@ class KeySimulator:
             return None
         mapping, _ = entry
         _send(_make_input(mapping.scan_code, key_up=True))
-        mod_scan = _modifier_scan(mapping.modifier)
-        if mod_scan is not None:
-            _send(_make_input(mod_scan, key_up=True))
         return mapping
 
     def release_all(self) -> None:
