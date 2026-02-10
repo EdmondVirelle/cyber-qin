@@ -24,6 +24,10 @@ from ..icons import (
     draw_plus,
     draw_refresh,
     draw_remove,
+    draw_repeat,
+    draw_repeat_one,
+    draw_skip_next,
+    draw_skip_prev,
     draw_stop,
 )
 from ..theme import (
@@ -45,6 +49,10 @@ _ICON_DRAWERS: dict[str, Callable] = {
     "music_note": draw_music_note,
     "live": draw_live,
     "library": draw_library,
+    "skip_next": draw_skip_next,
+    "skip_prev": draw_skip_prev,
+    "repeat": draw_repeat,
+    "repeat_one": draw_repeat_one,
 }
 
 

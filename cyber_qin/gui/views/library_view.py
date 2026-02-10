@@ -245,6 +245,21 @@ class LibraryView(QWidget):
             return self._tracks[idx].file_path
         return None
 
+    def play_first(self) -> str | None:
+        """Jump to the first track. Returns file_path or None if empty."""
+        if self._tracks:
+            self._track_list.set_playing(0)
+            return self._tracks[0].file_path
+        return None
+
+    def play_last(self) -> str | None:
+        """Jump to the last track. Returns file_path or None if empty."""
+        if self._tracks:
+            idx = len(self._tracks) - 1
+            self._track_list.set_playing(idx)
+            return self._tracks[idx].file_path
+        return None
+
     def _update_empty_state(self) -> None:
         has_tracks = len(self._tracks) > 0
         self._track_list.setVisible(has_tracks)

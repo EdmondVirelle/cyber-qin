@@ -23,7 +23,7 @@ from ..core.midi_listener import MidiListener
 from ..core.priority import set_thread_priority_realtime
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
-from .widgets.now_playing_bar import NowPlayingBar
+from .widgets.now_playing_bar import NowPlayingBar, RepeatMode
 from .widgets.sidebar import Sidebar
 
 log = logging.getLogger(__name__)
@@ -162,6 +162,9 @@ class AppShell(QMainWindow):
         # Now Playing bar controls → player
         self._now_playing.play_pause_clicked.connect(self._on_play_pause)
         self._now_playing.stop_clicked.connect(self._on_stop)
+        self._now_playing.prev_clicked.connect(self._on_prev_track)
+        self._now_playing.next_clicked.connect(self._on_next_track)
+        self._now_playing.repeat_clicked.connect(self._on_repeat_toggle)
         self._now_playing.seek_requested.connect(self._player.seek)
         self._now_playing.speed_changed.connect(self._player.set_speed)
         self._now_playing.speed_changed.connect(self._now_playing.on_speed_changed)
@@ -256,8 +259,43 @@ class AppShell(QMainWindow):
             self._now_playing.mini_piano.set_active_notes(set())
 
     def _on_playback_finished(self) -> None:
+        mode = self._now_playing.repeat_mode
+        if mode == RepeatMode.REPEAT_ONE:
+            # Repeat the same track
+            self._player.seek(0)
+            self._player.play()
+            self._live_view.log_viewer.log("  單曲重複")
+            return
+        if mode == RepeatMode.REPEAT_ALL:
+            # Advance to next; wrap around to first if at end
+            file_path = self._library_view.play_next()
+            if file_path is None:
+                # Wrap to first track
+                file_path = self._library_view.play_first()
+            if file_path:
+                self._on_play_file(file_path)
+                self._live_view.log_viewer.log("  循環播放: 下一首")
+                return
+        # RepeatMode.OFF or no more tracks
         self._now_playing.reset()
         self._live_view.log_viewer.log("  Auto-play finished")
+
+    def _on_repeat_toggle(self) -> None:
+        """Cycle repeat mode: OFF → REPEAT_ALL → REPEAT_ONE → OFF."""
+        mode = self._now_playing.repeat_mode
+        cycle = {
+            RepeatMode.OFF: RepeatMode.REPEAT_ALL,
+            RepeatMode.REPEAT_ALL: RepeatMode.REPEAT_ONE,
+            RepeatMode.REPEAT_ONE: RepeatMode.OFF,
+        }
+        new_mode = cycle[mode]
+        self._now_playing.set_repeat_mode(new_mode)
+        labels = {
+            RepeatMode.OFF: "關閉",
+            RepeatMode.REPEAT_ALL: "全部循環",
+            RepeatMode.REPEAT_ONE: "單曲重複",
+        }
+        self._live_view.log_viewer.log(f"  循環模式: {labels[new_mode]}")
 
     def _setup_shortcuts(self) -> None:
         """Register global keyboard shortcuts."""
@@ -273,11 +311,15 @@ class AppShell(QMainWindow):
 
     def _on_next_track(self) -> None:
         file_path = self._library_view.play_next()
+        if file_path is None and self._now_playing.repeat_mode == RepeatMode.REPEAT_ALL:
+            file_path = self._library_view.play_first()
         if file_path:
             self._on_play_file(file_path)
 
     def _on_prev_track(self) -> None:
         file_path = self._library_view.play_prev()
+        if file_path is None and self._now_playing.repeat_mode == RepeatMode.REPEAT_ALL:
+            file_path = self._library_view.play_last()
         if file_path:
             self._on_play_file(file_path)
 

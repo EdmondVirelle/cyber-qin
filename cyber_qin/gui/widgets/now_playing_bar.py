@@ -3,17 +3,25 @@
 from __future__ import annotations
 
 import time
+from enum import IntEnum, auto
 
 from PyQt6.QtCore import QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...core.midi_file_player import PlaybackState
-from ..theme import BG_SCROLL, DIVIDER, TEXT_PRIMARY
+from ..theme import ACCENT, BG_SCROLL, DIVIDER, TEXT_PRIMARY, TEXT_SECONDARY
 from .animated_widgets import TransportButton
 from .mini_piano import MiniPiano
 from .progress_bar import ProgressBar
 from .speed_control import SpeedControl
+
+
+class RepeatMode(IntEnum):
+    """Playback repeat modes."""
+    OFF = auto()
+    REPEAT_ALL = auto()    # 循環播放 — loop through playlist
+    REPEAT_ONE = auto()    # 重複播放 — repeat current track
 
 
 class NowPlayingBar(QWidget):
@@ -21,6 +29,9 @@ class NowPlayingBar(QWidget):
 
     play_pause_clicked = pyqtSignal()
     stop_clicked = pyqtSignal()
+    prev_clicked = pyqtSignal()
+    next_clicked = pyqtSignal()
+    repeat_clicked = pyqtSignal()
     seek_requested = pyqtSignal(float)
     speed_changed = pyqtSignal(float)
 
@@ -59,7 +70,17 @@ class NowPlayingBar(QWidget):
 
         # Transport controls (center)
         transport = QHBoxLayout()
-        transport.setSpacing(12)
+        transport.setSpacing(8)
+
+        self._repeat_btn = TransportButton("repeat", size=32, accent=False)
+        self._repeat_btn.setToolTip("循環模式: 關閉")
+        self._repeat_btn.clicked.connect(self.repeat_clicked)
+        transport.addWidget(self._repeat_btn)
+
+        self._prev_btn = TransportButton("skip_prev", size=36, accent=False)
+        self._prev_btn.setToolTip("上一首 (Ctrl+←)")
+        self._prev_btn.clicked.connect(self.prev_clicked)
+        transport.addWidget(self._prev_btn)
 
         self._stop_btn = TransportButton("stop", size=36, accent=False)
         self._stop_btn.setToolTip("停止")
@@ -67,9 +88,14 @@ class NowPlayingBar(QWidget):
         transport.addWidget(self._stop_btn)
 
         self._play_btn = TransportButton("play", size=48, accent=True)
-        self._play_btn.setToolTip("播放 / 暫停")
+        self._play_btn.setToolTip("播放 / 暫停 (Space)")
         self._play_btn.clicked.connect(self.play_pause_clicked)
         transport.addWidget(self._play_btn)
+
+        self._next_btn = TransportButton("skip_next", size=36, accent=False)
+        self._next_btn.setToolTip("下一首 (Ctrl+→)")
+        self._next_btn.clicked.connect(self.next_clicked)
+        transport.addWidget(self._next_btn)
 
         bottom.addLayout(transport)
 
@@ -88,6 +114,7 @@ class NowPlayingBar(QWidget):
         root.addLayout(bottom)
 
         self._state = PlaybackState.STOPPED
+        self._repeat_mode = RepeatMode.OFF
 
         # --- Interpolation timer for smooth progress updates (30 fps) ---
         self._last_position = 0.0
@@ -185,6 +212,25 @@ class NowPlayingBar(QWidget):
         c_min, c_sec = int(pos) // 60, int(pos) % 60
         t_min, t_sec = int(self._duration) // 60, int(self._duration) % 60
         self._time_label.setText(f"{c_min}:{c_sec:02d} / {t_min}:{t_sec:02d}")
+
+    @property
+    def repeat_mode(self) -> RepeatMode:
+        return self._repeat_mode
+
+    def set_repeat_mode(self, mode: RepeatMode) -> None:
+        """Update the repeat button icon and tooltip to reflect *mode*."""
+        self._repeat_mode = mode
+        _labels = {
+            RepeatMode.OFF: ("repeat", "循環模式: 關閉", TEXT_SECONDARY),
+            RepeatMode.REPEAT_ALL: ("repeat", "循環模式: 全部循環", ACCENT),
+            RepeatMode.REPEAT_ONE: ("repeat_one", "循環模式: 單曲重複", ACCENT),
+        }
+        icon, tip, _color = _labels[mode]
+        self._repeat_btn.icon_type = icon
+        self._repeat_btn.setToolTip(tip)
+        # Use accent styling when active
+        self._repeat_btn._accent = mode != RepeatMode.OFF
+        self._repeat_btn.update()
 
     def reset(self) -> None:
         self._title_label.setText("未載入曲目")

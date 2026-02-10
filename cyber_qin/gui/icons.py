@@ -193,6 +193,139 @@ def draw_music_note(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.restore()
 
 
+def draw_skip_next(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Skip-next icon: right-pointing triangle + vertical bar."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+
+    m = rect.width() * 0.26
+    r = rect.adjusted(m, m, -m, -m)
+
+    # Triangle
+    path = QPainterPath()
+    path.moveTo(r.left(), r.top())
+    path.lineTo(r.left() + r.width() * 0.65, r.center().y())
+    path.lineTo(r.left(), r.bottom())
+    path.closeSubpath()
+    painter.drawPath(path)
+
+    # Bar
+    bar_w = r.width() * 0.15
+    bar_x = r.right() - bar_w
+    bar_path = QPainterPath()
+    bar_path.addRoundedRect(QRectF(bar_x, r.top(), bar_w, r.height()), bar_w * 0.3, bar_w * 0.3)
+    painter.drawPath(bar_path)
+    painter.restore()
+
+
+def draw_skip_prev(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Skip-prev icon: vertical bar + left-pointing triangle."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+
+    m = rect.width() * 0.26
+    r = rect.adjusted(m, m, -m, -m)
+
+    # Bar
+    bar_w = r.width() * 0.15
+    bar_path = QPainterPath()
+    bar_path.addRoundedRect(QRectF(r.left(), r.top(), bar_w, r.height()), bar_w * 0.3, bar_w * 0.3)
+    painter.drawPath(bar_path)
+
+    # Triangle (pointing left)
+    path = QPainterPath()
+    path.moveTo(r.right(), r.top())
+    path.lineTo(r.left() + r.width() * 0.35, r.center().y())
+    path.lineTo(r.right(), r.bottom())
+    path.closeSubpath()
+    painter.drawPath(path)
+    painter.restore()
+
+
+def draw_repeat(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Repeat icon: two arrows forming a loop."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+    pen_w = rect.width() * 0.07
+    painter.setPen(QPen(color, pen_w))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    # Top-right arrow path (right to left)
+    rad = r.height() * 0.3
+    top_y = r.top() + rad
+    bot_y = r.bottom() - rad
+
+    # Draw the loop path
+    path = QPainterPath()
+    path.moveTo(r.right() - r.width() * 0.2, r.top())
+    path.lineTo(r.right() - rad, r.top())
+    path.arcTo(QRectF(r.right() - rad * 2, r.top(), rad * 2, rad * 2), 90, -90)
+    path.lineTo(r.right(), bot_y)
+    path.arcTo(QRectF(r.right() - rad * 2, r.bottom() - rad * 2, rad * 2, rad * 2), 0, -90)
+    path.lineTo(r.left() + r.width() * 0.2, r.bottom())
+    painter.drawPath(path)
+
+    path2 = QPainterPath()
+    path2.moveTo(r.left() + r.width() * 0.2, r.bottom())
+    path2.lineTo(r.left() + rad, r.bottom())
+    path2.arcTo(QRectF(r.left(), r.bottom() - rad * 2, rad * 2, rad * 2), 270, -90)
+    path2.lineTo(r.left(), top_y)
+    path2.arcTo(QRectF(r.left(), r.top(), rad * 2, rad * 2), 180, -90)
+    path2.lineTo(r.right() - r.width() * 0.2, r.top())
+    painter.drawPath(path2)
+
+    # Arrow heads
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    arr = rect.width() * 0.1
+
+    # Top-left arrow (pointing right)
+    ax = r.right() - r.width() * 0.2
+    ay = r.top()
+    arrow = QPainterPath()
+    arrow.moveTo(ax + arr, ay)
+    arrow.lineTo(ax - arr * 0.5, ay - arr)
+    arrow.lineTo(ax - arr * 0.5, ay + arr)
+    arrow.closeSubpath()
+    painter.drawPath(arrow)
+
+    # Bottom-right arrow (pointing left)
+    bx = r.left() + r.width() * 0.2
+    by = r.bottom()
+    arrow2 = QPainterPath()
+    arrow2.moveTo(bx - arr, by)
+    arrow2.lineTo(bx + arr * 0.5, by - arr)
+    arrow2.lineTo(bx + arr * 0.5, by + arr)
+    arrow2.closeSubpath()
+    painter.drawPath(arrow2)
+
+    painter.restore()
+
+
+def draw_repeat_one(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Repeat-one icon: repeat loop with a '1' in the center."""
+    draw_repeat(painter, rect, color)
+
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    # Draw "1" in center
+    painter.setPen(color)
+    font = painter.font()
+    font.setPixelSize(int(rect.width() * 0.32))
+    font.setBold(True)
+    painter.setFont(font)
+    painter.drawText(rect.toRect(), Qt.AlignmentFlag.AlignCenter, "1")
+    painter.restore()
+
+
 def draw_live(painter: QPainter, rect: QRectF, color: QColor) -> None:
     """Waveform icon (live mode)."""
     painter.save()
