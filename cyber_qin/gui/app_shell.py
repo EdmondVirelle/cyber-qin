@@ -6,6 +6,7 @@ import logging
 import time
 
 from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -16,8 +17,10 @@ from PyQt6.QtWidgets import (
 
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
+from ..core.mapping_schemes import get_scheme
 from ..core.midi_file_player import PlaybackState, create_player_controller
 from ..core.midi_listener import MidiListener
+from ..core.priority import set_thread_priority_realtime
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
 from .widgets.now_playing_bar import NowPlayingBar
@@ -45,9 +48,15 @@ class MidiProcessor(QObject):
         super().__init__(parent)
         self._mapper = mapper
         self._simulator = simulator
+        self._priority_set = False
 
     def on_midi_event(self, event_type: str, note: int, velocity: int) -> None:
         """Called on the rtmidi callback thread. Must be fast."""
+        # Set thread priority on first callback
+        if not self._priority_set:
+            set_thread_priority_realtime()
+            self._priority_set = True
+
         t0 = time.perf_counter()
 
         if event_type == "note_on":
@@ -89,6 +98,7 @@ class AppShell(QMainWindow):
 
         self._build_ui()
         self._connect_signals()
+        self._setup_shortcuts()
 
     def _build_ui(self) -> None:
         central = QWidget()
@@ -147,22 +157,47 @@ class AppShell(QMainWindow):
         self._player.state_changed.connect(self._now_playing.set_state)
         self._player.state_changed.connect(self._on_player_state_changed)
         self._player.playback_finished.connect(self._on_playback_finished)
+        self._player.countdown_tick.connect(self._on_countdown_tick)
 
         # Now Playing bar controls → player
         self._now_playing.play_pause_clicked.connect(self._on_play_pause)
         self._now_playing.stop_clicked.connect(self._on_stop)
         self._now_playing.seek_requested.connect(self._player.seek)
         self._now_playing.speed_changed.connect(self._player.set_speed)
+        self._now_playing.speed_changed.connect(self._now_playing.on_speed_changed)
+
+        # Scheme changes → update mini piano + preprocessor range
+        self._live_view.scheme_changed.connect(self._on_scheme_changed)
+
+    def _on_scheme_changed(self, scheme_id: str) -> None:
+        """Update mini piano range and preprocessor when scheme changes."""
+        try:
+            scheme = get_scheme(scheme_id)
+        except KeyError:
+            return
+        self._now_playing.mini_piano.set_midi_range(scheme.midi_range)
 
     def _on_play_file(self, file_path: str) -> None:
         """Load and play a MIDI file from the library."""
         try:
-            info = self._player.load_file(file_path)
+            # Pass scheme range to preprocessor
+            scheme = self._mapper.scheme
+            kwargs = {}
+            if scheme is not None:
+                kwargs["note_min"] = scheme.midi_range[0]
+                kwargs["note_max"] = scheme.midi_range[1]
+            info, stats = self._player.load_file(file_path, **kwargs)
             self._now_playing.set_track_info(info.name, info.duration_seconds)
             self._player.play()
+            lo, hi = stats.original_range
             self._live_view.log_viewer.log(
                 f"  Auto-play: {info.name} ({info.note_count} notes, {info.tempo_bpm} BPM)"
             )
+            if stats.notes_shifted > 0:
+                self._live_view.log_viewer.log(
+                    f"  預處理: {stats.notes_shifted}/{stats.total_notes} 音符"
+                    f"移調至可演奏範圍 (原始: {lo}-{hi})"
+                )
         except Exception as e:
             self._live_view.log_viewer.log(f"  Failed to load: {e}")
             log.exception("Failed to play file %s", file_path)
@@ -188,6 +223,12 @@ class AppShell(QMainWindow):
         else:
             mini.note_off(note)
 
+    def _on_countdown_tick(self, remaining: int) -> None:
+        """Show count-in beats on the now-playing bar and log."""
+        self._now_playing.set_countdown(remaining)
+        if remaining > 0:
+            self._live_view.log_viewer.log(f"  倒數: {remaining}...")
+
     def _on_player_state_changed(self, state: int) -> None:
         if state == PlaybackState.STOPPED:
             self._now_playing.mini_piano.set_active_notes(set())
@@ -195,6 +236,28 @@ class AppShell(QMainWindow):
     def _on_playback_finished(self) -> None:
         self._now_playing.reset()
         self._live_view.log_viewer.log("  Auto-play finished")
+
+    def _setup_shortcuts(self) -> None:
+        """Register global keyboard shortcuts."""
+        QShortcut(QKeySequence("Space"), self).activated.connect(
+            self._on_play_pause,
+        )
+        QShortcut(QKeySequence("Ctrl+Right"), self).activated.connect(
+            self._on_next_track,
+        )
+        QShortcut(QKeySequence("Ctrl+Left"), self).activated.connect(
+            self._on_prev_track,
+        )
+
+    def _on_next_track(self) -> None:
+        file_path = self._library_view.play_next()
+        if file_path:
+            self._on_play_file(file_path)
+
+    def _on_prev_track(self) -> None:
+        file_path = self._library_view.play_prev()
+        if file_path:
+            self._on_play_file(file_path)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self._player.cleanup()

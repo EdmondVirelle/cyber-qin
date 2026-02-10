@@ -120,12 +120,6 @@ class MidiFileParser:
 # Qt-dependent (requires running QApplication)
 # ──────────────────────────────────────────────
 
-def _import_qt():
-    """Lazy import of PyQt6 classes."""
-    from PyQt6.QtCore import QObject, QThread, pyqtSignal
-    return QObject, QThread, pyqtSignal
-
-
 # These classes use a pattern where the base class is resolved at definition time.
 # To avoid module-level Qt import, we use a factory approach.
 
@@ -140,15 +134,28 @@ def _ensure_qt_classes():
     if _PlaybackWorkerClass is not None:
         return
 
-    from PyQt6.QtCore import QObject, QThread, pyqtSignal
+    from PyQt6.QtCore import QObject, pyqtSignal
 
     class PlaybackWorker(QObject):
-        """Worker that runs on a QThread to play MIDI file events with precise timing."""
+        """Worker that plays MIDI file events with precise timing on a background thread.
+
+        The playback loop runs on a dedicated ``threading.Thread`` so it never
+        blocks the Qt event loop.  Pause / stop are controlled via
+        ``threading.Event`` flags that the loop checks each iteration.
+        Qt signals emitted from the playback thread are automatically queued
+        to the main thread for safe GUI updates.
+        """
 
         note_event = pyqtSignal(str, int, int)
         progress_updated = pyqtSignal(float, float)
         state_changed = pyqtSignal(int)
         playback_finished = pyqtSignal()
+        countdown_tick = pyqtSignal(int)  # remaining beats (4, 3, 2, 1, 0)
+
+        _COUNT_IN_BEATS = 4
+        _COUNT_IN_INTERVAL = 1.0  # seconds between beats
+        _TICK_FREQ = 800          # Hz
+        _TICK_DURATION = 60       # ms
 
         def __init__(self, mapper, simulator) -> None:
             super().__init__()
@@ -163,6 +170,7 @@ def _ensure_qt_classes():
             self._pause_flag = threading.Event()
             self._index = 0
             self._position = 0.0
+            self._playback_thread: threading.Thread | None = None
 
         @property
         def state(self) -> PlaybackState:
@@ -189,6 +197,7 @@ def _ensure_qt_classes():
 
         def play(self) -> None:
             if self._state == PlaybackState.PAUSED:
+                # Resume — unblock the existing playback thread
                 self._pause_flag.set()
                 self._state = PlaybackState.PLAYING
                 self.state_changed.emit(self._state)
@@ -197,11 +206,17 @@ def _ensure_qt_classes():
                 return
             if not self._events:
                 return
+            # Wait for any previous playback thread to finish
+            self._join_playback_thread()
             self._stop_flag.clear()
             self._pause_flag.set()
             self._state = PlaybackState.PLAYING
             self.state_changed.emit(self._state)
-            self._run_playback()
+            # Launch playback on a dedicated thread (non-blocking)
+            self._playback_thread = threading.Thread(
+                target=self._run_playback, daemon=True, name="midi-playback",
+            )
+            self._playback_thread.start()
 
         def pause(self) -> None:
             if self._state == PlaybackState.PLAYING:
@@ -213,7 +228,8 @@ def _ensure_qt_classes():
             if self._state == PlaybackState.STOPPED:
                 return
             self._stop_flag.set()
-            self._pause_flag.set()
+            self._pause_flag.set()  # unblock if paused
+            self._join_playback_thread()
             self._simulator.release_all()
             self._state = PlaybackState.STOPPED
             self._index = 0
@@ -234,8 +250,70 @@ def _ensure_qt_classes():
             duration = self._info.duration_seconds if self._info else 0.0
             self.progress_updated.emit(self._position, duration)
 
+        def _join_playback_thread(self) -> None:
+            """Wait for the playback thread to finish (if running)."""
+            if self._playback_thread is not None and self._playback_thread.is_alive():
+                self._playback_thread.join(timeout=3.0)
+            self._playback_thread = None
+
+        def _play_tick(self) -> None:
+            """Play a short metronome tick via winsound.Beep (Windows only)."""
+            try:
+                import winsound
+                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)
+            except Exception:
+                pass  # Graceful fallback on non-Windows or error
+
+        def _count_in(self) -> bool:
+            """4-beat metronome count-in. Returns False if stopped during count-in."""
+            for remaining in range(self._COUNT_IN_BEATS, 0, -1):
+                if self._stop_flag.is_set():
+                    self.countdown_tick.emit(0)
+                    return False
+
+                # Respect pause during count-in
+                if not self._pause_flag.is_set():
+                    self._pause_flag.wait()
+                    if self._stop_flag.is_set():
+                        self.countdown_tick.emit(0)
+                        return False
+
+                self.countdown_tick.emit(remaining)
+                self._play_tick()
+
+                # Wait ~1 second, interruptible by stop/pause
+                deadline = time.perf_counter() + self._COUNT_IN_INTERVAL
+                while time.perf_counter() < deadline:
+                    if self._stop_flag.is_set():
+                        self.countdown_tick.emit(0)
+                        return False
+                    if not self._pause_flag.is_set():
+                        # Paused — wait for resume, then restart this beat's wait
+                        self._pause_flag.wait()
+                        if self._stop_flag.is_set():
+                            self.countdown_tick.emit(0)
+                            return False
+                        deadline = time.perf_counter() + self._COUNT_IN_INTERVAL
+                        self.countdown_tick.emit(remaining)
+                        self._play_tick()
+                    time.sleep(0.01)
+
+            self.countdown_tick.emit(0)
+            return True
+
         def _run_playback(self) -> None:
+            """Blocking playback loop — runs on a dedicated thread."""
+            from .priority import set_thread_priority_realtime
+            set_thread_priority_realtime()
+
+            # Count-in: 4 beats of metronome before actual playback
+            if not self._count_in():
+                return
+
             duration = self._info.duration_seconds if self._info else 0.0
+            # Anchor interpolation timer right after count-in ends
+            self.progress_updated.emit(0.0, duration)
+
             start_wall = time.perf_counter()
             start_position = self._position
 
@@ -285,25 +363,23 @@ def _ensure_qt_classes():
             self.playback_finished.emit()
 
     class MidiFilePlayerController(QObject):
-        """Manages the playback thread lifecycle."""
+        """High-level playback controller — owns the worker, exposes signals."""
 
         note_event = pyqtSignal(str, int, int)
         progress_updated = pyqtSignal(float, float)
         state_changed = pyqtSignal(int)
         playback_finished = pyqtSignal()
+        countdown_tick = pyqtSignal(int)
 
         def __init__(self, mapper, simulator, parent=None) -> None:
             super().__init__(parent)
-            self._thread = QThread()
             self._worker = PlaybackWorker(mapper, simulator)
-            self._worker.moveToThread(self._thread)
 
             self._worker.note_event.connect(self.note_event)
             self._worker.progress_updated.connect(self.progress_updated)
             self._worker.state_changed.connect(self.state_changed)
             self._worker.playback_finished.connect(self.playback_finished)
-
-            self._thread.start()
+            self._worker.countdown_tick.connect(self.countdown_tick)
 
         @property
         def worker(self):
@@ -317,10 +393,13 @@ def _ensure_qt_classes():
         def info(self) -> MidiFileInfo | None:
             return self._worker.info
 
-        def load_file(self, file_path: str) -> MidiFileInfo:
+        def load_file(self, file_path: str, **preprocess_kwargs) -> tuple:
+            from .midi_preprocessor import preprocess
+
             events, info = MidiFileParser.parse(file_path)
+            events, stats = preprocess(events, **preprocess_kwargs)
             self._worker.load(events, info)
-            return info
+            return info, stats
 
         def play(self) -> None:
             self._worker.play()
@@ -339,8 +418,6 @@ def _ensure_qt_classes():
 
         def cleanup(self) -> None:
             self._worker.stop()
-            self._thread.quit()
-            self._thread.wait(3000)
 
     _PlaybackWorkerClass = PlaybackWorker
     _MidiFilePlayerControllerClass = MidiFilePlayerController

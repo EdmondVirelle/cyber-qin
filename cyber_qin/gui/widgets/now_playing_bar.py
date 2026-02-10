@@ -1,13 +1,15 @@
-"""Bottom "Now Playing" transport bar with QPainter icons and gradient background."""
+"""Bottom "Now Playing" transport bar with QPainter icons and gradient background — 賽博墨韻."""
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRectF, pyqtSignal
+import time
+
+from PyQt6.QtCore import QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...core.midi_file_player import PlaybackState
-from ..theme import BG_SURFACE, DIVIDER, TEXT_PRIMARY
+from ..theme import BG_SCROLL, DIVIDER, TEXT_PRIMARY
 from .animated_widgets import TransportButton
 from .mini_piano import MiniPiano
 from .progress_bar import ProgressBar
@@ -43,13 +45,13 @@ class NowPlayingBar(QWidget):
         info_layout = QVBoxLayout()
         info_layout.setSpacing(0)
         self._title_label = QLabel("未載入曲目")
-        self._title_label.setFont(QFont("Segoe UI", 12, QFont.Weight.DemiBold))
+        self._title_label.setFont(QFont("Microsoft JhengHei", 12, QFont.Weight.DemiBold))
         self._title_label.setStyleSheet(f"color: {TEXT_PRIMARY}; background: transparent;")
         info_layout.addWidget(self._title_label)
 
         self._time_label = QLabel("0:00 / 0:00")
         self._time_label.setProperty("class", "secondary")
-        self._time_label.setFont(QFont("Segoe UI", 10))
+        self._time_label.setFont(QFont("Microsoft JhengHei", 10))
         info_layout.addWidget(self._time_label)
         bottom.addLayout(info_layout)
 
@@ -74,9 +76,9 @@ class NowPlayingBar(QWidget):
         bottom.addStretch()
 
         # Speed control
-        self._speed = SpeedControl()
-        self._speed.speed_changed.connect(self.speed_changed)
-        bottom.addWidget(self._speed)
+        self._speed_ctrl = SpeedControl()
+        self._speed_ctrl.speed_changed.connect(self.speed_changed)
+        bottom.addWidget(self._speed_ctrl)
 
         # Mini piano (right)
         self._mini_piano = MiniPiano()
@@ -87,14 +89,25 @@ class NowPlayingBar(QWidget):
 
         self._state = PlaybackState.STOPPED
 
+        # --- Interpolation timer for smooth progress updates (30 fps) ---
+        self._last_position = 0.0
+        self._last_update_wall = time.perf_counter()
+        self._duration = 0.0
+        self._speed = 1.0
+        self._is_playing = False
+
+        self._interp_timer = QTimer(self)
+        self._interp_timer.setInterval(33)  # ~30 fps
+        self._interp_timer.timeout.connect(self._on_interpolation_tick)
+
     def paintEvent(self, event) -> None:  # noqa: N802
-        """Gradient background: slightly lighter top fading to BG_SURFACE."""
+        """Gradient background: 墨色 top fading to BG_SCROLL."""
         painter = QPainter(self)
         rect = QRectF(0, 0, self.width(), self.height())
 
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0.0, QColor(30, 30, 30))
-        gradient.setColorAt(1.0, QColor(BG_SURFACE))
+        gradient.setColorAt(0.0, QColor(0x1A, 0x23, 0x32))
+        gradient.setColorAt(1.0, QColor(BG_SCROLL))
         painter.fillRect(rect, gradient)
 
         # Top border line
@@ -113,7 +126,12 @@ class NowPlayingBar(QWidget):
         self._time_label.setText(f"0:00 / {mins}:{secs:02d}")
 
     def update_progress(self, current: float, total: float) -> None:
-        self._progress.set_progress(current, total)
+        """Called from the player on MIDI events — anchors interpolation."""
+        self._last_position = current
+        self._last_update_wall = time.perf_counter()
+        self._duration = total
+        # Use animated transition for smooth bar movement
+        self._progress.set_progress_animated(current, total)
         c_min, c_sec = int(current) // 60, int(current) % 60
         t_min, t_sec = int(total) // 60, int(total) % 60
         self._time_label.setText(f"{c_min}:{c_sec:02d} / {t_min}:{t_sec:02d}")
@@ -123,9 +141,50 @@ class NowPlayingBar(QWidget):
         if self._state == PlaybackState.PLAYING:
             self._play_btn.icon_type = "pause"
             self._play_btn.setToolTip("暫停")
+            self._is_playing = True
+            self._last_update_wall = time.perf_counter()
+            self._interp_timer.start()
         else:
             self._play_btn.icon_type = "play"
             self._play_btn.setToolTip("播放")
+            self._is_playing = False
+            self._interp_timer.stop()
+
+    def set_countdown(self, remaining: int) -> None:
+        """Show count-in beats: 4, 3, 2, 1 then restore title."""
+        if remaining > 0:
+            if not hasattr(self, "_saved_time") or self._saved_time is None:
+                self._saved_title = self._title_label.text()
+                self._saved_time = self._time_label.text()
+            self._title_label.setText(f"準備中... {remaining}")
+            self._time_label.setText("切換到遊戲視窗")
+        else:
+            # Count-in done — restore the saved title AND time label
+            saved = getattr(self, "_saved_title", None)
+            if saved:
+                self._title_label.setText(saved)
+                self._time_label.setText(
+                    getattr(self, "_saved_time", None) or "0:00 / 0:00"
+                )
+                self._saved_title = None
+                self._saved_time = None
+
+    def on_speed_changed(self, speed: float) -> None:
+        """Track current playback speed for interpolation."""
+        self._speed = speed
+
+    def _on_interpolation_tick(self) -> None:
+        """30 fps timer tick — linearly interpolate progress between MIDI events."""
+        if not self._is_playing or self._duration <= 0:
+            return
+        now = time.perf_counter()
+        elapsed = (now - self._last_update_wall) * self._speed
+        pos = min(self._last_position + elapsed, self._duration)
+
+        self._progress.set_progress_animated(pos, self._duration)
+        c_min, c_sec = int(pos) // 60, int(pos) % 60
+        t_min, t_sec = int(self._duration) // 60, int(self._duration) % 60
+        self._time_label.setText(f"{c_min}:{c_sec:02d} / {t_min}:{t_sec:02d}")
 
     def reset(self) -> None:
         self._title_label.setText("未載入曲目")
@@ -133,3 +192,9 @@ class NowPlayingBar(QWidget):
         self._progress.set_progress(0, 0)
         self._play_btn.icon_type = "play"
         self._state = PlaybackState.STOPPED
+        self._is_playing = False
+        self._interp_timer.stop()
+        self._last_position = 0.0
+        self._duration = 0.0
+        self._saved_title = None
+        self._saved_time = None

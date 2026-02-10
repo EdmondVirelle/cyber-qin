@@ -1,4 +1,4 @@
-"""MIDI file library view (Spotify playlist style) with gradient header and empty state illustration."""
+"""MIDI file library view with gradient header and empty state illustration — 賽博墨韻."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 
 class _LibraryGradientHeader(QWidget):
-    """Gradient header for library with blue accent."""
+    """Gradient header for library with 暗金 accent."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -35,8 +35,8 @@ class _LibraryGradientHeader(QWidget):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(30, 144, 255, 35))  # Blue accent
-        gradient.setColorAt(1, QColor(18, 18, 18, 0))
+        gradient.setColorAt(0, QColor(212, 168, 83, 35))   # 金墨半透明
+        gradient.setColorAt(1, QColor(10, 14, 20, 0))       # 透明
         painter.fillRect(QRectF(0, 0, self.width(), self.height()), gradient)
         painter.end()
 
@@ -63,7 +63,7 @@ class _EmptyStateWidget(QWidget):
 
         # Text
         painter.setPen(QColor(TEXT_SECONDARY))
-        font = QFont("Segoe UI", 16)
+        font = QFont("Microsoft JhengHei", 16)
         painter.setFont(font)
         text_y = h * 0.2 + icon_size + 20
         painter.drawText(
@@ -72,7 +72,7 @@ class _EmptyStateWidget(QWidget):
             "尚未匯入任何 MIDI 檔案",
         )
 
-        sub_font = QFont("Segoe UI", 12)
+        sub_font = QFont("Microsoft JhengHei", 12)
         painter.setFont(sub_font)
         painter.drawText(
             0, int(text_y + 35), w, 25,
@@ -116,8 +116,8 @@ class LibraryView(QWidget):
 
         header_row = QHBoxLayout()
 
-        title = QLabel("Library")
-        title.setFont(QFont("Segoe UI", 22, QFont.Weight.Bold))
+        title = QLabel("曲庫")
+        title.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
         title.setStyleSheet("background: transparent;")
         header_row.addWidget(title)
 
@@ -211,6 +211,30 @@ class LibraryView(QWidget):
 
     def set_playing(self, index: int) -> None:
         self._track_list.set_playing(index)
+
+    @property
+    def playing_index(self) -> int:
+        return self._track_list._playing_index
+
+    @property
+    def track_count(self) -> int:
+        return len(self._tracks)
+
+    def play_next(self) -> str | None:
+        """Advance to next track. Returns file_path or None if at end."""
+        idx = self._track_list._playing_index + 1
+        if 0 <= idx < len(self._tracks):
+            self._track_list.set_playing(idx)
+            return self._tracks[idx].file_path
+        return None
+
+    def play_prev(self) -> str | None:
+        """Go to previous track. Returns file_path or None if at start."""
+        idx = self._track_list._playing_index - 1
+        if 0 <= idx < len(self._tracks):
+            self._track_list.set_playing(idx)
+            return self._tracks[idx].file_path
+        return None
 
     def _update_empty_state(self) -> None:
         has_tracks = len(self._tracks) > 0

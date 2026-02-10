@@ -1,4 +1,4 @@
-"""Custom-painted progress/seek bar widget with animated interactions."""
+"""Custom-painted progress/seek bar widget with animated interactions — 賽博墨韻."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtPrope
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath
 from PyQt6.QtWidgets import QToolTip, QWidget
 
-from ..theme import ACCENT, BG_ELEVATED, TEXT_PRIMARY
+from ..theme import ACCENT, BG_MIST, TEXT_PRIMARY
 
 
 class ProgressBar(QWidget):
@@ -17,6 +17,7 @@ class ProgressBar(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._value = 0.0       # 0.0 - 1.0
+        self._anim_value = 0.0  # Animated display value 0.0 - 1.0
         self._duration = 0.0    # Total seconds
         self._hover_pos: float | None = None
         self._bar_height = 4.0
@@ -36,6 +37,11 @@ class ProgressBar(QWidget):
         self._handle_anim.setDuration(150)
         self._handle_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
+        # Progress value animation (for smooth interpolation ticks)
+        self._value_anim = QPropertyAnimation(self, b"anim_value")
+        self._value_anim.setDuration(100)
+        self._value_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
     @pyqtProperty(float)
     def bar_height(self) -> float:
         return self._bar_height
@@ -54,10 +60,31 @@ class ProgressBar(QWidget):
         self._handle_opacity = val
         self.update()
 
+    @pyqtProperty(float)
+    def anim_value(self) -> float:
+        return self._anim_value
+
+    @anim_value.setter
+    def anim_value(self, val: float) -> None:
+        self._anim_value = val
+        self.update()
+
     def set_progress(self, current: float, total: float) -> None:
+        """Direct jump — used for seek and reset (no animation)."""
         self._duration = total
         self._value = current / total if total > 0 else 0.0
+        self._anim_value = self._value
+        self._value_anim.stop()
         self.update()
+
+    def set_progress_animated(self, current: float, total: float) -> None:
+        """Smooth transition — used by interpolation timer."""
+        self._duration = total
+        self._value = current / total if total > 0 else 0.0
+        self._value_anim.stop()
+        self._value_anim.setStartValue(self._anim_value)
+        self._value_anim.setEndValue(self._value)
+        self._value_anim.start()
 
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
@@ -71,7 +98,7 @@ class ProgressBar(QWidget):
         # Track background
         track = QPainterPath()
         track.addRoundedRect(QRectF(0, bar_y, w, bar_h), bar_h / 2, bar_h / 2)
-        painter.fillPath(track, QColor(BG_ELEVATED))
+        painter.fillPath(track, QColor(BG_MIST))
 
         # Hover preview
         if self._hover_pos is not None:
@@ -80,8 +107,8 @@ class ProgressBar(QWidget):
             preview.addRoundedRect(QRectF(0, bar_y, pw, bar_h), bar_h / 2, bar_h / 2)
             painter.fillPath(preview, QColor(ACCENT + "40"))  # 25% opacity
 
-        # Filled portion
-        filled_w = self._value * w
+        # Filled portion — 賽博青
+        filled_w = self._anim_value * w
         if filled_w > 0:
             filled = QPainterPath()
             filled.addRoundedRect(QRectF(0, bar_y, filled_w, bar_h), bar_h / 2, bar_h / 2)
