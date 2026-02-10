@@ -35,7 +35,11 @@ def main() -> None:
             if request_elevation():
                 sys.exit(0)
 
-    # Apply Spotify dark theme
+    # Request 1ms timer resolution for low-latency playback
+    from .core.priority import begin_timer_period, end_timer_period
+    begin_timer_period(1)
+
+    # Apply 賽博墨韻 theme
     from .gui.theme import apply_theme
     apply_theme(app)
 
@@ -51,7 +55,9 @@ def main() -> None:
         enable_dark_title_bar(hwnd)
 
     window.show()
-    sys.exit(app.exec())
+    exit_code = app.exec()
+    end_timer_period(1)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

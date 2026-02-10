@@ -11,23 +11,26 @@ from PyQt6.QtWidgets import QWidget
 from ...core.constants import MIDI_NOTE_MAX, MIDI_NOTE_MIN
 
 _BLACK_SEMITONES = {1, 3, 6, 8, 10}
-_TOTAL_KEYS = MIDI_NOTE_MAX - MIDI_NOTE_MIN + 1  # 36
 
-_COLOR_OFF = QColor(62, 62, 62)
-_COLOR_OFF_BLACK = QColor(40, 40, 40)
-_COLOR_ON = QColor(29, 185, 84)
-_COLOR_ON_BRIGHT = QColor(30, 215, 96)
-_GLOW_COLOR = QColor(29, 185, 84, 60)
+# 賽博墨韻 colors
+_COLOR_OFF = QColor(0x2E, 0x3D, 0x50)          # 雲霧層
+_COLOR_OFF_BLACK = QColor(0x1A, 0x23, 0x32)     # 宣紙暗面
+_COLOR_ON = QColor(0x00, 0xF0, 0xFF)            # 賽博青
+_COLOR_ON_BRIGHT = QColor(0x40, 0xFF, 0xFF)      # 青光暈
+_GLOW_COLOR = QColor(0, 240, 255, 60)           # 青 glow
 _FADE_DURATION = 0.2  # seconds
 
 
 class MiniPiano(QWidget):
-    """Single-row 36-key mini piano visualizer with glow and fade effects."""
+    """Single-row mini piano visualizer with glow and fade effects."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._active_notes: set[int] = set()
         self._fade_notes: dict[int, float] = {}  # midi_note -> release_time
+        self._midi_min = MIDI_NOTE_MIN
+        self._midi_max = MIDI_NOTE_MAX
+        self._total_keys = self._midi_max - self._midi_min + 1
         self.setFixedHeight(36)
         self.setMinimumWidth(180)
 
@@ -35,6 +38,14 @@ class MiniPiano(QWidget):
         self._fade_timer = QTimer(self)
         self._fade_timer.timeout.connect(self._tick_fade)
         self._fade_timer.setInterval(16)  # ~60fps
+
+    def set_midi_range(self, midi_range: tuple[int, int]) -> None:
+        """Update the displayed MIDI note range."""
+        self._midi_min, self._midi_max = midi_range
+        self._total_keys = self._midi_max - self._midi_min + 1
+        self._active_notes.clear()
+        self._fade_notes.clear()
+        self.update()
 
     def set_active_notes(self, notes: set[int]) -> None:
         self._active_notes = notes
@@ -68,7 +79,12 @@ class MiniPiano(QWidget):
 
         w = self.width()
         h = self.height()
-        key_w = max(2, w / _TOTAL_KEYS)
+        total = self._total_keys
+        if total <= 0:
+            painter.end()
+            return
+
+        key_w = max(2, w / total)
         gap = 1
         now = time.monotonic()
 
@@ -77,11 +93,11 @@ class MiniPiano(QWidget):
         clip.addRoundedRect(QRectF(0, 0, w, h), 6, 6)
         painter.setClipPath(clip)
 
-        # Background
-        painter.fillRect(0, 0, w, h, QColor(24, 24, 24))
+        # Background — 墨黑
+        painter.fillRect(0, 0, w, h, QColor(0x0A, 0x0E, 0x14))
 
-        for i in range(_TOTAL_KEYS):
-            midi_note = MIDI_NOTE_MIN + i
+        for i in range(total):
+            midi_note = self._midi_min + i
             x = i * key_w
             is_active = midi_note in self._active_notes
             is_black = (midi_note % 12) in _BLACK_SEMITONES
@@ -90,13 +106,11 @@ class MiniPiano(QWidget):
             if is_active:
                 color = _COLOR_ON_BRIGHT if is_black else _COLOR_ON
             elif fade_t is not None:
-                # Fading from green to off
                 elapsed = now - fade_t
                 ratio = max(0.0, 1.0 - elapsed / _FADE_DURATION)
                 off_color = _COLOR_OFF_BLACK if is_black else _COLOR_OFF
                 color = _lerp_color(off_color, _COLOR_ON, ratio)
             else:
-                # Inactive: subtle vertical gradient
                 if is_black:
                     color = _COLOR_OFF_BLACK
                 else:
@@ -107,9 +121,8 @@ class MiniPiano(QWidget):
             path.addRoundedRect(key_rect, 2, 2)
 
             if not is_active and fade_t is None and not is_black:
-                # Subtle gradient for inactive white keys
                 grad = QLinearGradient(x, 0, x, h)
-                grad.setColorAt(0, QColor(68, 68, 68))
+                grad.setColorAt(0, QColor(0x36, 0x48, 0x5A))
                 grad.setColorAt(1, _COLOR_OFF)
                 painter.fillPath(path, grad)
             else:
@@ -121,7 +134,6 @@ class MiniPiano(QWidget):
                 glow_path = QPainterPath()
                 glow_path.addRoundedRect(glow_rect, 3, 3)
                 painter.fillPath(glow_path, _GLOW_COLOR)
-                # Redraw key on top of glow
                 painter.fillPath(path, color)
 
         painter.end()

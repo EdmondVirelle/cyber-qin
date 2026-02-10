@@ -37,6 +37,25 @@ SCAN = {
     "T": 0x14,
     "Y": 0x15,
     "U": 0x16,
+    # Extended letters (for multi-scheme support)
+    "I": 0x17,
+    "O": 0x18,
+    "P": 0x19,
+    "K": 0x25,
+    "L": 0x26,
+    # Number row
+    "1": 0x02,
+    "2": 0x03,
+    "3": 0x04,
+    "4": 0x05,
+    "5": 0x06,
+    "6": 0x07,
+    "7": 0x08,
+    "8": 0x09,
+    "9": 0x0A,
+    "0": 0x0B,
+    "MINUS": 0x0C,
+    "EQUALS": 0x0D,
     # Modifiers
     "LSHIFT": 0x2A,
     "LCTRL": 0x1D,
@@ -44,7 +63,9 @@ SCAN = {
     "ESCAPE": 0x01,
 }
 
-# MIDI note range the game maps to (before transpose)
+# MIDI note range the game maps to (before transpose).
+# These are defaults for the WWM 36-key scheme.
+# Per-scheme ranges are defined in mapping_schemes.py via scheme.midi_range.
 MIDI_NOTE_MIN = 48  # C3
 MIDI_NOTE_MAX = 83  # B5
 MIDI_RANGE = range(MIDI_NOTE_MIN, MIDI_NOTE_MAX + 1)

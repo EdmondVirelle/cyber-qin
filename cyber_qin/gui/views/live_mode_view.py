@@ -1,10 +1,10 @@
-"""Live MIDI input view — with gradient header and card containers."""
+"""Live MIDI input view — with gradient header and card containers — 賽博墨韻."""
 
 from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer
+from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -25,9 +25,10 @@ from ...core.constants import (
 )
 from ...core.key_mapper import KeyMapper
 from ...core.key_simulator import KeySimulator
+from ...core.mapping_schemes import get_scheme, list_schemes
 from ...core.midi_listener import MidiListener
 from ...utils.admin import is_admin
-from ..theme import BG_CARD, DIVIDER, TEXT_SECONDARY
+from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.log_viewer import LogViewer
 from ..widgets.piano_display import PianoDisplay
 from ..widgets.status_bar import StatusBar
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 
 
 class _GradientHeader(QWidget):
-    """Gradient header with accent color fade."""
+    """Gradient header with 暗青 accent fade."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -45,8 +46,8 @@ class _GradientHeader(QWidget):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(29, 185, 84, 40))  # Semi-transparent accent
-        gradient.setColorAt(1, QColor(18, 18, 18, 0))     # Fully transparent
+        gradient.setColorAt(0, QColor(0, 240, 255, 40))   # 賽博青半透明
+        gradient.setColorAt(1, QColor(10, 14, 20, 0))      # 透明
         painter.fillRect(QRectF(0, 0, self.width(), self.height()), gradient)
         painter.end()
 
@@ -58,7 +59,7 @@ class _CardContainer(QFrame):
         super().__init__(parent)
         self.setStyleSheet(
             f"_CardContainer {{"
-            f"  background-color: {BG_CARD};"
+            f"  background-color: {BG_PAPER};"
             f"  border-radius: 12px;"
             f"  border: 1px solid {DIVIDER};"
             f"}}"
@@ -67,6 +68,8 @@ class _CardContainer(QFrame):
 
 class LiveModeView(QWidget):
     """Live MIDI input mode — connect a MIDI device and play in real-time."""
+
+    scheme_changed = pyqtSignal(str)  # scheme_id
 
     def __init__(
         self,
@@ -105,8 +108,8 @@ class LiveModeView(QWidget):
         overlay_layout = QVBoxLayout(header_overlay)
         overlay_layout.setContentsMargins(24, 20, 24, 8)
 
-        header = QLabel("Live Mode")
-        header.setFont(QFont("Segoe UI", 22, QFont.Weight.Bold))
+        header = QLabel("演奏模式")
+        header.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
         header.setStyleSheet("background: transparent;")
         overlay_layout.addWidget(header)
 
@@ -125,32 +128,38 @@ class LiveModeView(QWidget):
 
         # Device selection card
         device_card = _CardContainer()
-        device_layout = QHBoxLayout(device_card)
-        device_layout.setContentsMargins(16, 12, 16, 12)
-        device_layout.setSpacing(8)
+        device_card_layout = QVBoxLayout(device_card)
+        device_card_layout.setContentsMargins(16, 12, 16, 12)
+        device_card_layout.setSpacing(8)
+
+        # Row 1: MIDI device + transpose
+        row1 = QHBoxLayout()
+        row1.setSpacing(8)
 
         lbl = QLabel("MIDI 裝置:")
         lbl.setStyleSheet("background: transparent;")
-        device_layout.addWidget(lbl)
+        row1.addWidget(lbl)
 
         self._port_combo = QComboBox()
         self._port_combo.setMinimumWidth(250)
-        device_layout.addWidget(self._port_combo)
+        row1.addWidget(self._port_combo)
 
         self._refresh_btn = QPushButton("重新整理")
         self._refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._refresh_btn.clicked.connect(self._refresh_ports)
-        device_layout.addWidget(self._refresh_btn)
+        row1.addWidget(self._refresh_btn)
 
         self._connect_btn = QPushButton("連線")
         self._connect_btn.setProperty("class", "accent")
         self._connect_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._connect_btn.clicked.connect(self._toggle_connection)
-        device_layout.addWidget(self._connect_btn)
+        row1.addWidget(self._connect_btn)
 
-        device_layout.addStretch()
+        row1.addStretch()
 
-        device_layout.addWidget(QLabel("移調:"))
+        transpose_lbl = QLabel("移調:")
+        transpose_lbl.setStyleSheet("background: transparent;")
+        row1.addWidget(transpose_lbl)
         self._transpose_spin = QSpinBox()
         self._transpose_spin.setRange(
             TRANSPOSE_MIN // TRANSPOSE_STEP,
@@ -159,12 +168,39 @@ class LiveModeView(QWidget):
         self._transpose_spin.setValue(0)
         self._transpose_spin.setSuffix(" 八度")
         self._transpose_spin.valueChanged.connect(self._on_transpose_changed)
-        device_layout.addWidget(self._transpose_spin)
+        row1.addWidget(self._transpose_spin)
+
+        device_card_layout.addLayout(row1)
+
+        # Row 2: Mapping scheme selector
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+
+        scheme_lbl = QLabel("映射方案:")
+        scheme_lbl.setStyleSheet("background: transparent;")
+        row2.addWidget(scheme_lbl)
+
+        self._scheme_combo = QComboBox()
+        self._scheme_combo.setMinimumWidth(250)
+        for scheme in list_schemes():
+            self._scheme_combo.addItem(scheme.name, scheme.id)
+        self._scheme_combo.currentIndexChanged.connect(self._on_scheme_combo_changed)
+        row2.addWidget(self._scheme_combo)
+
+        row2.addStretch()
+
+        self._scheme_desc = QLabel("")
+        self._scheme_desc.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
+        )
+        row2.addWidget(self._scheme_desc)
+
+        device_card_layout.addLayout(row2)
 
         content.addWidget(device_card)
 
         # Piano display
-        self._piano = PianoDisplay()
+        self._piano = PianoDisplay(mapper=self._mapper)
         content.addWidget(self._piano, 1)
 
         # Log viewer with title
@@ -172,7 +208,7 @@ class LiveModeView(QWidget):
         log_section.setSpacing(4)
 
         log_title = QLabel("Event Log")
-        log_title.setFont(QFont("Segoe UI", 11, QFont.Weight.DemiBold))
+        log_title.setFont(QFont("Microsoft JhengHei", 11, QFont.Weight.DemiBold))
         log_title.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         log_section.addWidget(log_title)
 
@@ -191,7 +227,6 @@ class LiveModeView(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        # Resize gradient header overlay to match width
         if hasattr(self, '_gradient_header'):
             for child in self._gradient_header.children():
                 if isinstance(child, QWidget):
@@ -210,6 +245,17 @@ class LiveModeView(QWidget):
         self._transpose_spin.setValue(transpose)
         self._mapper.transpose = transpose * TRANSPOSE_STEP
 
+        # Restore scheme selection
+        saved_scheme = self._settings.value("scheme_id", "", type=str)
+        if saved_scheme:
+            for i in range(self._scheme_combo.count()):
+                if self._scheme_combo.itemData(i) == saved_scheme:
+                    self._scheme_combo.setCurrentIndex(i)
+                    break
+
+        # Update description for initial selection
+        self._update_scheme_description()
+
         last_port = self._settings.value("last_port", "", type=str)
         self._refresh_ports()
         if last_port:
@@ -224,6 +270,37 @@ class LiveModeView(QWidget):
     @property
     def log_viewer(self) -> LogViewer:
         return self._log
+
+    # --- Scheme management ---
+
+    def _on_scheme_combo_changed(self, index: int) -> None:
+        scheme_id = self._scheme_combo.itemData(index)
+        if scheme_id is None:
+            return
+        self._apply_scheme(scheme_id)
+
+    def _apply_scheme(self, scheme_id: str) -> None:
+        try:
+            scheme = get_scheme(scheme_id)
+        except KeyError:
+            return
+        self._mapper.set_scheme(scheme)
+        self._piano.on_scheme_changed()
+        self._settings.setValue("scheme_id", scheme_id)
+        self._update_scheme_description()
+        self.scheme_changed.emit(scheme_id)
+        self._log.log(f"映射方案: {scheme.name} ({scheme.key_count} 鍵)")
+
+    def _update_scheme_description(self) -> None:
+        scheme_id = self._scheme_combo.currentData()
+        if scheme_id:
+            try:
+                scheme = get_scheme(scheme_id)
+                self._scheme_desc.setText(scheme.description)
+            except KeyError:
+                self._scheme_desc.setText("")
+        else:
+            self._scheme_desc.setText("")
 
     # --- MIDI connection management ---
 

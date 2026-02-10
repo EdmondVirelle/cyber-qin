@@ -1,4 +1,4 @@
-"""Spotify-inspired dark theme for the application."""
+"""武俠賽博水墨 dark theme — 墨韻 design system."""
 
 from __future__ import annotations
 
@@ -7,30 +7,41 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-# --- Color Palette ---
-BG_DARK = "#121212"
-BG_SURFACE = "#181818"
-BG_CARD = "#282828"
-BG_HOVER = "#333333"
-BG_ELEVATED = "#3E3E3E"
-ACCENT = "#1DB954"
-ACCENT_HOVER = "#1ED760"
-ACCENT_DARK = "#168D40"
-TEXT_PRIMARY = "#FFFFFF"
-TEXT_SECONDARY = "#B3B3B3"
-TEXT_DISABLED = "#727272"
-DIVIDER = "#404040"
-ERROR = "#E74C3C"
-WARNING = "#F39C12"
+# --- Color Palette: 賽博墨韻 ---
+BG_INK = "#0A0E14"          # 墨黑底（帶微藍）
+BG_SCROLL = "#101820"       # 卷軸面
+BG_PAPER = "#1A2332"        # 宣紙暗面
+BG_WASH = "#243040"         # 墨染懸停
+BG_MIST = "#2E3D50"         # 雲霧層
+ACCENT = "#00F0FF"          # 賽博青（霓虹青）
+ACCENT_GLOW = "#40FFFF"     # 青光暈
+ACCENT_DIM = "#008B99"      # 青暗
+ACCENT_GOLD = "#D4A853"     # 金墨（古風金）
+TEXT_PRIMARY = "#E8E0D0"    # 宣紙白（暖白）
+TEXT_SECONDARY = "#7A8899"  # 水墨灰
+TEXT_DISABLED = "#4A5568"   # 淡墨
+DIVIDER = "#1E2D3D"         # 墨痕
+ERROR = "#FF4444"           # 硃紅
+WARNING = "#E8A830"         # 琥珀金
 
-FONT_FAMILY = '"Segoe UI", "Microsoft JhengHei", sans-serif'
+# Legacy aliases (used by widgets that import the old names)
+BG_DARK = BG_INK
+BG_SURFACE = BG_SCROLL
+BG_CARD = BG_PAPER
+BG_HOVER = BG_WASH
+BG_ELEVATED = BG_MIST
+ACCENT_HOVER = ACCENT_GLOW
+ACCENT_DARK = ACCENT_DIM
+
+FONT_FAMILY = '"Microsoft JhengHei", "Noto Sans TC", sans-serif'
+FONT_MONO = '"Cascadia Code", Consolas, monospace'
 
 
 def get_stylesheet() -> str:
     return f"""
     /* ===== Global ===== */
     QMainWindow, QWidget {{
-        background-color: {BG_DARK};
+        background-color: {BG_INK};
         color: {TEXT_PRIMARY};
         font-family: {FONT_FAMILY};
         font-size: 13px;
@@ -67,7 +78,7 @@ def get_stylesheet() -> str:
 
     /* ===== Buttons ===== */
     QPushButton {{
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
         color: {TEXT_PRIMARY};
         border: none;
         border-radius: 16px;
@@ -76,24 +87,24 @@ def get_stylesheet() -> str:
         font-weight: 600;
     }}
     QPushButton:hover {{
-        background-color: {BG_HOVER};
+        background-color: {BG_WASH};
     }}
     QPushButton:pressed {{
-        background-color: {BG_ELEVATED};
+        background-color: {BG_MIST};
     }}
     QPushButton:disabled {{
         color: {TEXT_DISABLED};
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
     }}
     QPushButton[class="accent"] {{
         background-color: {ACCENT};
-        color: {BG_DARK};
+        color: {BG_INK};
         border-radius: 20px;
         padding: 8px 28px;
         font-weight: 700;
     }}
     QPushButton[class="accent"]:hover {{
-        background-color: {ACCENT_HOVER};
+        background-color: {ACCENT_GLOW};
     }}
     QPushButton[class="icon"] {{
         background: transparent;
@@ -106,7 +117,7 @@ def get_stylesheet() -> str:
         font-size: 16px;
     }}
     QPushButton[class="icon"]:hover {{
-        background-color: {BG_HOVER};
+        background-color: {BG_WASH};
     }}
 
     /* ===== Nav Buttons (Sidebar) ===== */
@@ -121,7 +132,7 @@ def get_stylesheet() -> str:
     }}
     QPushButton[class="nav"]:hover {{
         color: {TEXT_PRIMARY};
-        background-color: rgba(255, 255, 255, 0.05);
+        background-color: rgba(0, 240, 255, 0.05);
     }}
     QPushButton[class="nav-active"] {{
         background: transparent;
@@ -135,7 +146,7 @@ def get_stylesheet() -> str:
 
     /* ===== ComboBox ===== */
     QComboBox {{
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
         color: {TEXT_PRIMARY};
         border: 1px solid {DIVIDER};
         border-radius: 8px;
@@ -150,9 +161,9 @@ def get_stylesheet() -> str:
         width: 24px;
     }}
     QComboBox QAbstractItemView {{
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
         color: {TEXT_PRIMARY};
-        selection-background-color: {BG_HOVER};
+        selection-background-color: {BG_WASH};
         border: 1px solid {DIVIDER};
         border-radius: 4px;
         padding: 4px;
@@ -160,19 +171,19 @@ def get_stylesheet() -> str:
 
     /* ===== SpinBox ===== */
     QSpinBox {{
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
         color: {TEXT_PRIMARY};
         border: 1px solid {DIVIDER};
         border-radius: 8px;
         padding: 4px 8px;
     }}
     QSpinBox::up-button, QSpinBox::down-button {{
-        background-color: {BG_ELEVATED};
+        background-color: {BG_MIST};
         border: none;
         width: 16px;
     }}
     QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
-        background-color: {BG_HOVER};
+        background-color: {BG_WASH};
     }}
 
     /* ===== ScrollBar ===== */
@@ -182,7 +193,7 @@ def get_stylesheet() -> str:
         margin: 0;
     }}
     QScrollBar::handle:vertical {{
-        background: {BG_ELEVATED};
+        background: {BG_MIST};
         border-radius: 4px;
         min-height: 30px;
     }}
@@ -197,7 +208,7 @@ def get_stylesheet() -> str:
         height: 8px;
     }}
     QScrollBar::handle:horizontal {{
-        background: {BG_ELEVATED};
+        background: {BG_MIST};
         border-radius: 4px;
         min-width: 30px;
     }}
@@ -210,19 +221,19 @@ def get_stylesheet() -> str:
 
     /* ===== PlainTextEdit (Log) ===== */
     QPlainTextEdit {{
-        background-color: {BG_SURFACE};
+        background-color: {BG_SCROLL};
         color: {TEXT_SECONDARY};
         border: 1px solid {DIVIDER};
         border-radius: 8px;
         padding: 8px;
-        font-family: Consolas, "Cascadia Code", monospace;
+        font-family: {FONT_MONO};
         font-size: 11px;
-        selection-background-color: {BG_ELEVATED};
+        selection-background-color: {BG_MIST};
     }}
 
     /* ===== Slider ===== */
     QSlider::groove:horizontal {{
-        background: {BG_ELEVATED};
+        background: {BG_MIST};
         height: 4px;
         border-radius: 2px;
     }}
@@ -247,7 +258,7 @@ def get_stylesheet() -> str:
 
     /* ===== ToolTip ===== */
     QToolTip {{
-        background-color: {BG_CARD};
+        background-color: {BG_PAPER};
         color: {TEXT_PRIMARY};
         border: 1px solid {DIVIDER};
         border-radius: 4px;
@@ -273,6 +284,6 @@ def enable_dark_title_bar(hwnd: int) -> None:
 
 
 def apply_theme(app: QApplication) -> None:
-    """Apply the Spotify dark theme to the application."""
+    """Apply the 賽博墨韻 dark theme to the application."""
     app.setStyle("Fusion")
     app.setStyleSheet(get_stylesheet())

@@ -1,4 +1,4 @@
-"""Left navigation sidebar widget (Spotify-style) with QPainter icons and animations."""
+"""Left navigation sidebar widget with QPainter icons and animations — 賽博墨韻 style."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..icons import draw_music_note
-from ..theme import ACCENT, BG_SURFACE, DIVIDER, TEXT_SECONDARY
+from ..theme import ACCENT_GOLD, BG_SCROLL, DIVIDER, TEXT_SECONDARY
 from .animated_widgets import AnimatedNavButton
 
 
@@ -51,12 +51,12 @@ class Sidebar(QWidget):
         # Navigation buttons
         self._buttons: list[AnimatedNavButton] = []
 
-        self._live_btn = AnimatedNavButton("live", "Live Mode")
+        self._live_btn = AnimatedNavButton("live", "演奏模式")
         self._live_btn.clicked.connect(lambda: self._on_nav_click(0))
         layout.addWidget(self._live_btn)
         self._buttons.append(self._live_btn)
 
-        self._library_btn = AnimatedNavButton("library", "Library")
+        self._library_btn = AnimatedNavButton("library", "曲庫")
         self._library_btn.clicked.connect(lambda: self._on_nav_click(1))
         layout.addWidget(self._library_btn)
         self._buttons.append(self._library_btn)
@@ -77,7 +77,7 @@ class Sidebar(QWidget):
         from PyQt6.QtWidgets import QLabel
 
         ver = QLabel("v0.1.0")
-        ver.setFont(QFont("Segoe UI", 9))
+        ver.setFont(QFont("Microsoft JhengHei", 9))
         ver.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(ver)
@@ -96,7 +96,7 @@ class Sidebar(QWidget):
         """Custom paint for sidebar background."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), QColor(BG_SURFACE))
+        painter.fillRect(self.rect(), QColor(BG_SCROLL))
         painter.end()
 
     def _on_nav_click(self, index: int) -> None:
@@ -109,7 +109,7 @@ class Sidebar(QWidget):
 
 
 class _BrandLogo(QWidget):
-    """Brand logo widget with QPainter music note icon + text."""
+    """Brand logo widget with QPainter music note icon + text — 金墨 accent."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -119,12 +119,12 @@ class _BrandLogo(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Music note icon
+        # Music note icon — 金墨
         icon_rect = QRectF(16, 8, 32, 32)
-        draw_music_note(painter, icon_rect, QColor(ACCENT))
+        draw_music_note(painter, icon_rect, QColor(ACCENT_GOLD))
 
-        # Title text
-        painter.setPen(QColor(ACCENT))
+        # Title text — 金墨
+        painter.setPen(QColor(ACCENT_GOLD))
         font = QFont("Microsoft JhengHei", 16)
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
@@ -136,7 +136,7 @@ class _BrandLogo(QWidget):
 
         # Subtitle
         painter.setPen(QColor(TEXT_SECONDARY))
-        sub_font = QFont("Segoe UI", 9)
+        sub_font = QFont("Microsoft JhengHei", 9)
         painter.setFont(sub_font)
         painter.drawText(
             54, 34, self.width() - 62, 18,

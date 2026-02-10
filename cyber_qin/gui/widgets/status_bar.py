@@ -1,4 +1,4 @@
-"""Status bar with indicator lights, latency color-coding, and QSS class properties."""
+"""Status bar with indicator lights, latency color-coding, and QSS class properties — 賽博墨韻."""
 
 from __future__ import annotations
 

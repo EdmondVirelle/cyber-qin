@@ -1,4 +1,4 @@
-"""Playback speed control widget."""
+"""Playback speed control widget — 賽博墨韻."""
 
 from __future__ import annotations
 

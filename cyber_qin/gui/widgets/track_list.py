@@ -1,4 +1,4 @@
-"""Scrollable track list widget (Spotify playlist style) with icon buttons and hover reveal."""
+"""Scrollable track list widget with icon buttons and hover reveal — 賽博墨韻."""
 
 from __future__ import annotations
 
@@ -14,17 +14,17 @@ from PyQt6.QtWidgets import (
 
 from ...core.midi_file_player import MidiFileInfo
 from ..icons import draw_music_note
-from ..theme import ACCENT, BG_HOVER, TEXT_PRIMARY, TEXT_SECONDARY
+from ..theme import ACCENT, BG_WASH, TEXT_PRIMARY, TEXT_SECONDARY
 from .animated_widgets import IconButton
 
-# Colors for track icons, rotated by index
+# 水墨配色 icon colors, rotated by index
 _ICON_COLORS = [
-    QColor("#1DB954"),  # Green
-    QColor("#1E90FF"),  # Dodger blue
-    QColor("#E91E63"),  # Pink
-    QColor("#FF9800"),  # Orange
-    QColor("#9C27B0"),  # Purple
-    QColor("#00BCD4"),  # Cyan
+    QColor("#00F0FF"),  # 賽博青
+    QColor("#D4A853"),  # 金墨
+    QColor("#FF4444"),  # 硃紅
+    QColor("#4488CC"),  # 靛
+    QColor("#E8A830"),  # 琥珀
+    QColor("#2DB87A"),  # 翠
 ]
 
 
@@ -53,7 +53,7 @@ class _TrackIcon(QWidget):
 
 
 class _PlayingIndicator(QWidget):
-    """Animated green music note for playing state."""
+    """Animated cyan music note for playing state."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -82,7 +82,7 @@ class TrackCard(QWidget):
         self.setFixedHeight(60)
         self.setStyleSheet(
             f"TrackCard {{ background-color: transparent; border-radius: 4px; }}"
-            f"TrackCard:hover {{ background-color: {BG_HOVER}; }}"
+            f"TrackCard:hover {{ background-color: {BG_WASH}; }}"
         )
 
         layout = QHBoxLayout(self)
@@ -110,13 +110,13 @@ class TrackCard(QWidget):
         info_layout.setSpacing(2)
 
         name_label = QLabel(info.name)
-        name_label.setFont(QFont("Segoe UI", 13, QFont.Weight.DemiBold))
+        name_label.setFont(QFont("Microsoft JhengHei", 13, QFont.Weight.DemiBold))
         name_label.setStyleSheet(f"color: {TEXT_PRIMARY}; background: transparent;")
         info_layout.addWidget(name_label)
 
         details = f"{info.track_count} tracks  |  {info.note_count} notes  |  {info.tempo_bpm} BPM"
         detail_label = QLabel(details)
-        detail_label.setFont(QFont("Segoe UI", 10))
+        detail_label.setFont(QFont("Microsoft JhengHei", 10))
         detail_label.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         info_layout.addWidget(detail_label)
 

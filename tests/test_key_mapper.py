@@ -149,3 +149,60 @@ class TestAllMappings:
         m2 = KeyMapper.all_mappings()
         assert m1 == m2
         assert m1 is not m2
+
+
+class TestKeyMapperScheme:
+    """Test scheme support in KeyMapper."""
+
+    def test_default_uses_base_map(self):
+        km = KeyMapper()
+        assert km.scheme is None
+        # Should still resolve wwm_36 notes
+        result = km.lookup(60)
+        assert result is not None
+        assert result.scan_code == SCAN["A"]
+
+    def test_set_scheme(self):
+        from cyber_qin.core.mapping_schemes import get_scheme
+
+        km = KeyMapper()
+        scheme = get_scheme("ff14_32")
+        km.set_scheme(scheme)
+        assert km.scheme is scheme
+        # MIDI 48 in ff14_32 → A (plain)
+        result = km.lookup(48)
+        assert result is not None
+        assert result.scan_code == SCAN["A"]
+        assert result.modifier == Modifier.NONE
+
+    def test_set_scheme_changes_range(self):
+        from cyber_qin.core.mapping_schemes import get_scheme
+
+        km = KeyMapper()
+        scheme = get_scheme("ff14_32")
+        km.set_scheme(scheme)
+        # MIDI 80+ should be out of range for ff14_32 (range 48-79)
+        assert km.lookup(80) is None
+
+    def test_current_mappings(self):
+        km = KeyMapper()
+        mappings = km.current_mappings()
+        assert isinstance(mappings, dict)
+        assert len(mappings) == 36  # default is _BASE_MAP
+
+    def test_current_mappings_after_scheme_change(self):
+        from cyber_qin.core.mapping_schemes import get_scheme
+
+        km = KeyMapper()
+        scheme = get_scheme("generic_24")
+        km.set_scheme(scheme)
+        mappings = km.current_mappings()
+        assert len(mappings) == 24
+
+    def test_init_with_scheme(self):
+        from cyber_qin.core.mapping_schemes import get_scheme
+
+        scheme = get_scheme("generic_48")
+        km = KeyMapper(scheme=scheme)
+        assert km.scheme is scheme
+        assert len(km.current_mappings()) == 48

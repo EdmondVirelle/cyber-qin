@@ -65,7 +65,7 @@ class MidiFileParser:
         Correctly converts tick-based delta times to seconds using tempo map.
         """
         path = Path(file_path)
-        mid = mido.MidiFile(str(path))
+        mid = mido.MidiFile(str(path), clip=True)
         tpb = mid.ticks_per_beat
 
         # Build timed event list, tracking tempo changes

@@ -1,4 +1,4 @@
-"""Animated button widgets with QPainter-drawn icons and smooth transitions."""
+"""Animated button widgets with QPainter-drawn icons and smooth transitions — 賽博墨韻 style."""
 
 from __future__ import annotations
 
@@ -28,8 +28,9 @@ from ..icons import (
 )
 from ..theme import (
     ACCENT,
-    ACCENT_HOVER,
-    BG_HOVER,
+    ACCENT_GLOW,
+    ACCENT_GOLD,
+    BG_WASH,
     TEXT_PRIMARY,
     TEXT_SECONDARY,
 )
@@ -50,7 +51,7 @@ _ICON_DRAWERS: dict[str, Callable] = {
 class TransportButton(QAbstractButton):
     """Circular transport control button (play/pause/stop) with hover animation.
 
-    Play button: green circle + white icon.
+    Play button: cyan circle + dark icon.
     Stop button: transparent background + gray icon.
     """
 
@@ -116,11 +117,11 @@ class TransportButton(QAbstractButton):
         rect = QRectF(0, 0, self.width(), self.height())
 
         if self._accent:
-            # Green circle background with hover brightening
+            # Cyan circle background with hover brightening
             base = QColor(ACCENT)
-            hover = QColor(ACCENT_HOVER)
+            hover = QColor(ACCENT_GLOW)
             bg = _lerp_color(base, hover, self._hover_progress)
-            icon_color = QColor(255, 255, 255)
+            icon_color = QColor(0x0A, 0x0E, 0x14)  # Dark icon on cyan
 
             circle = QPainterPath()
             circle.addEllipse(rect)
@@ -128,7 +129,7 @@ class TransportButton(QAbstractButton):
         else:
             # Transparent with subtle hover background
             if self._hover_progress > 0.01:
-                bg = QColor(BG_HOVER)
+                bg = QColor(BG_WASH)
                 bg.setAlphaF(self._hover_progress * 0.8)
                 circle = QPainterPath()
                 circle.addEllipse(rect)
@@ -210,7 +211,7 @@ class IconButton(QAbstractButton):
 
         # Hover background
         if self._hover_progress > 0.01:
-            bg = QColor(BG_HOVER)
+            bg = QColor(BG_WASH)
             bg.setAlphaF(self._hover_progress * 0.7)
             circle = QPainterPath()
             circle.addEllipse(rect)
@@ -295,16 +296,16 @@ class AnimatedNavButton(QAbstractButton):
         # Hover background
         hover_alpha = self._hover_progress * 0.08 if not self._active else 0.0
         if hover_alpha > 0.001:
-            bg = QColor(255, 255, 255)
+            bg = QColor(0x00, 0xF0, 0xFF)  # Cyan tinted hover
             bg.setAlphaF(hover_alpha)
             path = QPainterPath()
             path.addRoundedRect(QRectF(4, 0, w - 8, h), 6, 6)
             painter.fillPath(path, bg)
 
-        # Active indicator (left green bar)
+        # Active indicator (left gold bar — 金墨)
         if self._active:
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor(ACCENT))
+            painter.setBrush(QColor(ACCENT_GOLD))
             indicator = QPainterPath()
             indicator.addRoundedRect(QRectF(0, h * 0.2, 3, h * 0.6), 1.5, 1.5)
             painter.drawPath(indicator)
@@ -332,7 +333,7 @@ class AnimatedNavButton(QAbstractButton):
 
         painter.setPen(text_color)
         font = painter.font()
-        font.setFamily("Segoe UI")
+        font.setFamily("Microsoft JhengHei")
         font.setPixelSize(14)
         font.setWeight(700 if self._active else 600)
         painter.setFont(font)

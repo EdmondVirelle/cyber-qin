@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .constants import SCAN, Modifier
+
+if TYPE_CHECKING:
+    from .mapping_schemes import MappingScheme
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,12 +81,18 @@ _BASE_MAP: dict[int, KeyMapping] = {
 class KeyMapper:
     """Translates MIDI note numbers to game key combinations.
 
-    Supports octave-based transpose. Notes outside the valid range
-    after transpose return None from lookup().
+    Supports octave-based transpose and switchable mapping schemes.
+    Notes outside the valid range after transpose return None from lookup().
     """
 
-    def __init__(self, transpose: int = 0) -> None:
+    def __init__(self, transpose: int = 0, scheme: MappingScheme | None = None) -> None:
         self._transpose = transpose
+        if scheme is not None:
+            self._scheme = scheme
+            self._mapping = scheme.mapping
+        else:
+            self._scheme = None
+            self._mapping = _BASE_MAP
 
     @property
     def transpose(self) -> int:
@@ -92,13 +102,31 @@ class KeyMapper:
     def transpose(self, value: int) -> None:
         self._transpose = value
 
+    @property
+    def scheme(self) -> MappingScheme | None:
+        """Return the currently active scheme, or None if using _BASE_MAP default."""
+        return self._scheme
+
+    def set_scheme(self, scheme: MappingScheme) -> None:
+        """Atomically switch to a new mapping scheme.
+
+        CPython's GIL guarantees that the dict reference swap is atomic,
+        so rtmidi callbacks reading self._mapping won't see a torn pointer.
+        """
+        self._scheme = scheme
+        self._mapping = scheme.mapping
+
     def lookup(self, midi_note: int) -> KeyMapping | None:
         """Map a MIDI note to a KeyMapping, applying transpose.
 
-        Returns None if the transposed note is out of the 36-key range.
+        Returns None if the transposed note is out of the mapping range.
         """
         mapped = midi_note + self._transpose
-        return _BASE_MAP.get(mapped)
+        return self._mapping.get(mapped)
+
+    def current_mappings(self) -> dict[int, KeyMapping]:
+        """Return a copy of the current mapping table."""
+        return dict(self._mapping)
 
     @staticmethod
     def note_name(midi_note: int) -> str:
