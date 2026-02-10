@@ -1,17 +1,16 @@
 """Virtual keyboard editor view — compose notes with click input and timeline.
 
 Layout:
-┌─────────────────────────────────────┐
-│ Gradient header: "編曲器" (紫霧色)    │
-├─────────────────────────────────────┤
-│ Toolbar: [Import][Export][Record]    │
-│ [Play][Undo][Redo][Clear]           │
-│ [Step: 1/4|1/8|1/16] [BPM] [校正]   │
-├─────────────────────────────────────┤
-│ NoteRoll (timeline, flex=1)         │
-├─────────────────────────────────────┤
-│ ClickablePiano (input keyboard)     │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ Gradient header: "編曲器" (紫霧色)               │
+├──────────────────────────────────────────────┤
+│ Row 1: [●錄音][▶播放] | [↩][↪][✕]    [匯入][匯出] │
+│ Row 2: 時值[1/4▾] 拍號[4/4▾] BPM[120] □Snap N音符 │
+├──────────────────────────────────────────────┤
+│ NoteRoll (timeline, flex=1)                  │
+├──────────────────────────────────────────────┤
+│ ClickablePiano (input keyboard)              │
+└──────────────────────────────────────────────┘
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ from __future__ import annotations
 import logging
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
+from PyQt6.QtGui import QColor, QFont, QKeyEvent, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -32,10 +31,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ...core.beat_sequence import (
+    DURATION_KEYS,
+    DURATION_PRESETS,
+    TIME_SIGNATURES,
+    EditorSequence,
+)
 from ...core.midi_file_player import MidiFileParser
 from ...core.midi_writer import MidiWriter
-from ...core.note_sequence import STEP_PRESETS, NoteSequence
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
+from ..widgets.animated_widgets import IconButton
 from ..widgets.clickable_piano import ClickablePiano
 from ..widgets.note_roll import NoteRoll
 
@@ -72,6 +77,15 @@ class _ToolbarCard(QWidget):
         )
 
 
+class _VSeparator(QWidget):
+    """Thin vertical divider line between button groups."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedSize(1, 24)
+        self.setStyleSheet(f"background-color: {DIVIDER};")
+
+
 class EditorView(QWidget):
     """Virtual keyboard editor — compose music by clicking piano keys."""
 
@@ -81,8 +95,7 @@ class EditorView(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._sequence = NoteSequence()
-        self._tempo_bpm: float = 120.0
+        self._sequence = EditorSequence()
         self._is_recording: bool = False
 
         self._build_ui()
@@ -129,22 +142,15 @@ class EditorView(QWidget):
         # Toolbar card
         toolbar_card = _ToolbarCard()
         toolbar_layout = QVBoxLayout(toolbar_card)
-        toolbar_layout.setContentsMargins(16, 10, 16, 10)
+        toolbar_layout.setContentsMargins(12, 8, 12, 8)
         toolbar_layout.setSpacing(6)
 
-        # Row 1: File operations + recording
+        # Row 1: Transport | Edit | File
         row1 = QHBoxLayout()
-        row1.setSpacing(8)
+        row1.setSpacing(6)
 
-        self._load_btn = QPushButton("匯入 MIDI")
-        self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        row1.addWidget(self._load_btn)
-
-        self._export_btn = QPushButton("匯出 MIDI")
-        self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        row1.addWidget(self._export_btn)
-
-        self._record_btn = QPushButton("錄音")
+        # Transport group
+        self._record_btn = QPushButton("● 錄音")
         self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._record_btn.setStyleSheet(
             "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
@@ -152,59 +158,93 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._record_btn)
 
-        self._play_btn = QPushButton("播放")
+        self._play_btn = QPushButton("▶ 播放")
         self._play_btn.setProperty("class", "accent")
         self._play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         row1.addWidget(self._play_btn)
 
-        self._undo_btn = QPushButton("復原")
-        self._undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        row1.addWidget(_VSeparator())
+
+        # Edit group
+        self._undo_btn = IconButton("undo", size=32)
+        self._undo_btn.setToolTip("復原 (Ctrl+Z)")
         row1.addWidget(self._undo_btn)
 
-        self._redo_btn = QPushButton("重做")
-        self._redo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._redo_btn = IconButton("redo", size=32)
+        self._redo_btn.setToolTip("重做 (Ctrl+Y)")
         row1.addWidget(self._redo_btn)
 
-        self._clear_btn = QPushButton("清除")
-        self._clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._clear_btn = IconButton("remove", size=32)
+        self._clear_btn.setToolTip("清除全部")
         row1.addWidget(self._clear_btn)
 
         row1.addStretch()
 
-        # Step selector
-        step_lbl = QLabel("步長:")
-        step_lbl.setStyleSheet("background: transparent;")
-        row1.addWidget(step_lbl)
+        # File group
+        self._load_btn = QPushButton("匯入")
+        self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        row1.addWidget(self._load_btn)
 
-        self._step_combo = QComboBox()
-        for label in STEP_PRESETS:
-            self._step_combo.addItem(label)
-        self._step_combo.setCurrentText("1/8")
-        row1.addWidget(self._step_combo)
+        self._export_btn = QPushButton("匯出")
+        self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        row1.addWidget(self._export_btn)
 
-        # Tempo
-        tempo_lbl = QLabel("BPM:")
-        tempo_lbl.setStyleSheet("background: transparent;")
-        row1.addWidget(tempo_lbl)
+        toolbar_layout.addLayout(row1)
+
+        # Row 2: Duration | Time Sig | BPM | Snap | Stats
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+
+        dur_lbl = QLabel("時值")
+        row2.addWidget(dur_lbl)
+
+        self._duration_combo = QComboBox()
+        for label in DURATION_PRESETS:
+            self._duration_combo.addItem(label)
+        self._duration_combo.setCurrentText("1/4")
+        row2.addWidget(self._duration_combo)
+
+        row2.addSpacing(8)
+
+        ts_lbl = QLabel("拍號")
+        row2.addWidget(ts_lbl)
+
+        self._ts_combo = QComboBox()
+        for num, denom in TIME_SIGNATURES:
+            self._ts_combo.addItem(f"{num}/{denom}")
+        self._ts_combo.setCurrentText("4/4")
+        row2.addWidget(self._ts_combo)
+
+        row2.addSpacing(8)
+
+        tempo_lbl = QLabel("BPM")
+        row2.addWidget(tempo_lbl)
 
         self._tempo_spin = QSpinBox()
         self._tempo_spin.setRange(40, 300)
         self._tempo_spin.setValue(120)
-        row1.addWidget(self._tempo_spin)
+        row2.addWidget(self._tempo_spin)
 
-        # Auto-correct checkbox
+        row2.addSpacing(8)
+
+        self._snap_cb = QCheckBox("Snap")
+        self._snap_cb.setChecked(True)
+        self._snap_cb.setStyleSheet("background: transparent;")
+        row2.addWidget(self._snap_cb)
+
         self._auto_tune_cb = QCheckBox("自動校正")
         self._auto_tune_cb.setStyleSheet("background: transparent;")
-        row1.addWidget(self._auto_tune_cb)
+        row2.addWidget(self._auto_tune_cb)
 
-        # Note count
-        self._note_count_lbl = QLabel("音符: 0")
+        row2.addStretch()
+
+        self._note_count_lbl = QLabel("0 音符")
         self._note_count_lbl.setStyleSheet(
             f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
         )
-        row1.addWidget(self._note_count_lbl)
+        row2.addWidget(self._note_count_lbl)
 
-        toolbar_layout.addLayout(row1)
+        toolbar_layout.addLayout(row2)
         content.addWidget(toolbar_card)
 
         # Note roll (timeline)
@@ -226,11 +266,13 @@ class EditorView(QWidget):
         self._undo_btn.clicked.connect(self._on_undo)
         self._redo_btn.clicked.connect(self._on_redo)
         self._clear_btn.clicked.connect(self._on_clear)
-        self._step_combo.currentTextChanged.connect(self._on_step_changed)
+        self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
+        self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
         self._note_roll.note_deleted.connect(self._on_note_deleted)
         self._note_roll.note_moved.connect(self._on_note_moved)
         self._note_roll.cursor_moved.connect(self._on_cursor_moved)
+        self._note_roll.note_right_clicked.connect(self._on_note_right_click_delete)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -241,16 +283,43 @@ class EditorView(QWidget):
 
     def _update_ui_state(self) -> None:
         """Sync UI with sequence state."""
-        self._note_roll.set_notes(self._sequence.notes)
-        self._note_roll.set_cursor_time(self._sequence.cursor_time)
-        self._note_roll.set_tempo(self._tempo_bpm)
+        active = self._sequence.active_track
+        track_notes = self._sequence.notes_in_track(active)
+        track_rests = self._sequence.rests_in_track(active)
+
+        # Ghost notes from other tracks
+        ghost_notes = []
+        for i, t in enumerate(self._sequence.tracks):
+            if i != active and not t.muted:
+                for n in self._sequence.notes_in_track(i):
+                    n._ghost_color = t.color
+                    ghost_notes.append(n)
+
+        self._note_roll.set_notes(track_notes)
+        self._note_roll.set_rests(track_rests)
+        self._note_roll.set_ghost_notes(ghost_notes)
+        self._note_roll.set_cursor_beats(self._sequence.cursor_beats)
+        self._note_roll.set_tempo(self._sequence.tempo_bpm)
+        self._note_roll.set_beats_per_bar(self._sequence.beats_per_bar)
+
+        if active < len(self._sequence.tracks):
+            self._note_roll.set_active_track_color(self._sequence.tracks[active].color)
+
         self._undo_btn.setEnabled(self._sequence.can_undo)
         self._redo_btn.setEnabled(self._sequence.can_redo)
-        self._note_count_lbl.setText(f"音符: {self._sequence.note_count}")
+
+        total = self._sequence.note_count
+        bars = self._sequence.bar_count
+        stats = f"{total} 音符"
+        if bars > 0:
+            stats += f" · {bars} 小節"
+        self._note_count_lbl.setText(stats)
 
     def _on_note_clicked(self, midi_note: int) -> None:
+        flash_beat = self._sequence.cursor_beats
         self._sequence.add_note(midi_note)
         self._update_ui_state()
+        self._note_roll.flash_at_beat(flash_beat)
 
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -265,9 +334,10 @@ class EditorView(QWidget):
         """Load a MIDI file into the editor."""
         try:
             events, info = MidiFileParser.parse(file_path)
-            self._sequence = NoteSequence.from_midi_file_events(events)
-            self._tempo_bpm = info.tempo_bpm
-            self._tempo_spin.setValue(int(self._tempo_bpm))
+            self._sequence = EditorSequence.from_midi_file_events(
+                events, tempo_bpm=info.tempo_bpm,
+            )
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
             self._update_ui_state()
         except Exception:
             log.exception("Failed to load %s", file_path)
@@ -287,14 +357,14 @@ class EditorView(QWidget):
 
         try:
             recorded = self._sequence.to_recorded_events()
-            MidiWriter.save(recorded, path, tempo_bpm=self._tempo_bpm)
+            MidiWriter.save(recorded, path, tempo_bpm=self._sequence.tempo_bpm)
         except Exception:
             log.exception("Failed to export %s", path)
 
     def _on_record_toggle(self) -> None:
         if self._is_recording:
             self._is_recording = False
-            self._record_btn.setText("錄音")
+            self._record_btn.setText("● 錄音")
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
                 "QPushButton:hover { background-color: #882222; }"
@@ -302,7 +372,7 @@ class EditorView(QWidget):
             self.recording_stopped.emit()
         else:
             self._is_recording = True
-            self._record_btn.setText("停止錄音")
+            self._record_btn.setText("■ 停止")
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #FF4444; color: #0A0E14; font-weight: 700; }"
                 "QPushButton:hover { background-color: #FF6666; }"
@@ -310,7 +380,25 @@ class EditorView(QWidget):
             self.recording_started.emit()
 
     def _on_note_moved(self, index: int, time_delta: float, pitch_delta: int) -> None:
-        self._sequence.move_note(index, time_delta, pitch_delta)
+        # index is relative to active track's notes — map to global
+        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+        if 0 <= index < len(active_notes):
+            target = active_notes[index]
+            # Find global index
+            for gi, n in enumerate(self._sequence._notes):
+                if n is target:
+                    self._sequence.move_note(gi, time_delta, pitch_delta)
+                    break
+        self._update_ui_state()
+
+    def _on_note_right_click_delete(self, index: int) -> None:
+        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+        if 0 <= index < len(active_notes):
+            target = active_notes[index]
+            for gi, n in enumerate(self._sequence._notes):
+                if n is target:
+                    self._sequence.delete_note(gi)
+                    break
         self._update_ui_state()
 
     @property
@@ -319,14 +407,15 @@ class EditorView(QWidget):
 
     def set_recorded_events(self, events: list) -> None:
         """Merge recorded events into the current sequence."""
-        recorded_seq = NoteSequence.from_midi_file_events(events)
+        recorded_seq = EditorSequence.from_midi_file_events(
+            events, tempo_bpm=self._sequence.tempo_bpm,
+        )
         self._sequence._push_undo()
         self._sequence._notes.extend(recorded_seq._notes)
-        self._sequence._notes.sort(key=lambda n: n.time_seconds)
+        self._sequence._notes.sort(key=lambda n: n.time_beats)
         self._update_ui_state()
 
     def _on_play(self) -> None:
-        """Emit play_requested with the current note sequence as MidiFileEvents."""
         if self._sequence.note_count == 0:
             return
         events = self._sequence.to_midi_file_events()
@@ -344,17 +433,70 @@ class EditorView(QWidget):
         self._sequence.clear()
         self._update_ui_state()
 
-    def _on_step_changed(self, label: str) -> None:
+    def _on_duration_changed(self, label: str) -> None:
         self._sequence.set_step_duration(label)
 
+    def _on_ts_changed(self, text: str) -> None:
+        parts = text.split("/")
+        if len(parts) == 2:
+            try:
+                num, denom = int(parts[0]), int(parts[1])
+                self._sequence.time_signature = (num, denom)
+                self._update_ui_state()
+            except ValueError:
+                pass
+
     def _on_tempo_changed(self, value: int) -> None:
-        self._tempo_bpm = float(value)
-        self._note_roll.set_tempo(self._tempo_bpm)
+        self._sequence.tempo_bpm = float(value)
+        self._note_roll.set_tempo(self._sequence.tempo_bpm)
 
     def _on_note_deleted(self, index: int) -> None:
-        self._sequence.delete_note(index)
+        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+        if 0 <= index < len(active_notes):
+            target = active_notes[index]
+            for gi, n in enumerate(self._sequence._notes):
+                if n is target:
+                    self._sequence.delete_note(gi)
+                    break
         self._update_ui_state()
 
     def _on_cursor_moved(self, t: float) -> None:
-        self._sequence.cursor_time = t
-        self._note_roll.set_cursor_time(t)
+        self._sequence.cursor_beats = t
+        self._note_roll.set_cursor_beats(t)
+
+    # ── Keyboard shortcuts ──────────────────────────────────
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        key = event.key()
+        text = event.text()
+
+        # Duration keys: 1-5
+        if text in DURATION_KEYS:
+            label = DURATION_KEYS[text]
+            self._sequence.set_step_duration(label)
+            self._duration_combo.setCurrentText(label)
+            return
+
+        # Rest key: 0
+        if text == "0":
+            flash_beat = self._sequence.cursor_beats
+            self._sequence.add_rest()
+            self._update_ui_state()
+            self._note_roll.flash_at_beat(flash_beat)
+            return
+
+        # Ctrl+Z / Ctrl+Y
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            if key == Qt.Key.Key_Z:
+                self._on_undo()
+                return
+            if key == Qt.Key.Key_Y:
+                self._on_redo()
+                return
+
+        # Space → play
+        if key == Qt.Key.Key_Space:
+            self._on_play()
+            return
+
+        super().keyPressEvent(event)

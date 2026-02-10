@@ -613,8 +613,8 @@ def preprocess(
         if e.event_type == "note_on" and (e.note < note_min or e.note > note_max)
     )
 
-    # 5. 流水摺疊 — voice-leading aware octave fold
-    events = normalize_octave_flowing(events, note_min=note_min, note_max=note_max)
+    # 5. Octave fold — clamp notes into playable range
+    events = normalize_octave(events, note_min=note_min, note_max=note_max)
 
     # 6. Collision dedup (high-note priority)
     events, dupes = deduplicate_notes(events)

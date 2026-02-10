@@ -342,6 +342,70 @@ def draw_record(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.restore()
 
 
+def draw_undo(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Counter-clockwise curved arrow (undo)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+    cx, cy = r.center().x(), r.center().y()
+    radius = r.width() * 0.4
+
+    painter.setPen(QPen(color, rect.width() * 0.08))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    arc_rect = QRectF(cx - radius, cy - radius, radius * 2, radius * 2)
+    painter.drawArc(arc_rect, 0, 180 * 16)
+
+    # Arrowhead at left end pointing down-left
+    ax = cx - radius
+    ay = cy
+    s = rect.width() * 0.13
+
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    arrow = QPainterPath()
+    arrow.moveTo(ax - s * 0.4, ay + s)
+    arrow.lineTo(ax - s, ay - s * 0.4)
+    arrow.lineTo(ax + s * 0.6, ay - s * 0.1)
+    arrow.closeSubpath()
+    painter.drawPath(arrow)
+
+    painter.restore()
+
+
+def draw_redo(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Clockwise curved arrow (redo)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+    cx, cy = r.center().x(), r.center().y()
+    radius = r.width() * 0.4
+
+    painter.setPen(QPen(color, rect.width() * 0.08))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    arc_rect = QRectF(cx - radius, cy - radius, radius * 2, radius * 2)
+    painter.drawArc(arc_rect, 180 * 16, -180 * 16)
+
+    # Arrowhead at right end pointing down-right
+    ax = cx + radius
+    ay = cy
+    s = rect.width() * 0.13
+
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    arrow = QPainterPath()
+    arrow.moveTo(ax + s * 0.4, ay + s)
+    arrow.lineTo(ax + s, ay - s * 0.4)
+    arrow.lineTo(ax - s * 0.6, ay - s * 0.1)
+    arrow.closeSubpath()
+    painter.drawPath(arrow)
+
+    painter.restore()
+
+
 def draw_editor(painter: QPainter, rect: QRectF, color: QColor) -> None:
     """Pencil icon (editor mode)."""
     painter.save()

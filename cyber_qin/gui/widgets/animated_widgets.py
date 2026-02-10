@@ -24,6 +24,7 @@ from ..icons import (
     draw_play,
     draw_plus,
     draw_record,
+    draw_redo,
     draw_refresh,
     draw_remove,
     draw_repeat,
@@ -31,12 +32,14 @@ from ..icons import (
     draw_skip_next,
     draw_skip_prev,
     draw_stop,
+    draw_undo,
 )
 from ..theme import (
     ACCENT,
     ACCENT_GLOW,
     ACCENT_GOLD,
     BG_WASH,
+    TEXT_DISABLED,
     TEXT_PRIMARY,
     TEXT_SECONDARY,
 )
@@ -55,8 +58,10 @@ _ICON_DRAWERS: dict[str, Callable] = {
     "record": draw_record,
     "skip_next": draw_skip_next,
     "skip_prev": draw_skip_prev,
+    "redo": draw_redo,
     "repeat": draw_repeat,
     "repeat_one": draw_repeat_one,
+    "undo": draw_undo,
 }
 
 
@@ -229,10 +234,13 @@ class IconButton(QAbstractButton):
             circle.addEllipse(rect)
             painter.fillPath(circle, bg)
 
-        # Icon color
-        base_c = QColor(TEXT_SECONDARY)
-        hover_c = QColor(TEXT_PRIMARY)
-        icon_color = _lerp_color(base_c, hover_c, self._hover_progress)
+        # Icon color (dim when disabled)
+        if not self.isEnabled():
+            icon_color = QColor(TEXT_DISABLED)
+        else:
+            base_c = QColor(TEXT_SECONDARY)
+            hover_c = QColor(TEXT_PRIMARY)
+            icon_color = _lerp_color(base_c, hover_c, self._hover_progress)
 
         drawer = _ICON_DRAWERS.get(self._icon_type)
         if drawer:
