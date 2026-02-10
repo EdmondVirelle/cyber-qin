@@ -64,7 +64,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     icon="assets/icon.ico",
     console=False,       # windowed app, no console
     disable_windowed_traceback=False,
@@ -80,7 +80,7 @@ coll = COLLECT(
     a.binaries,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     name="賽博琴仙",
 )

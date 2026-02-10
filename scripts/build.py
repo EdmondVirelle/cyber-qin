@@ -1,13 +1,16 @@
 """One-click build script for 賽博琴仙.
 
-Auto-detects Python 3.13 → creates venv → installs deps → generates icon → runs PyInstaller.
+Auto-detects Python 3.13 → creates venv → installs deps → generates icon
+→ runs PyInstaller → signs executable.
 
 Usage:
     python scripts/build.py
+    python scripts/build.py --skip-sign   # Skip code signing
 """
 
 from __future__ import annotations
 
+import argparse
 import shutil
 import subprocess
 import sys
@@ -18,6 +21,11 @@ VENV_DIR = PROJECT_ROOT / ".venv313"
 SPEC_FILE = PROJECT_ROOT / "cyber_qin.spec"
 ICON_FILE = PROJECT_ROOT / "assets" / "icon.ico"
 ICON_SCRIPT = PROJECT_ROOT / "scripts" / "generate_icon.py"
+DIST_DIR = PROJECT_ROOT / "dist" / "賽博琴仙"
+EXE_PATH = DIST_DIR / "賽博琴仙.exe"
+
+CERT_SUBJECT = "CN=CyberQin, O=CyberQin"
+TIMESTAMP_SERVER = "http://timestamp.digicert.com"
 
 # Minimum required Python version for build (PyQt6 compat)
 REQUIRED_MAJOR = 3
@@ -73,7 +81,65 @@ def run(cmd: list[str], desc: str) -> None:
         sys.exit(result.returncode)
 
 
+def sign_executable() -> bool:
+    """Sign the exe with a self-signed certificate via PowerShell.
+
+    Creates the certificate if it doesn't exist yet.
+    Returns True on success, False if signing is unavailable.
+    """
+    if sys.platform != "win32":
+        print("Code signing is only available on Windows.")
+        return False
+
+    if not EXE_PATH.exists():
+        print(f"Executable not found: {EXE_PATH}")
+        return False
+
+    # PowerShell script: find or create cert, then sign
+    ps_script = f"""
+$ErrorActionPreference = 'Stop'
+
+# Look for existing CyberQin code signing cert
+$cert = Get-ChildItem Cert:\\CurrentUser\\My -CodeSigningCert |
+    Where-Object {{ $_.Subject -eq '{CERT_SUBJECT}' }} |
+    Sort-Object NotAfter -Descending |
+    Select-Object -First 1
+
+if (-not $cert) {{
+    Write-Host 'Creating self-signed code signing certificate...'
+    $cert = New-SelfSignedCertificate `
+        -Subject '{CERT_SUBJECT}' `
+        -Type CodeSigningCert `
+        -CertStoreLocation Cert:\\CurrentUser\\My `
+        -NotAfter (Get-Date).AddYears(3)
+    Write-Host "Certificate created: $($cert.Thumbprint)"
+}} else {{
+    Write-Host "Using existing certificate: $($cert.Thumbprint)"
+}}
+
+# Sign the executable
+Set-AuthenticodeSignature `
+    -FilePath '{EXE_PATH}' `
+    -Certificate $cert `
+    -TimestampServer '{TIMESTAMP_SERVER}'
+
+Write-Host 'Signing complete.'
+"""
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+        cwd=str(PROJECT_ROOT),
+    )
+    if result.returncode != 0:
+        print("\nWARNING: Code signing failed. The exe will still work but may trigger AV warnings.")
+        return False
+    return True
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build 賽博琴仙")
+    parser.add_argument("--skip-sign", action="store_true", help="Skip code signing step")
+    args = parser.parse_args()
+
     print("賽博琴仙 Build Script")
     print(f"Project root: {PROJECT_ROOT}")
 
@@ -114,15 +180,21 @@ def main() -> None:
         "Building with PyInstaller",
     )
 
-    dist_dir = PROJECT_ROOT / "dist" / "賽博琴仙"
-    exe_path = dist_dir / "賽博琴仙.exe"
-    if exe_path.exists():
+    # 6. Code signing
+    if not args.skip_sign and EXE_PATH.exists():
+        print(f"\n{'='*60}")
+        print("  Code signing")
+        print(f"{'='*60}")
+        sign_executable()
+
+    # Summary
+    if EXE_PATH.exists():
         print("\nBuild successful!")
-        print(f"Output: {dist_dir}")
-        print(f"Executable: {exe_path}")
+        print(f"Output: {DIST_DIR}")
+        print(f"Executable: {EXE_PATH}")
     else:
-        print(f"\nWARNING: Expected exe not found at {exe_path}")
-        print(f"Check {dist_dir} for output.")
+        print(f"\nWARNING: Expected exe not found at {EXE_PATH}")
+        print(f"Check {DIST_DIR} for output.")
 
 
 if __name__ == "__main__":
