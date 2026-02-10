@@ -7,6 +7,7 @@ import logging
 from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -70,6 +71,8 @@ class LiveModeView(QWidget):
     """Live MIDI input mode — connect a MIDI device and play in real-time."""
 
     scheme_changed = pyqtSignal(str)  # scheme_id
+    recording_started = pyqtSignal()
+    recording_stopped = pyqtSignal(str)  # file_path
 
     def __init__(
         self,
@@ -196,6 +199,36 @@ class LiveModeView(QWidget):
         row2.addWidget(self._scheme_desc)
 
         device_card_layout.addLayout(row2)
+
+        # Row 3: Recording controls
+        row3 = QHBoxLayout()
+        row3.setSpacing(8)
+
+        self._record_btn = QPushButton("錄音")
+        self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._record_btn.setStyleSheet(
+            "QPushButton { background-color: #3a1a1a; color: #ff4444; "
+            "border: 1px solid #ff4444; border-radius: 16px; padding: 8px 20px; "
+            "font-weight: 600; }"
+            "QPushButton:hover { background-color: #4a2020; }"
+        )
+        self._record_btn.clicked.connect(self._toggle_recording)
+        row3.addWidget(self._record_btn)
+
+        self._auto_tune_check = QCheckBox("自動校正")
+        self._auto_tune_check.setStyleSheet("background: transparent;")
+        self._auto_tune_check.setToolTip("錄音結束後自動量化節奏與修正音高")
+        row3.addWidget(self._auto_tune_check)
+
+        row3.addStretch()
+
+        self._recording_status = QLabel("")
+        self._recording_status.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
+        )
+        row3.addWidget(self._recording_status)
+
+        device_card_layout.addLayout(row3)
 
         content.addWidget(device_card)
 
@@ -403,6 +436,39 @@ class LiveModeView(QWidget):
             name = KeyMapper.note_name(note)
             self._log.log(f"  Stuck key released: {name} (MIDI {note})")
             self._piano.note_off(note)
+
+    @property
+    def auto_tune_enabled(self) -> bool:
+        return self._auto_tune_check.isChecked()
+
+    def _toggle_recording(self) -> None:
+        """Toggle recording state — delegates actual logic to AppShell."""
+        if self._record_btn.text() == "錄音":
+            self._record_btn.setText("停止錄音")
+            self._record_btn.setStyleSheet(
+                "QPushButton { background-color: #ff4444; color: #0A0E14; "
+                "border: none; border-radius: 16px; padding: 8px 20px; "
+                "font-weight: 700; }"
+                "QPushButton:hover { background-color: #ff6666; }"
+            )
+            self._recording_status.setText("錄音中...")
+            self.recording_started.emit()
+        else:
+            self._record_btn.setText("錄音")
+            self._record_btn.setStyleSheet(
+                "QPushButton { background-color: #3a1a1a; color: #ff4444; "
+                "border: 1px solid #ff4444; border-radius: 16px; padding: 8px 20px; "
+                "font-weight: 600; }"
+                "QPushButton:hover { background-color: #4a2020; }"
+            )
+            self._recording_status.setText("")
+            self.recording_stopped.emit("")
+
+    def on_recording_saved(self, file_path: str) -> None:
+        """Called after recording is saved successfully."""
+        from pathlib import Path
+        name = Path(file_path).stem
+        self._log.log(f"  錄音已儲存: {name}")
 
     def cleanup(self) -> None:
         self._simulator.release_all()

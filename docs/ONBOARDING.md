@@ -1,7 +1,7 @@
-# 賽博琴仙 v0.2.0 — 從零開始的系統架構導覽
+# 賽博琴仙 v0.4.0 — 從零開始的系統架構導覽
 
 > **適用對象**：零經驗到中階工程師。從 Python 基礎一路講到即時系統設計、Windows 核心 API、
-> 智慧前處理演算法、CI/CD 自動化。每個設計決策都附上「為什麼這樣做」的推理過程。
+> 智慧前處理演算法（含流水摺疊）、錄音與編輯系統、CI/CD 自動化。每個設計決策都附上「為什麼這樣做」的推理過程。
 
 ---
 
@@ -44,7 +44,9 @@
 | 功能 | 說明 |
 |------|------|
 | 即時演奏 | MIDI 鍵盤 → 遊戲按鍵，端到端延遲 < 2ms |
-| MIDI 檔案播放 | 五階段智慧前處理 + 精準計時播放 |
+| MIDI 檔案播放 | 9 階段智慧前處理（含流水摺疊）+ 精準計時播放 |
+| 即時錄音 | 錄製 MIDI 演奏，Auto-Tune 後儲存為 `.mid` 檔案 |
+| 虛擬鍵盤編輯 | 滑鼠點選輸入音符 + piano roll 時間軸 + undo/redo |
 | 多方案支援 | 5 種鍵位方案（36/32/24/48/88 鍵） |
 | 曲庫管理 | 搜尋、多維排序、持久化儲存 |
 | 賽博墨韻介面 | 深色主題 + 即時琴鍵動畫 |
@@ -88,7 +90,7 @@ class KeyMapping:
 ```toml
 [project]
 name = "cyber-qin"
-version = "0.2.0"
+version = "0.4.0"
 
 dependencies = [
     "mido>=1.3",
@@ -161,7 +163,7 @@ Windows 有很多內建功能（叫做 **Win32 API**），但它們是用 C 語�
 
 | 套件 | 用途 |
 |------|------|
-| `pytest` | 自動跑 180 個測試，確認程式沒壞 |
+| `pytest` | 自動跑 289 個測試，確認程式沒壞 |
 | `ruff` | 程式碼風格檢查（比 flake8 快 100 倍以上的 Rust 實作） |
 | `pyinstaller` | 打包成免安裝的 .exe |
 | `pillow` | 圖示生成（配合 QPainter 輸出多解析度 .ico） |
@@ -172,12 +174,12 @@ Windows 有很多內建功能（叫做 **Win32 API**），但它們是用 C 語�
 
 ```
 賽博琴仙/
-├── pyproject.toml              ← 專案設定（名稱、版本 0.2.0、依賴、ruff 規則）
+├── pyproject.toml              ← 專案設定（名稱、版本 0.4.0、依賴、ruff 規則）
 ├── cyber_qin.spec              ← PyInstaller 打包規格（onedir + UAC admin）
 ├── CLAUDE.md                   ← 給 AI 助手看的開發指南
 │
-├── cyber_qin/                  ← 所有程式碼都在這裡
-│   ├── __init__.py             ← 套件標記（空檔）
+├── cyber_qin/                  ← 所有程式碼都在這裡（~7,500 LOC / 39 模組）
+│   ├── __init__.py             ← 版本號動態讀取（importlib.metadata → pyproject.toml fallback）
 │   ├── main.py                 ← 程式入口：權限檢查 → 計時器 → 主題 → 主視窗
 │   │
 │   ├── core/                   ← 核心邏輯（與 GUI 完全解耦）
@@ -186,7 +188,11 @@ Windows 有很多內建功能（叫做 **Win32 API**），但它們是用 C 語�
 │   │   ├── key_simulator.py        ← ctypes SendInput 封裝（含修飾鍵閃按）
 │   │   ├── midi_listener.py        ← python-rtmidi callback 封裝
 │   │   ├── midi_file_player.py     ← MIDI 檔案解析 + 計時播放引擎
-│   │   ├── midi_preprocessor.py    ← 五階段智慧前處理管線 [v0.2.0 新增]
+│   │   ├── midi_preprocessor.py    ← 9 階段預處理管線（含流水摺疊）
+│   │   ├── midi_recorder.py        ← 即時 MIDI 錄音引擎 [v0.4.0 新增]
+│   │   ├── midi_writer.py          ← 錄音匯出 .mid 檔案 [v0.4.0 新增]
+│   │   ├── auto_tune.py            ← 錄音後處理：節拍量化 + 音階校正 [v0.4.0 新增]
+│   │   ├── note_sequence.py        ← 可變音符序列模型（編輯器用）[v0.4.0 新增]
 │   │   ├── mapping_schemes.py      ← 5 種鍵位方案註冊表
 │   │   └── priority.py             ← 執行緒優先權 + 計時器精度工具
 │   │
@@ -195,14 +201,17 @@ Windows 有很多內建功能（叫做 **Win32 API**），但它們是用 C 語�
 │   │   ├── theme.py                ← 賽博墨韻深色主題（QSS + DWM）
 │   │   ├── icons.py                ← QPainter 向量圖示繪製
 │   │   ├── views/
-│   │   │   ├── live_mode_view.py   ← 演奏模式（裝置連線、琴鍵顯示）
-│   │   │   └── library_view.py     ← 曲庫（匯入、管理、失敗提示）
+│   │   │   ├── live_mode_view.py   ← 演奏模式（裝置連線、琴鍵顯示、錄音控制）
+│   │   │   ├── library_view.py     ← 曲庫（匯入、管理、失敗提示）
+│   │   │   └── editor_view.py      ← 虛擬鍵盤編輯器 [v0.4.0 新增]
 │   │   └── widgets/
 │   │       ├── piano_display.py    ← 大鋼琴顯示（動態行列 + 光暈動畫）
 │   │       ├── mini_piano.py       ← 迷你鋼琴（底部播放列用的）
+│   │       ├── clickable_piano.py  ← 可互動鋼琴（點選輸入音符）[v0.4.0 新增]
+│   │       ├── note_roll.py        ← 水平音符時間軸 [v0.4.0 新增]
 │   │       ├── sidebar.py          ← 左側導航欄
 │   │       ├── now_playing_bar.py  ← 底部播放控制列
-│   │       ├── track_list.py       ← 曲目列表（搜尋 + 排序）[v0.2.0 重構]
+│   │       ├── track_list.py       ← 曲目列表（搜尋 + 排序）
 │   │       ├── log_viewer.py       ← 事件日誌視窗
 │   │       ├── status_bar.py       ← 狀態列（連線、延遲顯示）
 │   │       └── animated_widgets.py ← 動畫按鈕等共用元件
@@ -211,18 +220,21 @@ Windows 有很多內建功能（叫做 **Win32 API**），但它們是用 C 語�
 │       ├── admin.py                ← 管理員權限檢查 / UAC 提升
 │       └── ime.py                  ← 輸入法狀態偵測
 │
-├── tests/                      ← 180 個自動化測試，5 個檔案
+├── tests/                      ← 289 個自動化測試，8 個檔案
 │   ├── test_key_mapper.py
 │   ├── test_key_simulator.py
 │   ├── test_midi_file_player.py
-│   ├── test_midi_preprocessor.py       [v0.2.0 新增]
-│   └── test_mapping_schemes.py         [v0.2.0 新增]
+│   ├── test_midi_preprocessor.py
+│   ├── test_mapping_schemes.py
+│   ├── test_auto_tune.py           [v0.4.0 新增]
+│   ├── test_midi_recorder.py       [v0.4.0 新增]
+│   └── test_note_sequence.py       [v0.4.0 新增]
 │
-├── scripts/                    ← 開發工具腳本 [v0.2.0 新增]
+├── scripts/                    ← 開發工具腳本
 │   ├── build.py                    ← 一鍵建置（自動找 Python 3.13 → venv → 打包）
 │   └── generate_icon.py            ← 圖示生成（QPainter + Pillow 多解析度 .ico）
 │
-├── .github/workflows/          ← CI/CD 管線 [v0.2.0 新增]
+├── .github/workflows/          ← CI/CD 管線
 │   ├── ci.yml                      ← 持續整合（3 版 Python × Windows + lint）
 │   └── release.yml                 ← 自動發佈（v* tag → build → GitHub Release）
 │
@@ -518,9 +530,27 @@ while time.perf_counter() < target_wall:  # 忙等最後 1ms
 
 播放前有 4 秒倒數（節拍器嗶嗶聲），讓使用者有時間 Alt+Tab 切回遊戲視窗。倒數過程中支援暫停和取消。
 
-### 6.7 `core/midi_preprocessor.py` — 五階段智慧前處理管線
+### 6.7 `core/midi_preprocessor.py` — 9 階段智慧前處理管線
 
-這是 v0.2.0 的核心新功能。詳見[第 7 節](#7-智慧前處理管線五階段演算法設計)。
+從 v0.2.0 的 5 階段演進到 v0.4.0 的 9 階段。核心改進是 Stage 5 的**流水摺疊**（Flowing Fold）——不再每個音獨立做 modulo fold，而是根據上下文打分，為每個音選出最能保持旋律走向的八度位置。每個 MIDI channel 獨立追蹤 voice state，低音線和旋律線不互相干擾。詳見[第 7 節](#7-智慧前處理管線九階段演算法設計)。
+
+### 6.7b `core/midi_recorder.py` — 即時 MIDI 錄音引擎
+
+v0.4.0 新增。用 `time.perf_counter()` 記錄每個 note_on / note_off 事件的精確時間戳。開始錄音時記下基準時間，後續每個事件的時間都是相對差值。
+
+### 6.7c `core/midi_writer.py` — 錄音匯出
+
+把 `RecordedEvent` 列表轉成 mido 的 `MidiFile` 物件再寫入 `.mid` 檔案。delta time 用 `mido.second2tick()` 轉換——跟播放端的 `tick2second()` 剛好是反操作。
+
+### 6.7d `core/auto_tune.py` — 錄音後處理
+
+錄完之後可選擇做兩道後處理：
+1. **節拍量化**（Beat Grid Quantize）：把音符起始時間吸附到最近的節拍格線，支援 1/4、1/8、1/16 音符。有 strength 參數控制量化強度（0.0 = 不動，1.0 = 完全對齊）。
+2. **音階校正**（Pitch Snap）：把超出遊戲音域的音符用八度摺疊拉回範圍內。這裡用的是簡單的 modulo fold，不是流水摺疊——因為錄音後的音符大致已在合理位置，不需要 context-aware 的複雜邏輯。
+
+### 6.7e `core/note_sequence.py` — 可變音符序列模型
+
+虛擬鍵盤編輯器的資料模型。用 list 儲存音符，支援 add / delete / move，內建 undo/redo stack。可以跟 `MidiFileEvent` 和 `RecordedEvent` 互轉，所以編輯完的東西可以直接丟進播放引擎或存檔。
 
 ### 6.8 `core/mapping_schemes.py` — 方案註冊表
 
@@ -594,47 +624,38 @@ def set_thread_priority_realtime() -> bool:
 
 ---
 
-## 7. 智慧前處理管線：五階段演算法設計
+## 7. 智慧前處理管線：九階段演算法設計
 
-這是 v0.2.0 的核心新功能。在播放 MIDI 檔案之前，原始事件需要經過五個階段的轉換，才能在遊戲的有限音域中最佳化呈現。
+v0.4.0 將管線從 5 階段擴展為 9 階段，每一階段處理一種特定問題。核心改進是第 5 階段的流水摺疊。
 
 ### 7.1 管線總覽
 
 ```
 原始 MIDI 事件
       │
+      ├── 1. 打擊過濾 (Percussion Filter)     GM channel 10 鼓組 → 移除
+      ├── 2. 音軌篩選 (Track Filter)           只保留使用者選的音軌
+      ├── 3. 八度去重 (Octave Dedup)           同時間同 pitch class → 保留最高
+      ├── 4. 智慧全域移調 (Global Transpose)   嘗試 ±48（步進 12），選最佳位移
+      ├── 5. 流水摺疊 (Flowing Fold) ★         voice-leading aware 八度摺疊
+      ├── 6. 碰撞去重 (Collision Dedup)        velocity 優先去重
+      ├── 7. 複音限制 (Polyphony Limiter)      超過 N 聲部 → 保留最高+最低
+      ├── 8. 力度正規化 (Velocity Normalize)   所有 note_on → 127
+      └── 9. 時間量化 (Time Quantize)          對齊 60fps 格線
+      │
       ▼
-┌─────────────────────────────┐
-│ 1. 智慧全域移調              │  ← 找到最佳的八度偏移量
-│    (Smart Global Transpose) │     嘗試 -48 到 +48（步進 12）
-└──────────┬──────────────────┘
-           ▼
-┌─────────────────────────────┐
-│ 2. 八度摺疊                  │  ← 剩餘超出範圍的音逐個搬入
-│    (Octave Fold)            │     while note > max: note -= 12
-└──────────┬──────────────────┘
-           ▼
-┌─────────────────────────────┐
-│ 3. 碰撞去重                  │  ← 同一時間同一音高的重複音符
-│    (Collision Dedup)         │     摺疊後可能產生碰撞
-└──────────┬──────────────────┘
-           ▼
-┌─────────────────────────────┐
-│ 4. 力度正規化                │  ← 所有 note_on 力度 → 127
-│    (Velocity Normalize)     │     遊戲不分輕重
-└──────────┬──────────────────┘
-           ▼
-┌─────────────────────────────┐
-│ 5. 時間量化                  │  ← 對齊到 60fps 時間格線
-│    (Time Quantize)          │     消除 < 16.67ms 的微小偏差
-└──────────┬──────────────────┘
-           ▼
-  排序（時間 → note_off 優先）
-           ▼
-  準備就緒的事件串列 + PreprocessStats
+  排序（時間 → note_off 優先） + PreprocessStats
 ```
 
-### 7.2 第一階段：智慧全域移調
+### 7.2 Stage 1-3：打擊過濾、音軌篩選、八度去重
+
+前三階段都是「清理」步驟，在進入摺疊前先把不需要的東西拿掉：
+
+- **打擊過濾**：MIDI 的 channel 10（0-indexed = 9）是 GM 規範的鼓組通道。遊戲沒有打擊樂鍵位，直接移除。
+- **音軌篩選**：多音軌 MIDI 裡使用者可能只想聽主旋律。這個階段根據使用者選擇，只保留指定的 track index。
+- **八度去重**：同一時間有 C4 和 C5（同一個 pitch class 的八度重疊）時，摺疊後它們會撞在一起。不如先在摺疊前就幹掉低的那個，減少後面的碰撞壓力。
+
+### 7.3 Stage 4：智慧全域移調
 
 **問題**：許多鋼琴曲的音域遠超遊戲的 36 鍵（MIDI 48-83）。如果一首曲子集中在 MIDI 84-107（高音區），暴力八度摺疊會讓所有音都擠進一個八度，完全失去旋律結構。
 
@@ -662,27 +683,46 @@ def compute_optimal_transpose(events, *, note_min=48, note_max=83) -> int:
 - 同分時選擇**絕對值最小**的偏移量，最大程度保留原曲音高
 - 搜尋空間只有 9 個候選值（-48, -36, -24, -12, 0, 12, 24, 36, 48），O(9n) 複雜度
 
-### 7.3 第二階段：八度摺疊
+### 7.4 Stage 5：流水摺疊（Flowing Fold）★
 
-全域移調後，仍可能有少數音符超出範圍。逐個用 while 迴圈搬入：
+這是 v0.4.0 的核心演算法改進。
+
+**舊做法的問題**：v0.3.0 以前用 `while note > max: note -= 12` 逐個搬入。這個 modulo fold 每個音獨立處理、不看前後文。當原曲跨越 3 個八度以上，旋律方向會被破壞——本來上行的樂句，摺疊後可能變成亂跳。
+
+**流水摺疊的思路**：每個音的 pitch class 在目標範圍 [48, 83] 裡通常有 2-3 個八度位置可選（比如 C 可以放在 48、60 或 72）。不盲選，而是根據上下文打分：
 
 ```python
-while note > note_max:
-    note -= 12
-while note < note_min:
-    note += 12
+對每個 note_on：
+  1. 列出所有合法八度位置（candidates）
+  2. 只有 1 個候選 → 直接用
+  3. 第一個音（沒有前文）→ 已在範圍內就保留原位，否則選最近中心的
+  4. 有前文 → 對每個 candidate 打分：
+     a. 聲導距離: -2.0 × |candidate - prev_note|    越近越好
+     b. 方向延續: 與前一步同方向 → +4.0；平滑反轉 → +1.5
+     c. 重力中心: -0.5 × |candidate - center|        留在最近活動區域
+     d. 範圍偏好: -0.1 × |candidate - mid|            微弱偏好中間位置
+  5. 選最高分的 candidate
+  6. 更新 prev_note, center (EMA α=0.15)
 ```
 
-### 7.4 第三階段：碰撞去重
+**Per-channel 獨立追蹤**：低音線走到哪、旋律線走到哪，各自記錄。channel 0 的 voice state 不會污染 channel 1 的決策。
 
-八度摺疊可能讓原本不同音高的音符碰撞到同一個音高。用 `(time, event_type, note)` 三元組作為 key 放入 set 去重，回傳移除數量。
+**note_off 配對**：用 `dict[(channel, original_note)] → list[folded_note]` 的 stack 記錄每個 note_on 摺疊到哪，note_off 從對應 stack pop，確保一對一配對。
 
-### 7.5 第四 & 五階段：力度正規化 + 時間量化
+### 7.5 Stage 6：碰撞去重（velocity 優先）
+
+流水摺疊後仍可能有碰撞（不同原始音折到同一個 pitch）。v0.4.0 改成 velocity 優先——同一時間同一音高，保留力度最大的那個。舊版是 first-seen-wins，可能留下力度弱的。
+
+### 7.6 Stage 7：複音限制
+
+可以設定同時最多幾個聲部。超出時，保留最高音 + 最低音（bass anchor），剩餘從高到低填滿。被丟棄的 note_on 連同對應的 note_off 一起移除。
+
+### 7.7 Stage 8-9：力度正規化 + 時間量化
 
 - **力度**：全部 `note_on` 設為 127（遊戲不分輕重）
 - **時間**：對齊到 60fps 格線（`round(t / 16.67ms) * 16.67ms`），消除微小偏差。只在有差異時才建立新的 immutable dataclass 物件。
 
-### 7.7 統計回報（PreprocessStats）
+### 7.8 統計回報（PreprocessStats）
 
 整個管線結束後，回報一個凍結的統計物件：
 
@@ -694,35 +734,45 @@ class PreprocessStats:
     original_range: tuple[int, int]     # 原始音域 (最低, 最高)
     global_transpose: int = 0           # 全域移調量（12 的倍數）
     duplicates_removed: int = 0         # 碰撞去重移除數
+    percussion_removed: int = 0         # 打擊通道移除數
+    tracks_removed: int = 0             # 音軌篩選移除數
+    octave_deduped: int = 0             # 八度去重移除數
+    polyphony_limited: int = 0          # 複音限制移除數
 ```
 
-這些統計資訊會顯示在 GUI 的日誌視窗中，讓使用者清楚知道前處理做了什麼。
+這些統計資訊會顯示在 GUI 的日誌視窗中，讓使用者清楚知道每個階段做了什麼。
 
-### 7.8 前後對比範例
+### 7.9 前後對比範例
 
-假設有一首高音區的鋼琴曲，音域 MIDI 72-107（C5-B7）：
+假設一首帶鼓組的高音區鋼琴曲，音域 MIDI 72-107（C5-B7）：
 
 ```
-原始：      [72 ═══════════════════════════════════ 107]
-遊戲範圍：     [48 ═══════════════ 83]
+原始：      [72 ═══════════════════════════════════ 107] + 鼓組 channel 10
 
-第 1 階段（智慧移調 -24）：
+Stage 1-2（打擊 + 音軌篩選）：
+            鼓組移除，只留鋼琴音軌
+
+Stage 3（八度去重）：
+            同時出現的 C5 和 C6 → 只留 C6
+
+Stage 4（智慧移調 -24）：
             [48 ═══════════════════════════════════ 83]
-            只有 84-83 = 部分音超出 ←── 大幅減少超出音符
+            大部分音落入範圍，少數仍超出
 
-第 2 階段（八度摺疊）：
-            [48 ═══════════════ 83] ← 全部收進範圍
+Stage 5（流水摺疊）：
+            剩餘超出音符根據旋律走向選擇八度位置
+            上行樂句 → 折完仍然上行，不會亂跳
 
-第 3 階段（去重）：
-            移除 3 個因摺疊而碰撞的重複音符
+Stage 6（碰撞去重）：
+            折完碰撞的 → 保留力度最大的
 
-第 4 階段（力度 → 127）
-第 5 階段（時間量化 → 60fps 格線）
+Stage 7-9（複音限制 + 力度 127 + 60fps 量化）
 
-統計：global_transpose=-24, notes_shifted=5, duplicates_removed=3
+統計：percussion_removed=16, global_transpose=-24,
+      notes_shifted=5, duplicates_removed=3
 ```
 
-如果沒有第 1 階段的智慧移調，直接做八度摺疊，所有 72-107 的音都會被硬擠進 48-83，大量音符碰撞在一起。智慧移調先做一次「整體搬家」，大幅減少後續摺疊和碰撞的壓力。
+如果沒有 Stage 4 的智慧移調，直接做流水摺疊，所有 72-107 的音都要做大幅度的八度跳轉，即使有打分機制也很難保持旋律的自然感。先「整體搬家」再「微調個別音」，效果好得多。
 
 ---
 
@@ -852,10 +902,13 @@ rtmidi 執行緒（由 python-rtmidi 的 C++ 層建立）
 | `test_key_mapper.py` | 翻譯表正確性、移調、方案切換 | `key_mapper.py` |
 | `test_key_simulator.py` | SendInput 呼叫、修飾鍵序列、看門狗 | `key_simulator.py` |
 | `test_midi_file_player.py` | MIDI 解析、時間轉換、播放狀態機 | `midi_file_player.py` |
-| `test_midi_preprocessor.py` | 五階段管線、邊界條件、統計正確性 | `midi_preprocessor.py` |
+| `test_midi_preprocessor.py` | 9 階段管線、流水摺疊、velocity 去重、邊界條件 | `midi_preprocessor.py` |
 | `test_mapping_schemes.py` | 方案完整性、範圍正確性、註冊表 | `mapping_schemes.py` |
+| `test_auto_tune.py` | 節拍量化、音階校正、strength 參數 | `auto_tune.py` |
+| `test_midi_recorder.py` | 錄音狀態機、事件時間戳、.mid 匯出 | `midi_recorder.py`, `midi_writer.py` |
+| `test_note_sequence.py` | 音符增刪改、undo/redo、格式互轉 | `note_sequence.py` |
 
-**共 180 個測試**，全部在 Windows CI 上跑，不需要真的 MIDI 裝置。
+**共 289 個測試**，全部在 Windows CI 上跑，不需要真的 MIDI 裝置。
 
 ### 10.2 Mock 硬體
 
@@ -876,22 +929,27 @@ with patch("cyber_qin.core.key_simulator._send") as mock_send:
 
 ### 10.3 前處理管線的測試策略
 
-前處理器的測試特別注重**邊界條件**和**不變量驗證**：
+前處理器有 118 個測試（佔全部的 40%），特別注重**邊界條件**和**不變量驗證**：
 
 - 空事件列表 → 回傳空列表 + 零統計
 - 全部音符都在範圍內 → `global_transpose=0`, `notes_shifted=0`
 - 全部音符都超出範圍 → 驗證所有音符都被搬入範圍
 - 碰撞去重 → 驗證 `duplicates_removed` 計數正確
 - 管線不變量：輸出的每個 note_on 音符都在 `[note_min, note_max]` 範圍內
+- 流水摺疊：上行旋律折完仍上行、下行仍下行
+- 流水摺疊：note_off 與 note_on 配對正確
+- 流水摺疊：不同 channel 獨立追蹤
+- velocity 去重：碰撞時保留力度最高的
+- 極端 MIDI 值（0 和 127）不 crash
 
 ```bash
-# 跑所有測試
+# 跑所有 289 個測試
 pytest
 
-# 跑測試，顯示簡短結果
+# 跑測試，簡短輸出
 pytest -q
 
-# 只跑前處理器測試
+# 只跑前處理器測試（含流水摺疊）
 pytest tests/test_midi_preprocessor.py -v
 ```
 
@@ -911,10 +969,10 @@ pytest tests/test_midi_preprocessor.py -v
 推送 `v*` 格式的 Git tag 時自動觸發：
 
 ```
-git tag v0.2.0 && git push --tags
+git tag v0.4.0 && git push --tags
   → checkout → pip install → generate icon → pyinstaller
   → Compress-Archive (pwsh) → upload artifact → create GitHub Release
-  → 產出：賽博琴仙-v0.2.0.zip + 自動 release notes
+  → 產出：賽博琴仙-v0.4.0.zip + 自動 release notes
 ```
 
 workflow 需要 `contents: write` 權限，在 `windows-latest` + Python 3.13 上執行。用 `softprops/action-gh-release@v2` 建立 Release 並附加 zip 檔案。
@@ -971,7 +1029,7 @@ cyber-qin                   # 或 python -m cyber_qin.main
 # 建置可執行檔
 python scripts/build.py     # 一鍵建置
 
-# 跑測試（180 個，不需要 MIDI 硬體）
+# 跑測試（289 個，不需要 MIDI 硬體）
 pytest -q
 
 # 程式碼風格
@@ -992,6 +1050,8 @@ ruff check --fix .          # 自動修正
 | 5 | Python 3.14 alpha + PyQt6 → `Unable to embed qt.conf` fatal crash | 用穩定版 3.11-3.13，CI 明確指定版本矩陣 |
 | 6 | 八度摺疊讓不同音高碰撞到同一個鍵（v0.2.0 新發現） | 先智慧移調減少摺疊量，再去重處理殘留碰撞 |
 | 7 | PyInstaller 打包 `cyber_qin/main.py` 時相對匯入失敗 | 用 `launcher.py` 薄包裝做絕對匯入 |
+| 8 | 純 modulo fold 破壞旋律方向（v0.4.0 改進） | 改用流水摺疊：對所有合法八度位置打分，根據前後文選最佳。per-channel 獨立追蹤 |
+| 9 | 碰撞去重 first-seen-wins 可能留下弱音（v0.4.0 改進） | 改成 velocity 優先，pre-scan 找最大力度再過濾 |
 
 ---
 
@@ -1015,7 +1075,9 @@ ruff check --fix .          # 自動修正
 | **transpose** | 移調——把所有音符整體往上或往下移若干半音 |
 | **全域移調（Global Transpose）** | v0.2.0 新增：以整八度為單位的智慧移調，在八度摺疊之前執行 |
 | **八度摺疊（Octave Fold）** | 把超出範圍的音符移入最近的合法八度 |
-| **碰撞去重（Collision Dedup）** | 移除八度摺疊後產生的重複音符——同一時間、同一音高只保留一個 |
+| **流水摺疊（Flowing Fold）** | v0.4.0 的 voice-leading aware 八度摺疊。不盲選八度位置，而是根據前後音符的走向打分選最佳位置 |
+| **碰撞去重（Collision Dedup）** | 移除八度摺疊後產生的重複音符——同一時間、同一音高只保留力度最高的 |
+| **Auto-Tune** | 錄音後處理——節拍量化（吸附到格線）+ 音階校正（折入可演奏範圍）|
 | **quantize** | 量化——把不精準的時間點對齊到整齊的格線上 |
 | **daemon thread** | 背景執行緒——主程式結束時它會自動終止，不會卡住 |
 | **Registry 模式** | 用一個中央字典管理所有註冊的物件（本專案用於映射方案） |

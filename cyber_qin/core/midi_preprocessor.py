@@ -5,8 +5,8 @@ Transforms raw MIDI events for optimal game playback:
 2. Track filter — keep only user-selected tracks
 3. Octave deduplication — same pitch class at same time → keep highest
 4. Smart global transpose — find optimal ±12 shift to center notes in range
-5. Octave normalization — fold remaining out-of-range notes by octave
-6. Collision deduplication — remove duplicate notes (high-note priority)
+5. 流水摺疊 (Flowing Fold) — voice-leading aware octave fold per channel
+6. Collision deduplication — velocity-priority duplicate removal
 7. Polyphony limiter — cap simultaneous notes, keep highest + lowest
 8. Velocity normalization — unify all note_on velocity to 127
 9. Time quantization — snap to frame grid to eliminate micro-delays
@@ -217,29 +217,219 @@ def normalize_octave(events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: i
     return result
 
 
-# ── Stage 6: Collision Deduplication (high-note priority) ──
+# ── Stage 5b: 流水摺疊 (Flowing Fold) ────────────────────
+
+
+@dataclass(slots=True)
+class _VoiceState:
+    """Per-channel voice-leading state for flowing fold."""
+
+    prev_note: float  # previous folded note (float for center EMA)
+    prev_prev_note: float
+    center: float  # exponential moving average of recent notes
+
+
+def _get_octave_candidates(note: int, note_min: int, note_max: int) -> list[int]:
+    """Return all octave positions of *note*'s pitch class within [note_min, note_max]."""
+    pc = note % 12
+    candidates: list[int] = []
+    # Start from the lowest octave position of this pitch class at or above note_min
+    base = note_min + ((pc - note_min % 12) % 12)
+    n = base
+    while n <= note_max:
+        candidates.append(n)
+        n += 12
+    return candidates
+
+
+def _score_candidate(
+    candidate: int,
+    state: _VoiceState,
+    note_min: int,
+    note_max: int,
+) -> float:
+    """Score a candidate octave position based on voice-leading context."""
+    mid = (note_min + note_max) / 2.0
+    score = 0.0
+
+    # (a) Voice-leading distance — prefer small intervals
+    score -= 2.0 * abs(candidate - state.prev_note)
+
+    # (b) Direction continuity — reward continuing the same direction
+    prev_direction = state.prev_note - state.prev_prev_note
+    curr_direction = candidate - state.prev_note
+    if prev_direction != 0 and curr_direction != 0:
+        # Same sign → same direction
+        if (prev_direction > 0) == (curr_direction > 0):
+            score += 4.0
+        elif abs(curr_direction) <= 5:
+            # Smooth reversal (small interval)
+            score += 1.5
+
+    # (c) Gravity center — stay near recent activity
+    score -= 0.5 * abs(candidate - state.center)
+
+    # (d) Range preference — mild bias toward center of range
+    score -= 0.1 * abs(candidate - mid)
+
+    return score
+
+
+def normalize_octave_flowing(
+    events: list,
+    *,
+    note_min: int = MIDI_NOTE_MIN,
+    note_max: int = MIDI_NOTE_MAX,
+) -> list:
+    """Voice-leading aware octave fold (流水摺疊).
+
+    Instead of blindly folding each note with modulo, this algorithm picks
+    the octave position that best preserves melodic direction per channel.
+    Uses per-channel tracking so bass and melody lines don't interfere.
+    """
+    from .midi_file_player import MidiFileEvent
+
+    mid = (note_min + note_max) / 2.0
+    # Per-channel voice state
+    states: dict[int, _VoiceState] = {}
+    # note_off pairing: (channel, original_note) → stack of folded notes
+    off_map: dict[tuple[int, int], list[int]] = {}
+
+    result: list = []
+    for evt in events:
+        if evt.event_type == "note_on":
+            ch = evt.channel
+            candidates = _get_octave_candidates(evt.note, note_min, note_max)
+            if not candidates:
+                # Shouldn't happen if note_min/note_max span ≥12, but be safe
+                # Fall back to simple modulo fold
+                n = evt.note
+                while n > note_max:
+                    n -= 12
+                while n < note_min:
+                    n += 12
+                candidates = [n]
+
+            if len(candidates) == 1:
+                chosen = candidates[0]
+            elif ch not in states:
+                # First note on this channel — no voice-leading context.
+                # Keep original if in range; otherwise pick closest to center.
+                if note_min <= evt.note <= note_max:
+                    chosen = evt.note
+                else:
+                    chosen = min(candidates, key=lambda c: abs(c - mid))
+                states[ch] = _VoiceState(
+                    prev_note=float(chosen),
+                    prev_prev_note=float(chosen),
+                    center=float(chosen),
+                )
+            else:
+                st = states[ch]
+                best_score = float("-inf")
+                chosen = candidates[0]
+                for c in candidates:
+                    s = _score_candidate(c, st, note_min, note_max)
+                    if s > best_score:
+                        best_score = s
+                        chosen = c
+
+            # Update voice state (skip if just initialized above)
+            if ch not in states:
+                states[ch] = _VoiceState(
+                    prev_note=float(chosen),
+                    prev_prev_note=float(chosen),
+                    center=float(chosen),
+                )
+            st = states[ch]
+            st.prev_prev_note = st.prev_note
+            st.prev_note = float(chosen)
+            st.center = st.center * 0.85 + float(chosen) * 0.15
+
+            # Record for note_off pairing
+            key = (ch, evt.note)
+            off_map.setdefault(key, []).append(chosen)
+
+            if chosen != evt.note:
+                evt = MidiFileEvent(
+                    time_seconds=evt.time_seconds,
+                    event_type=evt.event_type,
+                    note=chosen,
+                    velocity=evt.velocity,
+                    track=evt.track,
+                    channel=evt.channel,
+                )
+
+        elif evt.event_type == "note_off":
+            key = (evt.channel, evt.note)
+            stack = off_map.get(key)
+            if stack:
+                folded = stack.pop(0)
+            else:
+                # No matching note_on — fallback to simple fold
+                folded = evt.note
+                while folded > note_max:
+                    folded -= 12
+                while folded < note_min:
+                    folded += 12
+
+            if folded != evt.note:
+                evt = MidiFileEvent(
+                    time_seconds=evt.time_seconds,
+                    event_type=evt.event_type,
+                    note=folded,
+                    velocity=evt.velocity,
+                    track=evt.track,
+                    channel=evt.channel,
+                )
+
+        result.append(evt)
+    return result
+
+
+# ── Stage 6: Collision Deduplication (velocity priority) ──
 
 
 def deduplicate_notes(events: list) -> tuple[list, int]:
     """Remove duplicate note events at the same (time, type, note).
 
     After octave folding, multiple notes can collapse to the same pitch.
-    Uses high-note priority: when events with the same (time, type, note)
-    collide, the event is kept (first seen wins since list is sorted).
+    Uses velocity priority: when note_on events with the same (time, note)
+    collide, the one with the highest velocity is kept. For note_off events,
+    duplicates are simply collapsed (first seen wins).
 
     Returns (deduplicated_events, count_removed).
     """
-    seen: set[tuple[float, str, int]] = set()
+    # Pre-scan: find max velocity for each (time, note) collision among note_on
+    max_vel: dict[tuple[float, int], int] = {}
+    for evt in events:
+        if evt.event_type == "note_on":
+            key = (evt.time_seconds, evt.note)
+            if key not in max_vel or evt.velocity > max_vel[key]:
+                max_vel[key] = evt.velocity
+
+    seen_on: set[tuple[float, int]] = set()
+    seen_off: set[tuple[float, int]] = set()
     result: list = []
     removed = 0
 
     for evt in events:
-        if evt.event_type in ("note_on", "note_off"):
-            key = (evt.time_seconds, evt.event_type, evt.note)
-            if key in seen:
+        if evt.event_type == "note_on":
+            key = (evt.time_seconds, evt.note)
+            if key in seen_on:
                 removed += 1
                 continue
-            seen.add(key)
+            # Keep the one with max velocity, skip others
+            if evt.velocity < max_vel[key]:
+                removed += 1
+                continue
+            seen_on.add(key)
+        elif evt.event_type == "note_off":
+            key = (evt.time_seconds, evt.note)
+            if key in seen_off:
+                removed += 1
+                continue
+            seen_off.add(key)
         result.append(evt)
 
     return result, removed
@@ -379,8 +569,8 @@ def preprocess(
         2. Track filter (if include_tracks specified)
         3. Octave dedup (remove octave doublings, keep highest)
         4. Smart global transpose
-        5. Octave fold
-        6. Collision dedup (high-note priority)
+        5. 流水摺疊 — voice-leading aware octave fold
+        6. Collision dedup (velocity priority)
         7. Polyphony limit (if max_voices > 0)
         8. Velocity normalize
         9. Time quantize
@@ -423,8 +613,8 @@ def preprocess(
         if e.event_type == "note_on" and (e.note < note_min or e.note > note_max)
     )
 
-    # 5. Octave fold remaining out-of-range notes
-    events = normalize_octave(events, note_min=note_min, note_max=note_max)
+    # 5. 流水摺疊 — voice-leading aware octave fold
+    events = normalize_octave_flowing(events, note_min=note_min, note_max=note_max)
 
     # 6. Collision dedup (high-note priority)
     events, dupes = deduplicate_notes(events)

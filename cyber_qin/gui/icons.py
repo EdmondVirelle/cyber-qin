@@ -326,6 +326,52 @@ def draw_repeat_one(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.restore()
 
 
+def draw_record(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Filled circle (record icon)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+
+    m = rect.width() * 0.28
+    r = rect.adjusted(m, m, -m, -m)
+
+    path = QPainterPath()
+    path.addEllipse(r)
+    painter.drawPath(path)
+    painter.restore()
+
+
+def draw_editor(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Pencil icon (editor mode)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.22
+    r = rect.adjusted(m, m, -m, -m)
+    pen_w = rect.width() * 0.07
+
+    # Pencil body (diagonal line)
+    painter.setPen(QPen(color, pen_w * 1.8))
+    tip_x = r.left() + r.width() * 0.15
+    tip_y = r.bottom() - r.height() * 0.15
+    end_x = r.right() - r.width() * 0.15
+    end_y = r.top() + r.height() * 0.15
+    painter.drawLine(QPointF(tip_x, tip_y), QPointF(end_x, end_y))
+
+    # Pencil tip
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    tip = QPainterPath()
+    tip.moveTo(tip_x - r.width() * 0.08, tip_y + r.height() * 0.08)
+    tip.lineTo(tip_x + r.width() * 0.06, tip_y - r.height() * 0.02)
+    tip.lineTo(tip_x - r.width() * 0.02, tip_y + r.height() * 0.06)
+    tip.closeSubpath()
+    painter.drawPath(tip)
+
+    painter.restore()
+
+
 def draw_live(painter: QPainter, rect: QRectF, color: QColor) -> None:
     """Waveform icon (live mode)."""
     painter.save()

@@ -88,6 +88,7 @@ class LibraryView(QWidget):
     """MIDI file library with import and track list."""
 
     play_requested = pyqtSignal(str)  # Emits file path
+    edit_requested = pyqtSignal(str)  # Emits file path (for editor)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -165,6 +166,8 @@ class LibraryView(QWidget):
         self._track_list = TrackList()
         self._track_list.play_requested.connect(self._on_play)
         self._track_list.remove_requested.connect(self._on_remove)
+        if hasattr(self._track_list, 'edit_requested'):
+            self._track_list.edit_requested.connect(self._on_edit)
         content.addWidget(self._track_list, 1)
 
         # Empty state
@@ -259,6 +262,21 @@ class LibraryView(QWidget):
             self._track_list.set_playing(idx)
             return self._tracks[idx].file_path
         return None
+
+    def add_file(self, file_path: str) -> None:
+        """Add a MIDI file to the library programmatically (e.g., from recorder)."""
+        try:
+            _, info = MidiFileParser.parse(file_path)
+            self._tracks.append(info)
+            self._track_list.add_track(info)
+            self._save_library()
+            self._update_empty_state()
+        except Exception:
+            log.exception("Failed to add %s to library", file_path)
+
+    def _on_edit(self, index: int) -> None:
+        if 0 <= index < len(self._tracks):
+            self.edit_requested.emit(self._tracks[index].file_path)
 
     def _update_empty_state(self) -> None:
         has_tracks = len(self._tracks) > 0

@@ -5,8 +5,8 @@
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.2.0-green)
-![Tests](https://img.shields.io/badge/Tests-180%20passed-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.4.0-green)
+![Tests](https://img.shields.io/badge/Tests-289%20passed-brightgreen)
 
 ---
 
@@ -14,7 +14,7 @@
 
 **賽博琴仙** 是一款即時 MIDI-to-Keyboard 映射工具，專為《燕雲十六聲》(*Where Winds Meet*) 等遊戲設計。將 USB MIDI 鍵盤（如 Roland FP-30X）的琴鍵訊號，以 **< 2ms 延遲** 轉換為 DirectInput 掃描碼按鍵，讓遊戲角色與你的演奏完全同步。
 
-支援即時演奏與 MIDI 檔案自動播放兩種模式，內建智慧移調、八度摺疊、碰撞去重等預處理管線，並提供 5 種可切換的鍵位配置方案。
+支援即時演奏、MIDI 檔案自動播放、即時錄音與虛擬鍵盤編輯四種模式。內建 9 階段智慧預處理管線（含流水摺疊 voice-leading fold），以及錄音後的 Auto-Tune 後處理。提供 5 種可切換的鍵位配置方案。
 
 ---
 
@@ -36,8 +36,10 @@
 |------|------|
 | **即時 MIDI 映射** | MIDI callback 直接在 rtmidi 執行緒上觸發 `SendInput`，不經過 Qt 事件佇列，延遲 < 2ms |
 | **5 種鍵位方案** | 燕雲十六聲 36 鍵、FF14 32 鍵、通用 24/48/88 鍵，執行時即時切換 |
-| **智慧 MIDI 預處理** | 3 階段管線：全曲智慧移調 → 八度摺疊 → 碰撞去重（詳見[技術深潛](#智慧-midi-預處理管線)） |
-| **MIDI 檔案自動播放** | 匯入 `.mid` 檔案，0.25x - 2.0x 變速控制，可拖曳進度條，4 拍節拍器倒數 |
+| **9 階段 MIDI 預處理** | 打擊過濾 → 音軌篩選 → 八度去重 → 智慧移調 → 流水摺疊 → 碰撞去重 → 複音限制 → 力度正規化 → 時間量化（詳見[技術深潛](#智慧-midi-預處理管線)） |
+| **MIDI 檔案自動播放** | 匯入 `.mid` 檔案，0.25x - 2.0x 變速控制，可拖曳進度條，4 拍節拍器倒數，循環 / 單曲重複 |
+| **即時 MIDI 錄音** | 錄製演奏並儲存為 `.mid` 檔案，錄音後可做 Auto-Tune（節拍量化 + 音階校正） |
+| **虛擬鍵盤編輯器** | 用滑鼠在可互動鋼琴上點選輸入音符，piano roll 時間軸，支援 undo/redo |
 | **修飾鍵閃擊技術** | `Shift↓ → Key↓ → Shift↑` 以單一批次送出，防止修飾鍵污染後續和弦 |
 | **自動重連** | MIDI 裝置斷線時每 3 秒輪詢，插回自動恢復 |
 | **卡鍵看門狗** | 偵測按住超過 10 秒的按鍵並自動釋放，防止遊戲內角色卡死 |
@@ -108,7 +110,7 @@ MIDI Note On 訊號
 | **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒訊號 |
 | **建置** | PyInstaller | 單資料夾可執行檔封裝 |
 | **CI/CD** | GitHub Actions | 多版本測試 + tag 自動發佈 |
-| **程式碼品質** | Ruff + pytest | Linting + 180 項測試 |
+| **程式碼品質** | Ruff + pytest | Linting + 289 項測試 |
 
 ---
 
@@ -155,7 +157,7 @@ python scripts/build.py
 ### 測試
 
 ```bash
-# 執行全部 180 項測試（5 個測試檔案）
+# 執行全部 289 項測試（8 個測試檔案）
 pytest
 
 # 詳細輸出
@@ -178,10 +180,10 @@ ruff check --fix .
 
 | 指標 | 數值 |
 |------|------|
-| 原始碼行數 | ~5,000 LOC |
-| 模組數量 | 26 |
-| 測試數量 | 180 |
-| 測試檔案 | 5 |
+| 原始碼行數 | ~7,500 LOC |
+| 模組數量 | 39 |
+| 測試數量 | 289 |
+| 測試檔案 | 8 |
 | 測試涵蓋平台 | Python 3.11 / 3.12 / 3.13 |
 
 ---
@@ -196,7 +198,11 @@ cyber_qin/
 │   ├── key_simulator.py         # ctypes SendInput 封裝（DirectInput 掃描碼）
 │   ├── midi_listener.py         # python-rtmidi 即時輸入 + 自動重連
 │   ├── midi_file_player.py      # MIDI 檔案播放引擎（精準計時 + 4 拍倒數）
-│   ├── midi_preprocessor.py     # 智慧移調 + 八度摺疊 + 碰撞去重管線
+│   ├── midi_preprocessor.py     # 9 階段預處理管線（含流水摺疊）
+│   ├── midi_recorder.py         # 即時 MIDI 錄音引擎
+│   ├── midi_writer.py           # 錄音結果匯出 .mid 檔案
+│   ├── auto_tune.py             # 錄音後處理：節拍量化 + 音階校正
+│   ├── note_sequence.py         # 可變音符序列模型（編輯器用）
 │   ├── mapping_schemes.py       # 5 種可切換鍵位方案註冊表
 │   └── priority.py              # 執行緒優先權 + 高解析度計時器
 ├── gui/                         # PyQt6 使用者介面
@@ -204,11 +210,14 @@ cyber_qin/
 │   ├── icons.py                 # QPainter 向量圖示提供器
 │   ├── theme.py                 # 「賽博墨韻」暗色主題系統
 │   ├── views/
-│   │   ├── live_mode_view.py    # 即時演奏頁面
-│   │   └── library_view.py      # 曲庫管理頁面
+│   │   ├── live_mode_view.py    # 即時演奏頁面（含錄音控制）
+│   │   ├── library_view.py      # 曲庫管理頁面
+│   │   └── editor_view.py       # 虛擬鍵盤編輯器頁面
 │   └── widgets/
 │       ├── piano_display.py     # 動態鋼琴鍵盤（霓虹光暈效果）
 │       ├── mini_piano.py        # 底部迷你鋼琴視覺化
+│       ├── clickable_piano.py   # 可互動鋼琴（點選輸入音符）
+│       ├── note_roll.py         # 水平音符時間軸（簡化版 piano roll）
 │       ├── sidebar.py           # 側邊欄導航
 │       ├── now_playing_bar.py   # 底部播放控制列
 │       ├── track_list.py        # 曲目清單元件
@@ -280,48 +289,30 @@ def press(self, midi_note, mapping):
 
 `SendInput` 的設計保證同一批次中的事件不會被其他行程的輸入事件插隊，確保修飾鍵的作用範圍精確限定在單一按鍵上。
 
-### 3. 智慧 MIDI 預處理管線
+### 3. 智慧 MIDI 預處理管線（9 階段）
 
-將任意 MIDI 檔案適配到遊戲有限的音域範圍（如 36 鍵 = C3-B5），需要一套自動化的音符轉換管線：
+將任意 MIDI 檔案適配到遊戲有限的音域範圍（如 36 鍵 = C3-B5），需要一套自動化的音符轉換管線。v0.4.0 升級為 9 階段，其中核心改進是 Stage 5 的**流水摺疊**演算法：
 
 ```
 原始 MIDI 事件
     │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│ Stage 1: 智慧全曲移調                                  │
-│ 嘗試 -48 ~ +48 半音（12 的倍數），選擇使最多音符        │
-│ 落入可演奏範圍的位移量。同分時取絕對值最小者。           │
-└──────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│ Stage 2: 八度摺疊                                      │
-│ 剩餘超出範圍的音符逐一 ±12 半音摺疊至範圍內。           │
-└──────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│ Stage 3: 碰撞去重                                      │
-│ 摺疊後可能產生同一時間點、同一音高的重複音符。            │
-│ 移除重複，保留最後一個 note_off（最長延音）。            │
-└──────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│ Stage 4: 力度正規化                                    │
-│ 所有 note_on 力度統一為 127（遊戲不區分力度）。          │
-└──────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│ Stage 5: 60fps 時間量化                                │
-│ 將事件時間對齊至 ~16.67ms 格線，消除微延遲。            │
-└──────────────────────────────────────────────────────┘
+    ├── Stage 1: 打擊過濾        移除 GM channel 10 鼓組事件
+    ├── Stage 2: 音軌篩選        只保留使用者選取的音軌
+    ├── Stage 3: 八度去重        同一時間同一 pitch class → 保留最高的
+    ├── Stage 4: 智慧全曲移調    嘗試 ±48 半音（步進 12），選最佳位移
+    ├── Stage 5: 流水摺疊 ★      voice-leading aware 八度摺疊（per-channel）
+    │                             對每個音找出所有合法八度位置，打分選最佳：
+    │                             聲導距離 + 方向延續 + 重力中心 + 範圍偏好
+    ├── Stage 6: 碰撞去重        velocity 優先 — 碰撞時保留力度最高的
+    ├── Stage 7: 複音限制        上限 N 聲部，保留最高 + 最低（bass anchor）
+    ├── Stage 8: 力度正規化      所有 note_on 力度統一為 127
+    └── Stage 9: 時間量化        對齊 60fps 格線（~16.67ms），消除微延遲
     │
     ▼
 處理後事件（按時間排序，note_off 優先於 note_on）
 ```
+
+**流水摺疊**取代了舊版的 modulo fold（`while note > max: note -= 12`）。舊演算法每個音獨立處理，不看前後文，導致上行樂句在摺疊後方向被破壞。流水摺疊讓每個 MIDI channel 獨立追蹤 voice state，用打分函數在所有合法八度位置中選出最能保持旋律走向的那個。
 
 ### 4. ctypes INPUT 結構體陷阱
 
@@ -366,8 +357,8 @@ class INPUT(ctypes.Structure):
 
 ```bash
 # 觸發一次發佈
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 ---

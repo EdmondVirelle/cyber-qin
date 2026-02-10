@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
+from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, QStandardPaths, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -15,12 +17,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ..core.auto_tune import auto_tune
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
 from ..core.midi_file_player import PlaybackState, create_player_controller
 from ..core.midi_listener import MidiListener
+from ..core.midi_recorder import MidiRecorder
+from ..core.midi_writer import MidiWriter
 from ..core.priority import set_thread_priority_realtime
+from .views.editor_view import EditorView
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
 from .widgets.now_playing_bar import NowPlayingBar, RepeatMode
@@ -49,6 +55,11 @@ class MidiProcessor(QObject):
         self._mapper = mapper
         self._simulator = simulator
         self._priority_set = False
+        self._recorder: MidiRecorder | None = None
+
+    def set_recorder(self, recorder: MidiRecorder | None) -> None:
+        """Attach/detach a recorder. Called from the main thread."""
+        self._recorder = recorder
 
     def on_midi_event(self, event_type: str, note: int, velocity: int) -> None:
         """Called on the rtmidi callback thread. Must be fast."""
@@ -58,6 +69,11 @@ class MidiProcessor(QObject):
             self._priority_set = True
 
         t0 = time.perf_counter()
+
+        # Record event (thread-safe: list.append is GIL-atomic)
+        recorder = self._recorder
+        if recorder is not None and recorder.is_recording:
+            recorder.record_event(event_type, note, velocity)
 
         if event_type == "note_on":
             mapping = self._mapper.lookup(note)
@@ -75,12 +91,12 @@ class AppShell(QMainWindow):
     """Main application window with Spotify-style layout.
 
     Layout:
-    ┌──────────┬────────────────────────────────┐
-    │ Sidebar  │  Content (QStackedWidget)       │
-    │          │  [LiveModeView | LibraryView]   │
-    ├──────────┴────────────────────────────────┤
-    │  Now Playing Bar                           │
-    └────────────────────────────────────────────┘
+    ┌──────────┬──────────────────────────────────────────┐
+    │ Sidebar  │  Content (QStackedWidget)                 │
+    │          │  [LiveModeView | LibraryView | EditorView]│
+    ├──────────┴──────────────────────────────────────────┤
+    │  Now Playing Bar                                     │
+    └──────────────────────────────────────────────────────┘
     """
 
     def __init__(self) -> None:
@@ -95,6 +111,7 @@ class AppShell(QMainWindow):
         self._listener = MidiListener()
         self._processor = MidiProcessor(self._mapper, self._simulator)
         self._player = create_player_controller(self._mapper, self._simulator)
+        self._recorder = MidiRecorder()
 
         self._build_ui()
         self._connect_signals()
@@ -126,8 +143,12 @@ class AppShell(QMainWindow):
         # View 1: Library
         self._library_view = LibraryView()
 
+        # View 2: Editor
+        self._editor_view = EditorView()
+
         self._stack.addWidget(self._live_view)
         self._stack.addWidget(self._library_view)
+        self._stack.addWidget(self._editor_view)
         top.addWidget(self._stack, 1)
 
         root.addLayout(top, 1)
@@ -151,6 +172,9 @@ class AppShell(QMainWindow):
         # Library → file playback
         self._library_view.play_requested.connect(self._on_play_file)
 
+        # Library → editor
+        self._library_view.edit_requested.connect(self._on_edit_file)
+
         # File player → GUI updates
         self._player.note_event.connect(self._on_any_note_event)
         self._player.progress_updated.connect(self._now_playing.update_progress)
@@ -171,6 +195,135 @@ class AppShell(QMainWindow):
 
         # Scheme changes → update mini piano + preprocessor range
         self._live_view.scheme_changed.connect(self._on_scheme_changed)
+
+        # Recording signals
+        self._live_view.recording_started.connect(self._on_recording_started)
+        self._live_view.recording_stopped.connect(self._on_recording_stopped)
+
+        # Editor recording + play → preview
+        self._editor_view.recording_started.connect(self._on_editor_recording_started)
+        self._editor_view.recording_stopped.connect(self._on_editor_recording_stopped)
+        self._editor_view.play_requested.connect(self._on_editor_play)
+
+    # --- Recording ---
+
+    def _on_recording_started(self) -> None:
+        """Start recording MIDI events."""
+        self._recorder.start()
+        self._processor.set_recorder(self._recorder)
+        self._live_view.log_viewer.log("  錄音開始")
+
+    def _on_recording_stopped(self, _file_path: str) -> None:
+        """Stop recording and save to file."""
+        self._processor.set_recorder(None)
+        events = self._recorder.stop()
+
+        if not events:
+            self._live_view.log_viewer.log("  錄音結束 (無音符)")
+            return
+
+        # Apply auto-tune if enabled
+        if self._live_view.auto_tune_enabled:
+            events, stats = auto_tune(events)
+            self._live_view.log_viewer.log(
+                f"  自動校正: {stats.quantized_count} 量化, "
+                f"{stats.pitch_corrected_count} 修正"
+            )
+
+        # Save to file
+        data_dir = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.AppDataLocation
+        )
+        rec_dir = Path(data_dir) / "CyberQin" / "recordings"
+        rec_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_path = str(rec_dir / f"recording_{timestamp}.mid")
+
+        try:
+            MidiWriter.save(events, file_path)
+            note_count = sum(1 for e in events if e.event_type == "note_on")
+            self._live_view.log_viewer.log(
+                f"  錄音已儲存: recording_{timestamp}.mid ({note_count} 音符)"
+            )
+            # Add to library
+            self._library_view.add_file(file_path)
+            self._live_view.on_recording_saved(file_path)
+        except Exception as e:
+            self._live_view.log_viewer.log(f"  儲存錄音失敗: {e}")
+            log.exception("Failed to save recording")
+
+    # --- Editor ---
+
+    def _on_editor_recording_started(self) -> None:
+        """Start recording into the editor."""
+        self._recorder.start()
+        self._processor.set_recorder(self._recorder)
+        self._live_view.log_viewer.log("  編曲器錄音開始")
+
+    def _on_editor_recording_stopped(self) -> None:
+        """Stop recording and merge events into the editor sequence."""
+        self._processor.set_recorder(None)
+        events = self._recorder.stop()
+
+        if not events:
+            self._live_view.log_viewer.log("  編曲器錄音結束 (無音符)")
+            return
+
+        # Apply auto-tune if enabled
+        if self._editor_view.auto_tune_enabled:
+            events, stats = auto_tune(events)
+            self._live_view.log_viewer.log(
+                f"  自動校正: {stats.quantized_count} 量化, "
+                f"{stats.pitch_corrected_count} 修正"
+            )
+
+        # Convert RecordedEvents → MidiFileEvents for set_recorded_events
+        from ..core.midi_file_player import MidiFileEvent
+
+        file_events = [
+            MidiFileEvent(
+                time_seconds=e.timestamp,
+                event_type=e.event_type,
+                note=e.note,
+                velocity=e.velocity,
+            )
+            for e in events
+        ]
+        note_count = sum(1 for e in events if e.event_type == "note_on")
+        self._editor_view.set_recorded_events(file_events)
+        self._live_view.log_viewer.log(
+            f"  編曲器錄音完成: {note_count} 音符已合併"
+        )
+
+    def _on_edit_file(self, file_path: str) -> None:
+        """Open a file in the editor view."""
+        self._editor_view.load_file(file_path)
+        self._stack.setCurrentIndex(2)
+        self._sidebar._set_active(2)
+
+    def _on_editor_play(self, events: list) -> None:
+        """Play the editor's note sequence through the existing player."""
+        from ..core.midi_file_player import MidiFileInfo
+
+        if not events:
+            return
+        duration = max(e.time_seconds for e in events) if events else 0.0
+        note_count = sum(1 for e in events if e.event_type == "note_on")
+        info = MidiFileInfo(
+            file_path="",
+            name="編曲器預覽",
+            duration_seconds=duration,
+            track_count=1,
+            note_count=note_count,
+            tempo_bpm=120.0,
+        )
+        self._player.stop()
+        self._player.worker.load(events, info)
+        self._now_playing.set_track_info(info.name, info.duration_seconds)
+        self._player.play()
+        self._live_view.log_viewer.log(
+            f"  編曲器播放: {note_count} 音符, {duration:.1f}s"
+        )
 
     def _on_scheme_changed(self, scheme_id: str) -> None:
         """Update mini piano range and preprocessor when scheme changes."""
@@ -324,6 +477,10 @@ class AppShell(QMainWindow):
             self._on_play_file(file_path)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        # Stop any in-progress recording (live or editor)
+        if self._recorder.is_recording:
+            self._processor.set_recorder(None)
+            self._recorder.stop()
         self._player.cleanup()
         self._live_view.cleanup()
         super().closeEvent(event)

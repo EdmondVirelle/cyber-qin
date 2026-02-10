@@ -19,7 +19,7 @@ from .animated_widgets import AnimatedNavButton
 class Sidebar(QWidget):
     """Navigation sidebar with animated icon buttons and brand logo."""
 
-    navigation_changed = pyqtSignal(int)  # 0=Live, 1=Library
+    navigation_changed = pyqtSignal(int)  # 0=Live, 1=Library, 2=Editor
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -60,6 +60,11 @@ class Sidebar(QWidget):
         self._library_btn.clicked.connect(lambda: self._on_nav_click(1))
         layout.addWidget(self._library_btn)
         self._buttons.append(self._library_btn)
+
+        self._editor_btn = AnimatedNavButton("editor", "編曲器")
+        self._editor_btn.clicked.connect(lambda: self._on_nav_click(2))
+        layout.addWidget(self._editor_btn)
+        self._buttons.append(self._editor_btn)
 
         layout.addStretch()
 

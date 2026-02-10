@@ -31,13 +31,20 @@ cyber_qin/
 │   ├── key_mapper.py       # 36-key MIDI→keystroke mapping
 │   ├── key_simulator.py    # ctypes SendInput (DirectInput scan codes)
 │   ├── midi_listener.py    # python-rtmidi wrapper with auto-reconnect
-│   └── midi_file_player.py # MIDI file playback engine
+│   ├── midi_file_player.py # MIDI file playback engine
+│   ├── midi_preprocessor.py # 9-stage pipeline (flowing fold, velocity dedup)
+│   ├── midi_recorder.py    # Live MIDI recording engine
+│   ├── midi_writer.py      # Export recordings as .mid files
+│   ├── auto_tune.py        # Post-recording: beat quantize + pitch snap
+│   ├── note_sequence.py    # Mutable note model for editor (undo/redo)
+│   ├── mapping_schemes.py  # 5 switchable key mapping schemes
+│   └── priority.py         # Thread priority + high-res timer
 ├── gui/            # PyQt6 UI
 │   ├── app_shell.py        # QMainWindow with sidebar navigation
-│   ├── icons.py            # SVG icon provider
+│   ├── icons.py            # QPainter vector icon provider
 │   ├── theme.py            # Dark theme QSS
-│   ├── views/              # Full-page views (live_mode, library)
-│   └── widgets/            # Reusable widgets (piano, sidebar, etc.)
+│   ├── views/              # Full-page views (live_mode, library, editor)
+│   └── widgets/            # Reusable widgets (piano, sidebar, note_roll, etc.)
 ├── utils/
 │   ├── admin.py            # UAC elevation check
 │   └── ime.py              # Input method detection
@@ -54,7 +61,7 @@ cyber_qin/
 
 ## Testing
 
-- 82 tests across 3 files in `tests/`
+- 289 tests across 8 files in `tests/`
 - Tests mock `ctypes.windll` and `rtmidi` — no hardware needed
 - Run `pytest` from project root
 

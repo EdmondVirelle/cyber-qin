@@ -16,12 +16,14 @@ from PyQt6.QtGui import QColor, QPainter, QPainterPath
 from PyQt6.QtWidgets import QAbstractButton, QWidget
 
 from ..icons import (
+    draw_editor,
     draw_library,
     draw_live,
     draw_music_note,
     draw_pause,
     draw_play,
     draw_plus,
+    draw_record,
     draw_refresh,
     draw_remove,
     draw_repeat,
@@ -49,6 +51,8 @@ _ICON_DRAWERS: dict[str, Callable] = {
     "music_note": draw_music_note,
     "live": draw_live,
     "library": draw_library,
+    "editor": draw_editor,
+    "record": draw_record,
     "skip_next": draw_skip_next,
     "skip_prev": draw_skip_prev,
     "repeat": draw_repeat,

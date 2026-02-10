@@ -11,6 +11,7 @@ from cyber_qin.core.midi_preprocessor import (
     filter_tracks,
     limit_polyphony,
     normalize_octave,
+    normalize_octave_flowing,
     normalize_velocity,
     preprocess,
     quantize_timing,
@@ -465,8 +466,8 @@ class TestPreprocessSmartTranspose:
     def test_collision_dedup_after_fold(self):
         """Notes that collide after fold should be deduplicated."""
         # 72 and 96 are same pitch class (C) at the same time
-        # Octave dedup (stage 3) now catches this BEFORE folding → octave_deduped > 0
-        # If octave dedup doesn't catch it, collision dedup (stage 6) does
+        # Octave dedup (stage 3) catches this BEFORE folding → octave_deduped > 0
+        # After dedup only one C remains; flowing fold places it in range
         events = [
             _evt(0, "note_on", 72),
             _evt(0, "note_on", 96),    # same pitch class as 72 → deduped
@@ -477,10 +478,11 @@ class TestPreprocessSmartTranspose:
             *[_evt(i * 0.1 + 1.05, "note_off", 48 + (i % 36)) for i in range(30)],
         ]
         result, stats = preprocess(events)
-        # The 96→72 collision should be handled (by octave dedup or collision dedup)
+        # Only one C note_on should survive at t=0 (deduped + folded into range)
         t0_note_ons = [e for e in result if e.event_type == "note_on" and e.time_seconds < 0.01]
-        pitch_72_ons = [e for e in t0_note_ons if e.note == 72]
-        assert len(pitch_72_ons) == 1
+        c_pitch_ons = [e for e in t0_note_ons if e.note % 12 == 0]
+        assert len(c_pitch_ons) == 1
+        assert 48 <= c_pitch_ons[0].note <= 83
         assert stats.octave_deduped > 0 or stats.duplicates_removed > 0
 
     def test_wide_range_song_all_notes_playable(self):
@@ -1007,3 +1009,198 @@ class TestPreprocessFullPipeline:
         note_ons = [e for e in result if e.event_type == "note_on"]
         assert len(note_ons) == 0
         assert stats.percussion_removed == 2
+
+
+# ── normalize_octave_flowing (流水摺疊) ──────────────────
+
+
+class TestFlowingFold:
+    """Tests for the voice-leading aware octave fold."""
+
+    def test_in_range_unchanged(self):
+        """Notes already in range should not be modified."""
+        events = [
+            _evt(0, "note_on", 60),
+            _evt(0.5, "note_off", 60),
+        ]
+        result = normalize_octave_flowing(events)
+        assert result[0].note == 60
+        assert result[1].note == 60
+
+    def test_boundary_min(self):
+        """Note at exact minimum should be unchanged."""
+        events = [_evt(0, "note_on", 48)]
+        result = normalize_octave_flowing(events)
+        assert result[0].note == 48
+
+    def test_boundary_max(self):
+        """Note at exact maximum should be unchanged."""
+        events = [_evt(0, "note_on", 83)]
+        result = normalize_octave_flowing(events)
+        assert result[0].note == 83
+
+    def test_empty_list(self):
+        assert normalize_octave_flowing([]) == []
+
+    def test_metadata_preserved(self):
+        """time_seconds, velocity, track, channel should be preserved."""
+        events = [_evt(1.5, "note_on", 96, vel=100, track=2, channel=3)]
+        result = normalize_octave_flowing(events)
+        assert result[0].time_seconds == 1.5
+        assert result[0].velocity == 100
+        assert result[0].track == 2
+        assert result[0].channel == 3
+        assert 48 <= result[0].note <= 83
+
+    def test_ascending_melody_stays_ascending(self):
+        """An ascending melody that spans >3 octaves should fold upward."""
+        # C3(48) D3(50) E3(52) ... then jump to C6(84) D6(86) E6(88)
+        # After fold, the high notes should still trend upward from previous
+        events = []
+        t = 0.0
+        # Start with notes in range to establish context
+        for n in [60, 62, 64, 65, 67, 69, 71, 72]:
+            events.append(_evt(t, "note_on", n))
+            events.append(_evt(t + 0.09, "note_off", n))
+            t += 0.1
+        # Now add out-of-range ascending notes
+        for n in [84, 86, 88]:
+            events.append(_evt(t, "note_on", n))
+            events.append(_evt(t + 0.09, "note_off", n))
+            t += 0.1
+
+        result = normalize_octave_flowing(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        # All notes must be in range
+        for e in note_ons:
+            assert 48 <= e.note <= 83
+        # The last 3 notes (folded from 84,86,88) should be ascending
+        last3 = [e.note for e in note_ons[-3:]]
+        assert last3 == sorted(last3), f"Expected ascending, got {last3}"
+
+    def test_descending_melody_stays_descending(self):
+        """A descending melody should fold to preserve downward direction."""
+        events = []
+        t = 0.0
+        # Start mid-range descending
+        for n in [72, 71, 69, 67, 65, 64, 62, 60]:
+            events.append(_evt(t, "note_on", n))
+            events.append(_evt(t + 0.09, "note_off", n))
+            t += 0.1
+        # Continue descending below range
+        for n in [47, 45, 43]:
+            events.append(_evt(t, "note_on", n))
+            events.append(_evt(t + 0.09, "note_off", n))
+            t += 0.1
+
+        result = normalize_octave_flowing(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        for e in note_ons:
+            assert 48 <= e.note <= 83
+        # The last 3 notes (folded from 47,45,43) should be descending
+        last3 = [e.note for e in note_ons[-3:]]
+        assert last3 == sorted(last3, reverse=True), f"Expected descending, got {last3}"
+
+    def test_note_off_pairing(self):
+        """note_off should be folded to match its corresponding note_on."""
+        events = [
+            _evt(0, "note_on", 96),   # out of range → folded
+            _evt(0.5, "note_off", 96),  # should match the folded note_on
+        ]
+        result = normalize_octave_flowing(events)
+        assert result[0].note == result[1].note
+        assert 48 <= result[0].note <= 83
+
+    def test_different_channels_independent(self):
+        """Each channel should track voice state independently."""
+        events = [
+            # Channel 0: ascending
+            _evt(0.0, "note_on", 60, channel=0),
+            _evt(0.1, "note_on", 64, channel=0),
+            _evt(0.2, "note_on", 67, channel=0),
+            # Channel 1: descending (interleaved)
+            _evt(0.0, "note_on", 72, channel=1),
+            _evt(0.1, "note_on", 69, channel=1),
+            _evt(0.2, "note_on", 65, channel=1),
+            # Now an out-of-range note on each channel
+            _evt(0.3, "note_on", 84, channel=0),  # ch0 was ascending
+            _evt(0.3, "note_on", 84, channel=1),  # ch1 was descending
+        ]
+        result = normalize_octave_flowing(events)
+        # Both ch0 and ch1 out-of-range notes fold into range
+        ch0_last = [e for e in result if e.event_type == "note_on" and e.channel == 0][-1]
+        ch1_last = [e for e in result if e.event_type == "note_on" and e.channel == 1][-1]
+        assert 48 <= ch0_last.note <= 83
+        assert 48 <= ch1_last.note <= 83
+
+    def test_extreme_range_no_crash(self):
+        """Notes at MIDI extremes (0 and 127) should not crash."""
+        events = [
+            _evt(0, "note_on", 0),
+            _evt(0.1, "note_on", 127),
+            _evt(0.5, "note_off", 0),
+            _evt(0.6, "note_off", 127),
+        ]
+        result = normalize_octave_flowing(events)
+        for e in result:
+            assert 48 <= e.note <= 83
+
+    def test_all_notes_in_range_after_fold(self):
+        """Every note after flowing fold must be in [note_min, note_max]."""
+        events = [
+            _evt(i * 0.1, "note_on", 20 + i * 7)
+            for i in range(16)
+        ]
+        result = normalize_octave_flowing(events)
+        for e in result:
+            if e.event_type == "note_on":
+                assert 48 <= e.note <= 83, f"Note {e.note} out of range"
+
+    def test_single_out_of_range_note(self):
+        """A single out-of-range note should be folded into range."""
+        events = [_evt(0, "note_on", 96)]
+        result = normalize_octave_flowing(events)
+        assert 48 <= result[0].note <= 83
+        # C7 (96) pitch class C → candidates are 48, 60, 72 → should pick one
+        assert result[0].note % 12 == 0
+
+
+# ── deduplicate_notes velocity priority ──────────────────
+
+
+class TestDeduplicateNotesVelocity:
+    """Tests for the velocity-priority collision dedup."""
+
+    def test_collision_keeps_highest_velocity(self):
+        """When two note_on events collide, the higher velocity wins."""
+        events = [
+            _evt(0, "note_on", 60, vel=50),
+            _evt(0, "note_on", 60, vel=100),  # higher velocity
+        ]
+        result, removed = deduplicate_notes(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 1
+        assert note_ons[0].velocity == 100
+        assert removed == 1
+
+    def test_no_collision_unchanged(self):
+        """Without collisions, all events pass through."""
+        events = [
+            _evt(0, "note_on", 60, vel=80),
+            _evt(0.5, "note_off", 60),
+            _evt(1.0, "note_on", 64, vel=90),
+        ]
+        result, removed = deduplicate_notes(events)
+        assert len(result) == 3
+        assert removed == 0
+
+    def test_note_off_dedup_not_affected_by_velocity(self):
+        """note_off duplicates should be collapsed regardless of velocity."""
+        events = [
+            _evt(1.0, "note_off", 60, vel=0),
+            _evt(1.0, "note_off", 60, vel=64),
+        ]
+        result, removed = deduplicate_notes(events)
+        note_offs = [e for e in result if e.event_type == "note_off"]
+        assert len(note_offs) == 1
+        assert removed == 1
