@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 
 # Windows thread priority constants
 _THREAD_PRIORITY_TIME_CRITICAL = 15
+_priority_warning_shown = False
 
 
 def set_thread_priority_realtime() -> bool:
@@ -17,6 +18,7 @@ def set_thread_priority_realtime() -> bool:
 
     Returns True on success, False on failure or non-Windows.
     """
+    global _priority_warning_shown  # noqa: PLW0603
     if sys.platform != "win32":
         return False
     try:
@@ -26,11 +28,14 @@ def set_thread_priority_realtime() -> bool:
         )
         if result:
             log.debug("Thread priority set to TIME_CRITICAL")
-        else:
+        elif not _priority_warning_shown:
             log.warning("SetThreadPriority failed")
+            _priority_warning_shown = True
         return bool(result)
     except Exception:
-        log.warning("Failed to set thread priority", exc_info=True)
+        if not _priority_warning_shown:
+            log.warning("Failed to set thread priority", exc_info=True)
+            _priority_warning_shown = True
         return False
 
 

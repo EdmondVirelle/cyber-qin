@@ -65,6 +65,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    icon="assets/icon.ico",
     console=False,       # windowed app, no console
     disable_windowed_traceback=False,
     argv_emulation=False,

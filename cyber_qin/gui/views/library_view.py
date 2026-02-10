@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -187,6 +188,7 @@ class LibraryView(QWidget):
             "",
             "MIDI Files (*.mid *.midi);;All Files (*)",
         )
+        failed: list[str] = []
         for fpath in files:
             try:
                 _, info = MidiFileParser.parse(fpath)
@@ -194,6 +196,13 @@ class LibraryView(QWidget):
                 self._track_list.add_track(info)
             except Exception:
                 log.exception("Failed to parse %s", fpath)
+                failed.append(Path(fpath).name)
+        if failed:
+            QMessageBox.warning(
+                self,
+                "匯入失敗",
+                "以下檔案無法匯入：\n\n" + "\n".join(f"• {name}" for name in failed),
+            )
         self._save_library()
         self._update_empty_state()
 

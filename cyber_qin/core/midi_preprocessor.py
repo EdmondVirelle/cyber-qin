@@ -1,9 +1,11 @@
 """MIDI preprocessing pipeline for 燕雲十六聲 (Where Winds Meet) 36-key mode.
 
 Transforms raw MIDI events for optimal game playback:
-1. Octave normalization — shift out-of-range notes into the 3-octave range
-2. Velocity normalization — unify all note_on velocity to 127
-3. Time quantization — snap to frame grid to eliminate micro-delays
+1. Smart global transpose — find optimal ±12 shift to center notes in range
+2. Octave normalization — fold remaining out-of-range notes by octave
+3. Collision deduplication — remove duplicate notes at the same time+pitch
+4. Velocity normalization — unify all note_on velocity to 127
+5. Time quantization — snap to frame grid to eliminate micro-delays
 """
 
 from __future__ import annotations
@@ -23,6 +25,58 @@ class PreprocessStats:
     total_notes: int
     notes_shifted: int
     original_range: tuple[int, int]  # (lowest, highest) MIDI note before shift
+    global_transpose: int = 0        # semitones applied globally (multiple of 12)
+    duplicates_removed: int = 0      # collisions removed after octave folding
+
+
+def compute_optimal_transpose(
+    events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: int = MIDI_NOTE_MAX,
+) -> int:
+    """Find the best global transpose (multiple of 12) to maximize in-range notes.
+
+    Tries shifts from -48 to +48 in steps of 12 and picks the one that puts
+    the most note_on events inside [note_min, note_max].
+    Returns 0 if no shift helps.
+    """
+    notes = [e.note for e in events if e.event_type == "note_on"]
+    if not notes:
+        return 0
+
+    best_shift = 0
+    best_in_range = sum(1 for n in notes if note_min <= n <= note_max)
+
+    for shift in range(-48, 49, 12):
+        if shift == 0:
+            continue
+        in_range = sum(1 for n in notes if note_min <= n + shift <= note_max)
+        # Prefer more in-range; break ties by smallest absolute shift
+        if in_range > best_in_range or (
+            in_range == best_in_range and abs(shift) < abs(best_shift)
+        ):
+            best_in_range = in_range
+            best_shift = shift
+
+    return best_shift
+
+
+def apply_global_transpose(events: list, *, semitones: int) -> list:
+    """Shift all note events by a fixed number of semitones."""
+    if semitones == 0:
+        return events
+
+    from .midi_file_player import MidiFileEvent
+
+    return [
+        MidiFileEvent(
+            time_seconds=evt.time_seconds,
+            event_type=evt.event_type,
+            note=evt.note + semitones,
+            velocity=evt.velocity,
+            track=evt.track,
+        )
+        if evt.event_type in ("note_on", "note_off") else evt
+        for evt in events
+    ]
 
 
 def normalize_octave(events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: int = MIDI_NOTE_MAX) -> list:
@@ -49,6 +103,30 @@ def normalize_octave(events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: i
             )
         result.append(evt)
     return result
+
+
+def deduplicate_notes(events: list) -> tuple[list, int]:
+    """Remove duplicate note events at the same (time, type, note).
+
+    After octave folding, multiple notes can collapse to the same pitch.
+    For note_off duplicates, keep only the last one (longest sustain).
+
+    Returns (deduplicated_events, count_removed).
+    """
+    seen: set[tuple[float, str, int]] = set()
+    result: list = []
+    removed = 0
+
+    for evt in events:
+        if evt.event_type in ("note_on", "note_off"):
+            key = (evt.time_seconds, evt.event_type, evt.note)
+            if key in seen:
+                removed += 1
+                continue
+            seen.add(key)
+        result.append(evt)
+
+    return result, removed
 
 
 def normalize_velocity(events: list, *, target: int = 127) -> list:
@@ -100,7 +178,7 @@ def preprocess(
 ) -> tuple[list, PreprocessStats]:
     """Apply the full preprocessing pipeline.
 
-    Order: octave → velocity → quantize → re-sort.
+    Order: global transpose → octave fold → dedup → velocity → quantize → re-sort.
     Returns (processed_events, stats).
 
     Args:
@@ -123,18 +201,36 @@ def preprocess(
     else:
         lo, hi, out_of_range = 0, 0, 0
 
-    stats = PreprocessStats(
-        total_notes=total,
-        notes_shifted=out_of_range,
-        original_range=(lo, hi),
-    )
+    # 1. Smart global transpose
+    transpose = compute_optimal_transpose(events, note_min=note_min, note_max=note_max)
+    events = apply_global_transpose(events, semitones=transpose)
 
-    # Pipeline
+    # Recount after transpose (some notes now in range that weren't before)
+    if transpose != 0:
+        out_of_range = sum(
+            1 for e in events
+            if e.event_type == "note_on" and (e.note < note_min or e.note > note_max)
+        )
+
+    # 2. Octave fold remaining out-of-range notes
     events = normalize_octave(events, note_min=note_min, note_max=note_max)
+
+    # 3. Deduplicate collisions from folding
+    events, dupes = deduplicate_notes(events)
+
+    # 4-5. Velocity + timing
     events = normalize_velocity(events)
     events = quantize_timing(events)
 
     # Re-sort: by time, then note_off before note_on (release before press)
     events.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
+
+    stats = PreprocessStats(
+        total_notes=total,
+        notes_shifted=out_of_range,
+        original_range=(lo, hi),
+        global_transpose=transpose,
+        duplicates_removed=dupes,
+    )
 
     return events, stats

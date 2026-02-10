@@ -76,7 +76,9 @@ class Sidebar(QWidget):
         # Version label
         from PyQt6.QtWidgets import QLabel
 
-        ver = QLabel("v0.1.0")
+        from cyber_qin import __version__
+
+        ver = QLabel(f"v{__version__}")
         ver.setFont(QFont("Microsoft JhengHei", 9))
         ver.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         ver.setAlignment(Qt.AlignmentFlag.AlignCenter)

@@ -1,12 +1,14 @@
-"""Scrollable track list widget with icon buttons and hover reveal — 賽博墨韻."""
+"""Scrollable track list widget with search, sort, and hover-reveal buttons — 賽博墨韻."""
 
 from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath
 from PyQt6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -14,7 +16,7 @@ from PyQt6.QtWidgets import (
 
 from ...core.midi_file_player import MidiFileInfo
 from ..icons import draw_music_note
-from ..theme import ACCENT, BG_WASH, TEXT_PRIMARY, TEXT_SECONDARY
+from ..theme import ACCENT, BG_PAPER, BG_WASH, DIVIDER, TEXT_PRIMARY, TEXT_SECONDARY
 from .animated_widgets import IconButton
 
 # 水墨配色 icon colors, rotated by index
@@ -25,6 +27,15 @@ _ICON_COLORS = [
     QColor("#4488CC"),  # 靛
     QColor("#E8A830"),  # 琥珀
     QColor("#2DB87A"),  # 翠
+]
+
+# Sort options: (display_name, key_func, reverse)
+_SORT_OPTIONS: list[tuple[str, str]] = [
+    ("預設順序", "default"),
+    ("名稱", "name"),
+    ("BPM", "bpm"),
+    ("音符數", "notes"),
+    ("時長", "duration"),
 ]
 
 
@@ -166,19 +177,64 @@ class TrackCard(QWidget):
 
 
 class TrackList(QWidget):
-    """Scrollable list of MIDI track cards."""
+    """Scrollable list of MIDI track cards with search and sort."""
 
-    play_requested = pyqtSignal(int)    # track index
-    remove_requested = pyqtSignal(int)  # track index
+    play_requested = pyqtSignal(int)    # track index (in _all_cards)
+    remove_requested = pyqtSignal(int)  # track index (in _all_cards)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._cards: list[TrackCard] = []
+        self._all_cards: list[TrackCard] = []
+        self._visible_cards: list[TrackCard] = []
         self._playing_index: int = -1
+        self._current_sort: str = "default"
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(6)
 
+        # Search + sort toolbar
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        toolbar.setSpacing(8)
+
+        self._search_input = QLineEdit()
+        self._search_input.setPlaceholderText("搜尋曲名…")
+        self._search_input.setClearButtonEnabled(True)
+        self._search_input.setFixedHeight(32)
+        self._search_input.setStyleSheet(
+            f"QLineEdit {{"
+            f"  background: {BG_PAPER}; color: {TEXT_PRIMARY}; border: 1px solid {DIVIDER};"
+            f"  border-radius: 6px; padding: 4px 10px; font-size: 12px;"
+            f"}}"
+            f"QLineEdit:focus {{ border-color: {ACCENT}; }}"
+        )
+        self._search_input.textChanged.connect(self._apply_filter)
+        toolbar.addWidget(self._search_input, 1)
+
+        self._sort_combo = QComboBox()
+        self._sort_combo.setFixedHeight(32)
+        self._sort_combo.setFixedWidth(120)
+        for display_name, _key in _SORT_OPTIONS:
+            self._sort_combo.addItem(display_name)
+        self._sort_combo.setStyleSheet(
+            f"QComboBox {{"
+            f"  background: {BG_PAPER}; color: {TEXT_PRIMARY}; border: 1px solid {DIVIDER};"
+            f"  border-radius: 6px; padding: 4px 8px; font-size: 12px;"
+            f"}}"
+            f"QComboBox:focus {{ border-color: {ACCENT}; }}"
+            f"QComboBox::drop-down {{ border: none; width: 20px; }}"
+            f"QComboBox QAbstractItemView {{"
+            f"  background: {BG_PAPER}; color: {TEXT_PRIMARY}; border: 1px solid {DIVIDER};"
+            f"  selection-background-color: {BG_WASH};"
+            f"}}"
+        )
+        self._sort_combo.currentIndexChanged.connect(self._on_sort_changed)
+        toolbar.addWidget(self._sort_combo)
+
+        outer.addLayout(toolbar)
+
+        # Scrollable card area
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -192,39 +248,85 @@ class TrackList(QWidget):
         self._layout.addStretch()
 
         self._scroll.setWidget(self._container)
-        outer.addWidget(self._scroll)
+        outer.addWidget(self._scroll, 1)
 
     def add_track(self, info: MidiFileInfo) -> None:
-        index = len(self._cards)
+        index = len(self._all_cards)
         card = TrackCard(index, info)
         card.play_clicked.connect(self.play_requested.emit)
         card.remove_clicked.connect(self._on_remove)
-        self._cards.append(card)
-        self._layout.insertWidget(self._layout.count() - 1, card)
+        self._all_cards.append(card)
+        self._apply_filter()
 
     def _on_remove(self, index: int) -> None:
-        if 0 <= index < len(self._cards):
-            card = self._cards.pop(index)
+        if 0 <= index < len(self._all_cards):
+            card = self._all_cards.pop(index)
             self._layout.removeWidget(card)
             card.deleteLater()
             # Re-index remaining cards
-            for i, c in enumerate(self._cards):
+            for i, c in enumerate(self._all_cards):
                 c._index = i
                 c._index_label.setText(f"{i + 1}")
+            self._apply_filter()
             self.remove_requested.emit(index)
 
     def set_playing(self, index: int) -> None:
-        for i, card in enumerate(self._cards):
+        for i, card in enumerate(self._all_cards):
             card.set_playing(i == index)
         self._playing_index = index
 
     def clear(self) -> None:
-        for card in self._cards:
+        for card in self._all_cards:
             self._layout.removeWidget(card)
             card.deleteLater()
-        self._cards.clear()
+        self._all_cards.clear()
+        self._visible_cards.clear()
         self._playing_index = -1
 
     @property
     def count(self) -> int:
-        return len(self._cards)
+        return len(self._all_cards)
+
+    # ── Search & Sort ──
+
+    def _on_sort_changed(self, combo_index: int) -> None:
+        if 0 <= combo_index < len(_SORT_OPTIONS):
+            self._current_sort = _SORT_OPTIONS[combo_index][1]
+            self._apply_filter()
+
+    def _apply_filter(self) -> None:
+        """Rebuild visible card list based on search text and sort order."""
+        query = self._search_input.text().strip().lower()
+
+        # Filter
+        filtered = [
+            card for card in self._all_cards
+            if not query or query in card._info.name.lower()
+        ]
+
+        # Sort
+        if self._current_sort == "name":
+            filtered.sort(key=lambda c: c._info.name.lower())
+        elif self._current_sort == "bpm":
+            filtered.sort(key=lambda c: c._info.tempo_bpm, reverse=True)
+        elif self._current_sort == "notes":
+            filtered.sort(key=lambda c: c._info.note_count, reverse=True)
+        elif self._current_sort == "duration":
+            filtered.sort(key=lambda c: c._info.duration_seconds, reverse=True)
+        # "default" keeps insertion order
+
+        # Remove all cards from layout (except the trailing stretch)
+        for card in self._visible_cards:
+            self._layout.removeWidget(card)
+            card.setVisible(False)
+
+        # Re-add filtered cards
+        self._visible_cards = filtered
+        for i, card in enumerate(filtered):
+            self._layout.insertWidget(i, card)
+            card.setVisible(True)
+
+    # Alias for backwards compatibility
+    @property
+    def _cards(self) -> list[TrackCard]:
+        return self._all_cards

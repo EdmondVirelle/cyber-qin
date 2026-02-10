@@ -193,10 +193,20 @@ class AppShell(QMainWindow):
             self._live_view.log_viewer.log(
                 f"  Auto-play: {info.name} ({info.note_count} notes, {info.tempo_bpm} BPM)"
             )
+            if stats.global_transpose != 0:
+                direction = "↑" if stats.global_transpose > 0 else "↓"
+                octaves = abs(stats.global_transpose) // 12
+                self._live_view.log_viewer.log(
+                    f"  智慧移調: 全曲{direction}{octaves} 個八度 (原始: {lo}-{hi})"
+                )
             if stats.notes_shifted > 0:
                 self._live_view.log_viewer.log(
-                    f"  預處理: {stats.notes_shifted}/{stats.total_notes} 音符"
-                    f"移調至可演奏範圍 (原始: {lo}-{hi})"
+                    f"  八度摺疊: {stats.notes_shifted}/{stats.total_notes} 音符"
+                    f"收納至可演奏範圍"
+                )
+            if stats.duplicates_removed > 0:
+                self._live_view.log_viewer.log(
+                    f"  碰撞去重: 移除 {stats.duplicates_removed} 個重複音符"
                 )
         except Exception as e:
             self._live_view.log_viewer.log(f"  Failed to load: {e}")

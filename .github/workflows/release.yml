@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -e .[dev]
+
+      - name: Generate icon
+        run: python scripts/generate_icon.py
+
+      - name: Build with PyInstaller
+        run: pyinstaller cyber_qin.spec --clean -y
+
+      - name: Create zip archive
+        run: Compress-Archive -Path "dist/賽博琴仙/*" -DestinationPath "dist/賽博琴仙-${{ github.ref_name }}.zip"
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 賽博琴仙-${{ github.ref_name }}
+          path: dist/賽博琴仙/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/賽博琴仙-${{ github.ref_name }}.zip
+          generate_release_notes: true
