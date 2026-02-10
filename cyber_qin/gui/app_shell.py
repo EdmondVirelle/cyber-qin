@@ -180,9 +180,9 @@ class AppShell(QMainWindow):
     def _on_play_file(self, file_path: str) -> None:
         """Load and play a MIDI file from the library."""
         try:
-            # Pass scheme range to preprocessor
+            # Pass scheme range + preprocessing options to preprocessor
             scheme = self._mapper.scheme
-            kwargs = {}
+            kwargs: dict = {"remove_percussion": True}
             if scheme is not None:
                 kwargs["note_min"] = scheme.midi_range[0]
                 kwargs["note_max"] = scheme.midi_range[1]
@@ -193,6 +193,14 @@ class AppShell(QMainWindow):
             self._live_view.log_viewer.log(
                 f"  Auto-play: {info.name} ({info.note_count} notes, {info.tempo_bpm} BPM)"
             )
+            if stats.percussion_removed > 0:
+                self._live_view.log_viewer.log(
+                    f"  打擊軌過濾: 移除 {stats.percussion_removed} 個打擊音符"
+                )
+            if stats.octave_deduped > 0:
+                self._live_view.log_viewer.log(
+                    f"  八度去重: 移除 {stats.octave_deduped} 個重複八度音"
+                )
             if stats.global_transpose != 0:
                 direction = "↑" if stats.global_transpose > 0 else "↓"
                 octaves = abs(stats.global_transpose) // 12
@@ -207,6 +215,10 @@ class AppShell(QMainWindow):
             if stats.duplicates_removed > 0:
                 self._live_view.log_viewer.log(
                     f"  碰撞去重: 移除 {stats.duplicates_removed} 個重複音符"
+                )
+            if stats.polyphony_limited > 0:
+                self._live_view.log_viewer.log(
+                    f"  聲部限制: 移除 {stats.polyphony_limited} 個過密音符"
                 )
         except Exception as e:
             self._live_view.log_viewer.log(f"  Failed to load: {e}")

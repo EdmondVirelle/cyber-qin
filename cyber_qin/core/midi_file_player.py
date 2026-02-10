@@ -40,6 +40,17 @@ class MidiFileEvent:
     note: int
     velocity: int
     track: int = 0
+    channel: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class MidiTrackInfo:
+    """Metadata about a single MIDI track."""
+    index: int
+    name: str
+    channel: int        # primary channel (-1 if mixed/none)
+    note_count: int
+    is_percussion: bool  # True if channel == 9 (GM percussion)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,56 +62,121 @@ class MidiFileInfo:
     track_count: int
     note_count: int
     tempo_bpm: float
+    tracks: tuple[MidiTrackInfo, ...] = ()
 
 
 class MidiFileParser:
     """Parse .mid files into sorted event lists."""
 
     @staticmethod
+    def _build_tempo_map(mid: mido.MidiFile) -> list[tuple[int, int]]:
+        """Extract a global tempo map: list of (abs_tick, tempo_uspb).
+
+        Scans ALL tracks for set_tempo events (some MIDIs put them
+        outside the conductor track).
+        """
+        tempo_events: list[tuple[int, int]] = []
+        for track in mid.tracks:
+            abs_tick = 0
+            for msg in track:
+                abs_tick += msg.time
+                if msg.type == "set_tempo":
+                    tempo_events.append((abs_tick, msg.tempo))
+        tempo_events.sort(key=lambda x: x[0])
+        if not tempo_events or tempo_events[0][0] != 0:
+            tempo_events.insert(0, (0, 500000))  # default 120 BPM
+        return tempo_events
+
+    @staticmethod
+    def _tick_to_sec(abs_tick: int, tempo_map: list[tuple[int, int]], tpb: int) -> float:
+        """Convert absolute tick to seconds using the tempo map."""
+        seconds = 0.0
+        prev_tick = 0
+        prev_tempo = tempo_map[0][1]
+        for map_tick, map_tempo in tempo_map:
+            if map_tick >= abs_tick:
+                break
+            seconds += mido.tick2second(map_tick - prev_tick, tpb, prev_tempo)
+            prev_tick = map_tick
+            prev_tempo = map_tempo
+        seconds += mido.tick2second(abs_tick - prev_tick, tpb, prev_tempo)
+        return seconds
+
+    @staticmethod
     def parse(file_path: str) -> tuple[list[MidiFileEvent], MidiFileInfo]:
         """Parse a MIDI file into a list of timed events + metadata.
 
         Returns (events, info) where events are sorted by time_seconds.
-        Handles velocity-0 note_on as note_off.
-        Correctly converts tick-based delta times to seconds using tempo map.
+        Preserves track index and MIDI channel for each event.
         """
         path = Path(file_path)
         mid = mido.MidiFile(str(path), clip=True)
         tpb = mid.ticks_per_beat
+        tempo_map = MidiFileParser._build_tempo_map(mid)
 
-        # Build timed event list, tracking tempo changes
         events: list[MidiFileEvent] = []
-        abs_time_sec = 0.0
-        tempo = 500000  # Default 120 BPM (microseconds per beat)
-        note_count = 0
-        first_tempo = tempo
+        track_infos: list[MidiTrackInfo] = []
+        first_tempo = tempo_map[0][1]
 
-        for msg in mido.merge_tracks(mid.tracks):
-            # Convert delta ticks to seconds
-            abs_time_sec += mido.tick2second(msg.time, tpb, tempo)
+        for track_idx, track in enumerate(mid.tracks):
+            abs_tick = 0
+            track_note_count = 0
+            track_name = ""
+            channels_seen: set[int] = set()
 
-            if msg.type == "set_tempo":
-                tempo = msg.tempo
-                if note_count == 0:
-                    first_tempo = tempo
-            elif msg.type == "note_on" and msg.velocity > 0:
-                events.append(MidiFileEvent(
-                    time_seconds=abs_time_sec,
-                    event_type="note_on",
-                    note=msg.note,
-                    velocity=msg.velocity,
-                ))
-                note_count += 1
-            elif msg.type == "note_off" or (
-                msg.type == "note_on" and msg.velocity == 0
-            ):
-                events.append(MidiFileEvent(
-                    time_seconds=abs_time_sec,
-                    event_type="note_off",
-                    note=msg.note,
-                    velocity=0,
-                ))
+            for msg in track:
+                abs_tick += msg.time
 
+                if msg.type == "track_name":
+                    track_name = msg.name
+                elif msg.type == "note_on" and msg.velocity > 0:
+                    t = MidiFileParser._tick_to_sec(abs_tick, tempo_map, tpb)
+                    events.append(MidiFileEvent(
+                        time_seconds=t,
+                        event_type="note_on",
+                        note=msg.note,
+                        velocity=msg.velocity,
+                        track=track_idx,
+                        channel=msg.channel,
+                    ))
+                    track_note_count += 1
+                    channels_seen.add(msg.channel)
+                elif msg.type == "note_off" or (
+                    msg.type == "note_on" and msg.velocity == 0
+                ):
+                    t = MidiFileParser._tick_to_sec(abs_tick, tempo_map, tpb)
+                    events.append(MidiFileEvent(
+                        time_seconds=t,
+                        event_type="note_off",
+                        note=msg.note,
+                        velocity=0,
+                        track=track_idx,
+                        channel=msg.channel,
+                    ))
+                    channels_seen.add(msg.channel)
+
+            # Determine primary channel for this track
+            primary_ch = -1
+            if len(channels_seen) == 1:
+                primary_ch = next(iter(channels_seen))
+            elif channels_seen:
+                # Most common channel (excluding None)
+                primary_ch = max(channels_seen, key=lambda c: sum(
+                    1 for e in events if e.track == track_idx and e.channel == c
+                )) if track_note_count > 0 else -1
+
+            track_infos.append(MidiTrackInfo(
+                index=track_idx,
+                name=track_name or f"Track {track_idx}",
+                channel=primary_ch,
+                note_count=track_note_count,
+                is_percussion=(primary_ch == 9),
+            ))
+
+        # Sort by time
+        events.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
+
+        total_notes = sum(1 for e in events if e.event_type == "note_on")
         duration = events[-1].time_seconds if events else 0.0
         tempo_bpm = mido.tempo2bpm(first_tempo)
 
@@ -109,8 +185,9 @@ class MidiFileParser:
             name=path.stem,
             duration_seconds=duration,
             track_count=len(mid.tracks),
-            note_count=note_count,
+            note_count=total_notes,
             tempo_bpm=round(tempo_bpm, 1),
+            tracks=tuple(track_infos),
         )
 
         return events, info

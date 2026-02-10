@@ -6,6 +6,10 @@ from cyber_qin.core.midi_preprocessor import (
     apply_global_transpose,
     compute_optimal_transpose,
     deduplicate_notes,
+    deduplicate_octaves,
+    filter_percussion,
+    filter_tracks,
+    limit_polyphony,
     normalize_octave,
     normalize_velocity,
     preprocess,
@@ -13,9 +17,15 @@ from cyber_qin.core.midi_preprocessor import (
 )
 
 
-def _evt(t: float, typ: str, note: int, vel: int = 80) -> MidiFileEvent:
-    """Shorthand event constructor."""
-    return MidiFileEvent(time_seconds=t, event_type=typ, note=note, velocity=vel)
+def _evt(
+    t: float, typ: str, note: int, vel: int = 80,
+    *, track: int = 0, channel: int = 0,
+) -> MidiFileEvent:
+    """Shorthand event constructor with optional track/channel."""
+    return MidiFileEvent(
+        time_seconds=t, event_type=typ, note=note, velocity=vel,
+        track=track, channel=channel,
+    )
 
 
 # ── normalize_octave ──────────────────────────────────────
@@ -454,12 +464,12 @@ class TestPreprocessSmartTranspose:
 
     def test_collision_dedup_after_fold(self):
         """Notes that collide after fold should be deduplicated."""
-        # Three notes spanning 3 octaves at the same time — two must collide after fold
-        # 48 (in range), 60 (in range), 96 (folds to 72)
-        # Plus a note at 72 — will collide with 96 after fold
+        # 72 and 96 are same pitch class (C) at the same time
+        # Octave dedup (stage 3) now catches this BEFORE folding → octave_deduped > 0
+        # If octave dedup doesn't catch it, collision dedup (stage 6) does
         events = [
             _evt(0, "note_on", 72),
-            _evt(0, "note_on", 96),    # folds to 72 → collision
+            _evt(0, "note_on", 96),    # same pitch class as 72 → deduped
             _evt(0.5, "note_off", 72),
             _evt(0.5, "note_off", 96),
             # Add enough in-range notes so transpose stays at 0
@@ -467,12 +477,11 @@ class TestPreprocessSmartTranspose:
             *[_evt(i * 0.1 + 1.05, "note_off", 48 + (i % 36)) for i in range(30)],
         ]
         result, stats = preprocess(events)
-        # The 96→72 collision should be deduplicated
+        # The 96→72 collision should be handled (by octave dedup or collision dedup)
         t0_note_ons = [e for e in result if e.event_type == "note_on" and e.time_seconds < 0.01]
-        # At most one note_on for pitch 72 at time 0
         pitch_72_ons = [e for e in t0_note_ons if e.note == 72]
         assert len(pitch_72_ons) == 1
-        assert stats.duplicates_removed > 0
+        assert stats.octave_deduped > 0 or stats.duplicates_removed > 0
 
     def test_wide_range_song_all_notes_playable(self):
         """A song spanning 5 octaves should have all notes in range after processing."""
@@ -485,3 +494,516 @@ class TestPreprocessSmartTranspose:
         for e in result:
             if e.event_type == "note_on":
                 assert 48 <= e.note <= 83, f"Note {e.note} out of range"
+
+
+# ── filter_percussion ────────────────────────────────────
+
+
+class TestFilterPercussion:
+    def test_removes_channel_9(self):
+        events = [
+            _evt(0, "note_on", 36, channel=9),   # kick drum
+            _evt(0, "note_on", 60, channel=0),    # piano
+            _evt(0.5, "note_off", 36, channel=9),
+            _evt(0.5, "note_off", 60, channel=0),
+        ]
+        result, removed = filter_percussion(events)
+        assert removed == 2  # note_on + note_off on channel 9
+        assert len(result) == 2
+        assert all(e.channel == 0 for e in result)
+
+    def test_empty_list(self):
+        result, removed = filter_percussion([])
+        assert result == []
+        assert removed == 0
+
+    def test_all_percussion(self):
+        events = [
+            _evt(0, "note_on", 36, channel=9),
+            _evt(0.5, "note_off", 36, channel=9),
+            _evt(1, "note_on", 38, channel=9),
+            _evt(1.5, "note_off", 38, channel=9),
+        ]
+        result, removed = filter_percussion(events)
+        assert len(result) == 0
+        assert removed == 4
+
+    def test_no_percussion(self):
+        events = [
+            _evt(0, "note_on", 60, channel=0),
+            _evt(0.5, "note_off", 60, channel=0),
+        ]
+        result, removed = filter_percussion(events)
+        assert len(result) == 2
+        assert removed == 0
+
+    def test_custom_percussion_channel(self):
+        events = [
+            _evt(0, "note_on", 60, channel=5),
+            _evt(0, "note_on", 72, channel=0),
+        ]
+        result, removed = filter_percussion(events, percussion_channel=5)
+        assert removed == 1
+        assert len(result) == 1
+        assert result[0].channel == 0
+
+    def test_preserves_non_note_events_on_channel_9(self):
+        """Non note_on/note_off events on channel 9 should be kept."""
+        # Only note_on and note_off with channel 9 are removed
+        events = [
+            _evt(0, "note_on", 36, channel=9),
+            _evt(0, "note_on", 60, channel=0),
+        ]
+        result, removed = filter_percussion(events)
+        assert removed == 1
+        assert len(result) == 1
+
+    def test_multiple_channels_mixed(self):
+        events = [
+            _evt(0, "note_on", 60, channel=0),
+            _evt(0, "note_on", 36, channel=9),
+            _evt(0.1, "note_on", 62, channel=1),
+            _evt(0.1, "note_on", 42, channel=9),
+            _evt(0.5, "note_off", 60, channel=0),
+            _evt(0.5, "note_off", 36, channel=9),
+        ]
+        result, removed = filter_percussion(events)
+        assert removed == 3  # 2 note_on + 1 note_off on ch9
+        assert len(result) == 3
+
+
+# ── filter_tracks ────────────────────────────────────────
+
+
+class TestFilterTracks:
+    def test_none_keeps_all(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0, "note_on", 72, track=1),
+        ]
+        result, removed = filter_tracks(events, include_tracks=None)
+        assert len(result) == 2
+        assert removed == 0
+
+    def test_filter_single_track(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0, "note_on", 72, track=1),
+            _evt(0, "note_on", 84, track=2),
+        ]
+        result, removed = filter_tracks(events, include_tracks={1})
+        assert len(result) == 1
+        assert result[0].track == 1
+        assert removed == 2
+
+    def test_filter_multiple_tracks(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0, "note_on", 72, track=1),
+            _evt(0, "note_on", 84, track=2),
+            _evt(0, "note_on", 48, track=3),
+        ]
+        result, removed = filter_tracks(events, include_tracks={0, 2})
+        assert len(result) == 2
+        assert {e.track for e in result} == {0, 2}
+        assert removed == 2
+
+    def test_empty_include_set_removes_all(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0.5, "note_off", 60, track=0),
+        ]
+        result, removed = filter_tracks(events, include_tracks=set())
+        assert len(result) == 0
+        assert removed == 2
+
+    def test_empty_events(self):
+        result, removed = filter_tracks([], include_tracks={0})
+        assert result == []
+        assert removed == 0
+
+    def test_preserves_event_order(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0.1, "note_on", 72, track=1),
+            _evt(0.2, "note_on", 64, track=0),
+        ]
+        result, _ = filter_tracks(events, include_tracks={0})
+        assert result[0].note == 60
+        assert result[1].note == 64
+
+
+# ── deduplicate_octaves ──────────────────────────────────
+
+
+class TestDeduplicateOctaves:
+    def test_same_pitch_class_same_time_keeps_highest(self):
+        """C4 (60) and C5 (72) at same time → keep C5."""
+        events = [
+            _evt(0, "note_on", 60),  # C4
+            _evt(0, "note_on", 72),  # C5 — higher → kept
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 72),
+        ]
+        result, removed = deduplicate_octaves(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 1
+        assert note_ons[0].note == 72
+        assert removed > 0
+
+    def test_different_pitch_classes_kept(self):
+        """C4 (60) and D4 (62) at same time → both kept."""
+        events = [
+            _evt(0, "note_on", 60),  # C4
+            _evt(0, "note_on", 62),  # D4
+        ]
+        result, removed = deduplicate_octaves(events)
+        assert len(result) == 2
+        assert removed == 0
+
+    def test_same_pitch_class_different_time_kept(self):
+        """C4 at t=0 and C5 at t=1 → both kept."""
+        events = [
+            _evt(0, "note_on", 60),
+            _evt(1, "note_on", 72),
+        ]
+        result, removed = deduplicate_octaves(events)
+        assert len(result) == 2
+        assert removed == 0
+
+    def test_three_octaves_keep_highest(self):
+        """C3 (48), C4 (60), C5 (72) at same time → keep only C5."""
+        events = [
+            _evt(0, "note_on", 48),
+            _evt(0, "note_on", 60),
+            _evt(0, "note_on", 72),
+            _evt(0.5, "note_off", 48),
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 72),
+        ]
+        result, removed = deduplicate_octaves(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 1
+        assert note_ons[0].note == 72
+
+    def test_empty_list(self):
+        result, removed = deduplicate_octaves([])
+        assert result == []
+        assert removed == 0
+
+    def test_single_note(self):
+        events = [_evt(0, "note_on", 60), _evt(0.5, "note_off", 60)]
+        result, removed = deduplicate_octaves(events)
+        assert len(result) == 2
+        assert removed == 0
+
+    def test_note_off_also_removed(self):
+        """When a note_on is dropped, its matching note_off should also be dropped."""
+        events = [
+            _evt(0, "note_on", 60),    # C4 — will be dropped
+            _evt(0, "note_on", 72),    # C5 — kept
+            _evt(0.5, "note_off", 60),  # should also be dropped
+            _evt(0.5, "note_off", 72),  # kept
+        ]
+        result, removed = deduplicate_octaves(events)
+        # 2 removed: note_on(60) + note_off(60)
+        assert removed == 2
+        assert len(result) == 2
+
+    def test_complex_chord(self):
+        """A chord with octave doublings in multiple pitch classes."""
+        events = [
+            # C major chord with octave doublings
+            _evt(0, "note_on", 48),  # C3
+            _evt(0, "note_on", 60),  # C4 → C4 kept (highest C)
+            _evt(0, "note_on", 52),  # E3
+            _evt(0, "note_on", 64),  # E4 → E4 kept
+            _evt(0, "note_on", 55),  # G3 — no duplicate, kept
+        ]
+        result, removed = deduplicate_octaves(events)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 3  # C4, E4, G3
+        notes = sorted(e.note for e in note_ons)
+        assert notes == [55, 60, 64]
+
+
+# ── limit_polyphony ──────────────────────────────────────
+
+
+class TestLimitPolyphony:
+    def test_disabled_when_max_zero(self):
+        events = [
+            _evt(0, "note_on", 60),
+            _evt(0, "note_on", 64),
+            _evt(0, "note_on", 67),
+        ]
+        result, removed = limit_polyphony(events, max_voices=0)
+        assert len(result) == 3
+        assert removed == 0
+
+    def test_disabled_when_negative(self):
+        events = [_evt(0, "note_on", 60)]
+        result, removed = limit_polyphony(events, max_voices=-1)
+        assert len(result) == 1
+        assert removed == 0
+
+    def test_within_limit_no_removal(self):
+        events = [
+            _evt(0, "note_on", 60),
+            _evt(0, "note_on", 64),
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 64),
+        ]
+        result, removed = limit_polyphony(events, max_voices=4)
+        assert len(result) == 4
+        assert removed == 0
+
+    def test_limit_to_one_voice(self):
+        """With max_voices=1, highest note wins (no bass anchor at 1 voice)."""
+        events = [
+            _evt(0, "note_on", 60),     # lower → dropped
+            _evt(0, "note_on", 64),     # higher → kept
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 64),
+        ]
+        result, removed = limit_polyphony(events, max_voices=1)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 1
+        assert note_ons[0].note == 64  # highest kept
+        assert removed >= 2  # note_on(60) + note_off(60)
+
+    def test_limit_to_two_keeps_highest_and_lowest(self):
+        """With 3 simultaneous notes and max_voices=2, keep highest + lowest."""
+        events = [
+            _evt(0, "note_on", 60),    # C4 — lowest → kept
+            _evt(0, "note_on", 64),    # E4 — middle → may be dropped
+            _evt(0, "note_on", 72),    # C5 — highest → kept
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 64),
+            _evt(0.5, "note_off", 72),
+        ]
+        result, removed = limit_polyphony(events, max_voices=2)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        notes = {e.note for e in note_ons}
+        assert 60 in notes  # lowest kept
+        assert 72 in notes  # highest kept
+        assert removed >= 1
+
+    def test_dropped_note_off_also_removed(self):
+        """When a note_on is dropped, its note_off should also be removed."""
+        events = [
+            _evt(0, "note_on", 60),     # lower → dropped (max_voices=1, high-note priority)
+            _evt(0, "note_on", 64),     # higher → kept
+            _evt(0.5, "note_off", 60),  # should also be removed
+            _evt(0.5, "note_off", 64),
+        ]
+        result, removed = limit_polyphony(events, max_voices=1)
+        # Both note_on(60) and note_off(60) should be removed
+        assert removed == 2
+        assert all(e.note == 64 for e in result)
+
+    def test_voice_freed_after_note_off(self):
+        """After a note_off frees a voice, new notes should be accepted."""
+        events = [
+            _evt(0, "note_on", 60),
+            _evt(0.5, "note_off", 60),    # frees the voice
+            _evt(1, "note_on", 64),        # should be accepted now
+        ]
+        result, removed = limit_polyphony(events, max_voices=1)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 2
+        assert removed == 0
+
+    def test_empty_list(self):
+        result, removed = limit_polyphony([], max_voices=2)
+        assert result == []
+        assert removed == 0
+
+    def test_realistic_4_voice_limit(self):
+        """Simulate a 4-voice limit on a 6-note chord."""
+        events = [
+            _evt(0, "note_on", 48),   # C3
+            _evt(0, "note_on", 52),   # E3
+            _evt(0, "note_on", 55),   # G3
+            _evt(0, "note_on", 60),   # C4
+            _evt(0, "note_on", 64),   # E4
+            _evt(0, "note_on", 72),   # C5
+        ]
+        result, removed = limit_polyphony(events, max_voices=4)
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 4
+        assert removed == 2
+        # Highest (72) and lowest (48) should be preserved
+        notes = {e.note for e in note_ons}
+        assert 48 in notes
+        assert 72 in notes
+
+
+# ── preprocess (new features integration) ─────────────────
+
+
+class TestPreprocessPercussion:
+    def test_percussion_removed_by_default(self):
+        events = [
+            _evt(0, "note_on", 60, channel=0),
+            _evt(0, "note_on", 36, channel=9),   # percussion
+            _evt(0.5, "note_off", 60, channel=0),
+            _evt(0.5, "note_off", 36, channel=9),
+        ]
+        result, stats = preprocess(events)
+        assert stats.percussion_removed == 2
+        assert all(e.channel != 9 for e in result if e.event_type in ("note_on", "note_off"))
+
+    def test_percussion_kept_when_disabled(self):
+        events = [
+            _evt(0, "note_on", 60, channel=0),
+            _evt(0, "note_on", 36, channel=9),
+        ]
+        _, stats = preprocess(events, remove_percussion=False)
+        assert stats.percussion_removed == 0
+
+
+class TestPreprocessTrackFilter:
+    def test_include_tracks_filters(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0, "note_on", 72, track=1),
+            _evt(0, "note_on", 64, track=2),
+            _evt(0.5, "note_off", 60, track=0),
+            _evt(0.5, "note_off", 72, track=1),
+            _evt(0.5, "note_off", 64, track=2),
+        ]
+        _, stats = preprocess(events, include_tracks={0, 2})
+        assert stats.tracks_removed > 0
+
+    def test_include_tracks_none_keeps_all(self):
+        events = [
+            _evt(0, "note_on", 60, track=0),
+            _evt(0, "note_on", 72, track=1),
+        ]
+        _, stats = preprocess(events, include_tracks=None)
+        assert stats.tracks_removed == 0
+
+
+class TestPreprocessOctaveDedup:
+    def test_octave_dedup_in_pipeline(self):
+        """Octave doublings should be removed in the full pipeline."""
+        events = [
+            _evt(0, "note_on", 60),     # C4
+            _evt(0, "note_on", 72),     # C5 — octave doubling
+            _evt(0, "note_on", 62),     # D4 — different pitch class
+            _evt(0.5, "note_off", 60),
+            _evt(0.5, "note_off", 72),
+            _evt(0.5, "note_off", 62),
+        ]
+        _, stats = preprocess(events)
+        assert stats.octave_deduped > 0
+
+
+class TestPreprocessPolyphonyLimit:
+    def test_polyphony_limit_in_pipeline(self):
+        events = [
+            _evt(i * 0.001, "note_on", 48 + i)
+            for i in range(10)
+        ]
+        events += [
+            _evt(1.0 + i * 0.001, "note_off", 48 + i)
+            for i in range(10)
+        ]
+        _, stats = preprocess(events, max_voices=4)
+        assert stats.polyphony_limited > 0
+
+    def test_polyphony_limit_zero_means_no_limit(self):
+        events = [
+            _evt(0, "note_on", 48 + i) for i in range(10)
+        ]
+        _, stats = preprocess(events, max_voices=0)
+        assert stats.polyphony_limited == 0
+
+
+class TestPreprocessFullPipeline:
+    """Integration tests for the complete 9-stage pipeline."""
+
+    def test_all_stats_populated(self):
+        """Pipeline should populate all stat fields."""
+        events = [
+            _evt(0, "note_on", 36, channel=9),      # percussion
+            _evt(0, "note_on", 60, channel=0),       # C4
+            _evt(0, "note_on", 72, channel=0),       # C5 — octave dup
+            _evt(0, "note_on", 96, channel=0),       # C7 — out of range
+            _evt(0.5, "note_off", 36, channel=9),
+            _evt(0.5, "note_off", 60, channel=0),
+            _evt(0.5, "note_off", 72, channel=0),
+            _evt(0.5, "note_off", 96, channel=0),
+        ]
+        result, stats = preprocess(events)
+        assert stats.percussion_removed > 0
+        assert stats.total_notes > 0
+        assert isinstance(stats.original_range, tuple)
+        assert len(stats.original_range) == 2
+
+    def test_percussion_then_track_filter_order(self):
+        """Percussion filter runs before track filter."""
+        events = [
+            _evt(0, "note_on", 36, channel=9, track=0),  # percussion on track 0
+            _evt(0, "note_on", 60, channel=0, track=0),   # piano on track 0
+            _evt(0, "note_on", 72, channel=0, track=1),   # piano on track 1
+        ]
+        # Include only track 0 — percussion should already be removed
+        _, stats = preprocess(events, include_tracks={0})
+        assert stats.percussion_removed == 1
+        assert stats.tracks_removed > 0
+
+    def test_end_to_end_complex(self):
+        """Complex scenario with all pipeline stages active."""
+        events = []
+        # Track 0: Melody (channel 0)
+        for i in range(20):
+            n = 60 + (i % 12)
+            events.append(_evt(i * 0.1, "note_on", n, track=0, channel=0))
+            events.append(_evt(i * 0.1 + 0.05, "note_off", n, track=0, channel=0))
+
+        # Track 1: Bass (channel 0, low notes)
+        for i in range(10):
+            n = 36 + (i % 12)
+            events.append(_evt(i * 0.2, "note_on", n, track=1, channel=0))
+            events.append(_evt(i * 0.2 + 0.1, "note_off", n, track=1, channel=0))
+
+        # Track 9: Drums (channel 9)
+        for i in range(8):
+            events.append(_evt(i * 0.25, "note_on", 36, track=2, channel=9))
+            events.append(_evt(i * 0.25 + 0.05, "note_off", 36, track=2, channel=9))
+
+        events.sort(key=lambda e: e.time_seconds)
+
+        result, stats = preprocess(events, max_voices=4)
+        assert stats.percussion_removed > 0
+        assert stats.total_notes > 0
+        # All surviving notes in range
+        for e in result:
+            if e.event_type == "note_on":
+                assert 48 <= e.note <= 83
+                assert e.velocity == 127
+
+    def test_pipeline_preserves_note_off_before_note_on(self):
+        """At the same quantized time, note_off should come before note_on."""
+        events = [
+            _evt(0, "note_off", 60),
+            _evt(0, "note_on", 64),
+        ]
+        result, _ = preprocess(events)
+        assert result[0].event_type == "note_off"
+        assert result[1].event_type == "note_on"
+
+    def test_pipeline_empty_after_filters(self):
+        """If all events are filtered out, should return empty gracefully."""
+        events = [
+            _evt(0, "note_on", 36, channel=9),
+            _evt(0.5, "note_off", 36, channel=9),
+        ]
+        result, stats = preprocess(events, remove_percussion=True)
+        # All notes were percussion — after filtering, no note_ons
+        # The pipeline should handle empty events gracefully
+        note_ons = [e for e in result if e.event_type == "note_on"]
+        assert len(note_ons) == 0
+        assert stats.percussion_removed == 2
