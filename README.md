@@ -5,8 +5,8 @@
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.4.0-green)
-![Tests](https://img.shields.io/badge/Tests-289%20passed-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.5.0-green)
+![Tests](https://img.shields.io/badge/Tests-366%20passed-brightgreen)
 
 ---
 
@@ -14,7 +14,7 @@
 
 **賽博琴仙** 是一款即時 MIDI-to-Keyboard 映射工具，專為《燕雲十六聲》(*Where Winds Meet*) 等遊戲設計。將 USB MIDI 鍵盤（如 Roland FP-30X）的琴鍵訊號，以 **< 2ms 延遲** 轉換為 DirectInput 掃描碼按鍵，讓遊戲角色與你的演奏完全同步。
 
-支援即時演奏、MIDI 檔案自動播放、即時錄音與虛擬鍵盤編輯四種模式。內建 9 階段智慧預處理管線（含流水摺疊 voice-leading fold），以及錄音後的 Auto-Tune 後處理。提供 5 種可切換的鍵位配置方案。
+支援五大模式：即時演奏、MIDI 檔案自動播放、即時錄音、虛擬鍵盤編輯、以及全新的 **拍號制編輯器**（beat-based editor）。內建 9 階段智慧預處理管線、錄音後 Auto-Tune 後處理、5 種可切換鍵位方案，以及多軌音符序列模型。
 
 ---
 
@@ -36,13 +36,29 @@
 |------|------|
 | **即時 MIDI 映射** | MIDI callback 直接在 rtmidi 執行緒上觸發 `SendInput`，不經過 Qt 事件佇列，延遲 < 2ms |
 | **5 種鍵位方案** | 燕雲十六聲 36 鍵、FF14 32 鍵、通用 24/48/88 鍵，執行時即時切換 |
-| **9 階段 MIDI 預處理** | 打擊過濾 → 音軌篩選 → 八度去重 → 智慧移調 → 流水摺疊 → 碰撞去重 → 複音限制 → 力度正規化 → 時間量化（詳見[技術深潛](#智慧-midi-預處理管線)） |
+| **9 階段 MIDI 預處理** | 打擊過濾 → 音軌篩選 → 八度去重 → 智慧移調 → 八度摺疊 → 碰撞去重 → 複音限制 → 力度正規化 → 時間量化 |
 | **MIDI 檔案自動播放** | 匯入 `.mid` 檔案，0.25x - 2.0x 變速控制，可拖曳進度條，4 拍節拍器倒數，循環 / 單曲重複 |
 | **即時 MIDI 錄音** | 錄製演奏並儲存為 `.mid` 檔案，錄音後可做 Auto-Tune（節拍量化 + 音階校正） |
-| **虛擬鍵盤編輯器** | 用滑鼠在可互動鋼琴上點選輸入音符，piano roll 時間軸，支援 undo/redo |
+| **拍號制編輯器** | Beat-based 多軌音符序列，undo/redo、copy/paste、拖曳音符、休止符視覺化、ghost notes、鍵盤快捷鍵 |
+| **虛擬鍵盤輸入** | 可互動鋼琴點選輸入音符，NoteRoll 時間軸視覺化 |
 | **修飾鍵閃擊技術** | `Shift↓ → Key↓ → Shift↑` 以單一批次送出，防止修飾鍵污染後續和弦 |
 | **自動重連** | MIDI 裝置斷線時每 3 秒輪詢，插回自動恢復 |
 | **卡鍵看門狗** | 偵測按住超過 10 秒的按鍵並自動釋放，防止遊戲內角色卡死 |
+
+### 拍號制編輯器（v0.5.0 新增）
+
+| 功能 | 說明 |
+|------|------|
+| **Beat-based 時間模型** | 所有音符位置以拍為單位（float），BPM 變更不會破壞音符位置 |
+| **多軌系統** | 預設 4 軌、最多 12 軌，12 色色盤，per-track mute/solo/channel |
+| **時值預設** | 全音符 / 二分 / 四分 / 八分 / 十六分，鍵盤快捷鍵 1-5 |
+| **休止符視覺化** | 紅色半透明長條，明確區分有聲/無聲 |
+| **Ghost Notes** | 非活躍軌道音符以 20% 透明度顯示，提供上下文 |
+| **拖曳編輯** | 左鍵拖曳移動音符（時間 + 音高），右鍵刪除 |
+| **Undo / Redo** | 100 步歷史，Ctrl+Z / Ctrl+Y |
+| **Copy / Paste** | 框選複製，游標位置貼上 |
+| **拍號支援** | 4/4、3/4、2/4、6/8、4/8，格線自動調整 |
+| **專案序列化** | `to_project_dict()` / `from_project_dict()` 完整保存/載入 |
 
 ### 使用者介面
 
@@ -81,6 +97,16 @@
                                                        ┌───────────┬──────────────┐←────────────┘
                                                        │ KeyMapper │ KeySimulator │→ Game
                                                        └───────────┴──────────────┘
+
+
+                          拍號制編輯器
+┌──────────────┐  beat-based  ┌────────────────┐  to_midi_events  ┌──────────────┐
+│ EditorView   │─────────────→│ EditorSequence │────────────────→│ MidiWriter   │→ .mid
+│ (GUI)        │              │ (BeatNote/Rest)│                 └──────────────┘
+│              │←─────────────│ multi-track    │
+│ NoteRoll     │  undo/redo   │ copy/paste     │
+│ ClickPiano   │              │ serialize      │
+└──────────────┘              └────────────────┘
 ```
 
 ### 延遲最佳化路徑
@@ -110,7 +136,7 @@ MIDI Note On 訊號
 | **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒訊號 |
 | **建置** | PyInstaller | 單資料夾可執行檔封裝 |
 | **CI/CD** | GitHub Actions | 多版本測試 + tag 自動發佈 |
-| **程式碼品質** | Ruff + pytest | Linting + 289 項測試 |
+| **程式碼品質** | Ruff + pytest | Linting + 366 項測試 |
 
 ---
 
@@ -157,7 +183,7 @@ python scripts/build.py
 ### 測試
 
 ```bash
-# 執行全部 289 項測試（8 個測試檔案）
+# 執行全部 366 項測試（9 個測試檔案）
 pytest
 
 # 詳細輸出
@@ -180,10 +206,11 @@ ruff check --fix .
 
 | 指標 | 數值 |
 |------|------|
-| 原始碼行數 | ~7,500 LOC |
-| 模組數量 | 39 |
-| 測試數量 | 289 |
-| 測試檔案 | 8 |
+| 原始碼行數 | ~8,500 LOC |
+| 測試碼行數 | ~2,900 LOC |
+| 模組數量 | 40 |
+| 測試數量 | 366 |
+| 測試檔案 | 9 |
 | 測試涵蓋平台 | Python 3.11 / 3.12 / 3.13 |
 
 ---
@@ -198,11 +225,12 @@ cyber_qin/
 │   ├── key_simulator.py         # ctypes SendInput 封裝（DirectInput 掃描碼）
 │   ├── midi_listener.py         # python-rtmidi 即時輸入 + 自動重連
 │   ├── midi_file_player.py      # MIDI 檔案播放引擎（精準計時 + 4 拍倒數）
-│   ├── midi_preprocessor.py     # 9 階段預處理管線（含流水摺疊）
+│   ├── midi_preprocessor.py     # 9 階段預處理管線
 │   ├── midi_recorder.py         # 即時 MIDI 錄音引擎
 │   ├── midi_writer.py           # 錄音結果匯出 .mid 檔案
 │   ├── auto_tune.py             # 錄音後處理：節拍量化 + 音階校正
-│   ├── note_sequence.py         # 可變音符序列模型（編輯器用）
+│   ├── beat_sequence.py         # Beat-based 多軌音符序列模型（編輯器核心）
+│   ├── note_sequence.py         # 秒制音符序列模型（舊版編輯器）
 │   ├── mapping_schemes.py       # 5 種可切換鍵位方案註冊表
 │   └── priority.py              # 執行緒優先權 + 高解析度計時器
 ├── gui/                         # PyQt6 使用者介面
@@ -212,12 +240,12 @@ cyber_qin/
 │   ├── views/
 │   │   ├── live_mode_view.py    # 即時演奏頁面（含錄音控制）
 │   │   ├── library_view.py      # 曲庫管理頁面
-│   │   └── editor_view.py       # 虛擬鍵盤編輯器頁面
+│   │   └── editor_view.py       # 拍號制編輯器頁面
 │   └── widgets/
 │       ├── piano_display.py     # 動態鋼琴鍵盤（霓虹光暈效果）
 │       ├── mini_piano.py        # 底部迷你鋼琴視覺化
 │       ├── clickable_piano.py   # 可互動鋼琴（點選輸入音符）
-│       ├── note_roll.py         # 水平音符時間軸（簡化版 piano roll）
+│       ├── note_roll.py         # Beat-based piano roll 時間軸
 │       ├── sidebar.py           # 側邊欄導航
 │       ├── now_playing_bar.py   # 底部播放控制列
 │       ├── track_list.py        # 曲目清單元件
@@ -225,7 +253,7 @@ cyber_qin/
 │       ├── speed_control.py     # 播放速度控制器
 │       ├── log_viewer.py        # 即時事件日誌
 │       ├── status_bar.py        # 狀態列
-│       └── animated_widgets.py  # 動畫基礎元件
+│       └── animated_widgets.py  # 動畫基礎元件（IconButton 等）
 └── utils/
     ├── admin.py                 # UAC 提權檢查
     └── ime.py                   # 輸入法偵測
@@ -291,7 +319,7 @@ def press(self, midi_note, mapping):
 
 ### 3. 智慧 MIDI 預處理管線（9 階段）
 
-將任意 MIDI 檔案適配到遊戲有限的音域範圍（如 36 鍵 = C3-B5），需要一套自動化的音符轉換管線。v0.4.0 升級為 9 階段，其中核心改進是 Stage 5 的**流水摺疊**演算法：
+將任意 MIDI 檔案適配到遊戲有限的音域範圍（如 36 鍵 = C3-B5），需要一套自動化的音符轉換管線：
 
 ```
 原始 MIDI 事件
@@ -300,9 +328,7 @@ def press(self, midi_note, mapping):
     ├── Stage 2: 音軌篩選        只保留使用者選取的音軌
     ├── Stage 3: 八度去重        同一時間同一 pitch class → 保留最高的
     ├── Stage 4: 智慧全曲移調    嘗試 ±48 半音（步進 12），選最佳位移
-    ├── Stage 5: 流水摺疊 ★      voice-leading aware 八度摺疊（per-channel）
-    │                             對每個音找出所有合法八度位置，打分選最佳：
-    │                             聲導距離 + 方向延續 + 重力中心 + 範圍偏好
+    ├── Stage 5: 八度摺疊        將超出範圍的音符摺入可演奏區間
     ├── Stage 6: 碰撞去重        velocity 優先 — 碰撞時保留力度最高的
     ├── Stage 7: 複音限制        上限 N 聲部，保留最高 + 最低（bass anchor）
     ├── Stage 8: 力度正規化      所有 note_on 力度統一為 127
@@ -312,9 +338,25 @@ def press(self, midi_note, mapping):
 處理後事件（按時間排序，note_off 優先於 note_on）
 ```
 
-**流水摺疊**取代了舊版的 modulo fold（`while note > max: note -= 12`）。舊演算法每個音獨立處理，不看前後文，導致上行樂句在摺疊後方向被破壞。流水摺疊讓每個 MIDI channel 獨立追蹤 voice state，用打分函數在所有合法八度位置中選出最能保持旋律走向的那個。
+### 4. Beat-based 編輯器資料模型
 
-### 4. ctypes INPUT 結構體陷阱
+v0.5.0 引入 `EditorSequence` — 以**拍**為時間單位的多軌音符序列模型。核心設計：
+
+```python
+@dataclass
+class BeatNote:
+    time_beats: float      # 以拍為單位的絕對位置
+    duration_beats: float  # 以拍為單位的持續時間
+    note: int              # MIDI 0-127
+    velocity: int = 100
+    track: int = 0
+
+# 拍轉秒：time_seconds = time_beats * (60.0 / tempo_bpm)
+```
+
+相較舊版的秒制模型（`NoteSequence`），beat-based 的優勢在於：BPM 變更只影響播放速度，不會破壞音符的相對位置。支援 5 種拍號（4/4、3/4、2/4、6/8、4/8），`beats_per_bar = numerator * (4 / denominator)`。
+
+### 5. ctypes INPUT 結構體陷阱
 
 Windows `SendInput` API 要求 `INPUT` 結構體的大小精確為 40 bytes（64-bit）。結構體內部使用 union 包含 `MOUSEINPUT`、`KEYBDINPUT`、`HARDWAREINPUT` 三種類型。
 
@@ -357,8 +399,8 @@ class INPUT(ctypes.Structure):
 
 ```bash
 # 觸發一次發佈
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 ---
@@ -372,6 +414,41 @@ git push origin v0.4.0
 | **通用 24 鍵** | 24 | C3 - B4 | 2 x 12 (ZXC / QWE + Shift/Ctrl) | 通用 |
 | **通用 48 鍵** | 48 | C2 - B5 | 4 x 12 (數字行 / ZXC / ASD / QWE) | 通用 |
 | **通用 88 鍵** | 88 | A0 - C8 | 8 x 11 (多層 Shift/Ctrl 組合) | 通用（全鋼琴） |
+
+---
+
+## 版本歷程
+
+### v0.5.0 — 拍號制編輯器 + SDD 設計文件
+- `EditorSequence` — beat-based 多軌音符序列模型（BeatNote / BeatRest / Track）
+- 重寫 `NoteRoll` — beat grid、bar lines、ghost notes、right-click delete
+- 重寫 `EditorView` — 鍵盤快捷鍵（1-5 時值、0 休止符、Ctrl+Z/Y）
+- `IconButton` disabled 狀態灰色、undo/redo 圖示
+- 還原 Stage 5 為 simple octave fold（移除流水摺疊）
+- 366 項測試全過
+- EDITOR_SDD.md 設計文件
+
+### v0.4.0 — 流水摺疊、MIDI 錄音、虛擬鍵盤編輯器
+- 流水摺疊 voice-leading octave fold（per-channel）
+- `MidiRecorder` + `MidiWriter` — 即時錄音 + .mid 匯出
+- `AutoTune` — 節拍量化 + 音階校正
+- `NoteSequence` — 可變音符序列模型
+- `ClickablePiano` + `NoteRoll` — 虛擬鍵盤編輯器
+
+### v0.3.0 — 重複模式 + 前/後曲
+- 三種重複模式（關 / 全部循環 / 單曲重複）
+- 上/下一首按鈕
+
+### v0.2.0 — 智慧預處理 + 搜尋排序
+- 9 階段 MIDI 預處理管線
+- 曲庫搜尋/排序
+- GitHub Actions CI/CD
+
+### v0.1.0 — 初始版本
+- 即時 MIDI 映射 + 自動播放
+- 賽博墨韻暗色主題
+- 修飾鍵閃擊技術
+- PyInstaller 封裝
 
 ---
 

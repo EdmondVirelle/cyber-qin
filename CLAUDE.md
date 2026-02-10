@@ -32,11 +32,12 @@ cyber_qin/
 │   ├── key_simulator.py    # ctypes SendInput (DirectInput scan codes)
 │   ├── midi_listener.py    # python-rtmidi wrapper with auto-reconnect
 │   ├── midi_file_player.py # MIDI file playback engine
-│   ├── midi_preprocessor.py # 9-stage pipeline (flowing fold, velocity dedup)
+│   ├── midi_preprocessor.py # 9-stage pipeline (octave fold, velocity dedup)
 │   ├── midi_recorder.py    # Live MIDI recording engine
 │   ├── midi_writer.py      # Export recordings as .mid files
 │   ├── auto_tune.py        # Post-recording: beat quantize + pitch snap
-│   ├── note_sequence.py    # Mutable note model for editor (undo/redo)
+│   ├── beat_sequence.py    # Beat-based multi-track note model (editor core)
+│   ├── note_sequence.py    # Seconds-based note model (legacy editor)
 │   ├── mapping_schemes.py  # 5 switchable key mapping schemes
 │   └── priority.py         # Thread priority + high-res timer
 ├── gui/            # PyQt6 UI
@@ -58,10 +59,11 @@ cyber_qin/
 - **ctypes INPUT struct**: The union MUST include `MOUSEINPUT` (largest member) so `sizeof(INPUT)` is 40 on 64-bit. Without it, `SendInput` silently fails.
 - **Qt lazy imports**: Qt-dependent classes can't be at module level if the module may be imported before `QApplication` exists. Use lazy definition.
 - **MIDI time**: `mido.merge_tracks()` returns ticks, not seconds. Always convert with `mido.tick2second()`.
+- **Beat-based editor**: `EditorSequence` uses beats (float), not seconds. Seconds only computed for playback: `time_seconds = time_beats * (60.0 / tempo_bpm)`.
 
 ## Testing
 
-- 289 tests across 8 files in `tests/`
+- 366 tests across 9 files in `tests/`
 - Tests mock `ctypes.windll` and `rtmidi` — no hardware needed
 - Run `pytest` from project root
 
