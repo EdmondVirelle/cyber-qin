@@ -19,7 +19,7 @@
 |------|------|------|
 | **低延遲** | Low Latency | 從琴鍵按下到遊戲角色動作 < 2ms。音樂演奏不容許感知得到的延遲。 |
 | **音樂正確** | Musically Correct | 音符映射精確、時間量化正確、MIDI 協議語義完整。 |
-| **可維護** | Maintainable | 清晰的架構、392 個測試、型別提示、模組化設計。 |
+| **可維護** | Maintainable | 清晰的架構、450 個測試、型別提示、模組化設計。 |
 
 在每篇 Reading 的總結中，我們會用這三個原則來評估所學的技術。
 
@@ -55,7 +55,7 @@
 >
 > | 低延遲 | 音樂正確 | 可維護 |
 > |--------|---------|--------|
-> | 從 MIDI 輸入到 SendInput 輸出的完整路徑在 rtmidi 回呼執行緒上同步完成，不經過 Qt 事件佇列。 | 36 鍵映射表完整覆蓋 C3-B5（MIDI 48-83），包含所有升降號的 Shift/Ctrl 修飾鍵組合。 | 43 個模組、392 個自動化測試、核心與 GUI 完全分離。 |
+> | 從 MIDI 輸入到 SendInput 輸出的完整路徑在 rtmidi 回呼執行緒上同步完成，不經過 Qt 事件佇列。 | 36 鍵映射表完整覆蓋 C3-B5（MIDI 48-83），包含所有升降號的 Shift/Ctrl 修飾鍵組合。 | 45 個模組、450 個自動化測試、核心與 GUI 完全分離。 |
 
 閱讀本篇後，你將能夠：
 
@@ -159,7 +159,7 @@
 
 | 技術 | 角色 | 學習資源 |
 |------|------|----------|
-| **pytest** | 測試框架（392 個測試） | [pytest docs](https://docs.pytest.org/) |
+| **pytest** | 測試框架（450 個測試） | [pytest docs](https://docs.pytest.org/) |
 | **Ruff** | Linter + Formatter | [Ruff docs](https://docs.astral.sh/ruff/) |
 | **PyInstaller** | 打包成 .exe | [PyInstaller docs](https://pyinstaller.org/) |
 | **GitHub Actions** | CI/CD 自動測試+發佈 | [Actions docs](https://docs.github.com/en/actions) |
@@ -182,7 +182,7 @@
 ├── CLAUDE.md               ← AI 助手開發指南
 ├── README.md               ← GitHub 說明
 │
-├── cyber_qin/              ← 原始碼（43 個模組，~9,700 行）
+├── cyber_qin/              ← 原始碼（45 個模組，~10,300 行）
 │   ├── __init__.py
 │   ├── main.py             ← 程式進入點
 │   │
@@ -221,7 +221,7 @@
 │       ├── admin.py            ← UAC 管理員權限
 │       └── ime.py              ← 輸入法偵測
 │
-├── tests/                  ← 392 個測試（10 個檔案，~3,200 行）
+├── tests/                  ← 450 個測試（11 個檔案，~4,100 行）
 ├── docs/                   ← 文件
 └── .github/workflows/      ← CI/CD
 ```
@@ -266,7 +266,7 @@ pip install -e .[dev]
 cyber-qin
 
 # 3. 跑測試
-pytest          # 全部 392 個
+pytest          # 全部 450 個
 pytest -q       # 簡短輸出
 pytest tests/test_beat_sequence.py  # 只跑某個檔案
 
@@ -1999,7 +1999,7 @@ def autosave(seq: EditorSequence) -> None:
 
 > | 低延遲 | 音樂正確 | 可維護 |
 > |--------|---------|--------|
-> | Mock 掉 `SendInput`，在沒有硬體的環境下驗證按鍵邏輯。 | 參數化測試覆蓋所有 36 個音符的映射正確性。 | 392 個測試提供回歸保護——改任何程式碼後立刻知道有沒有壞。 |
+> | Mock 掉 `SendInput`，在沒有硬體的環境下驗證按鍵邏輯。 | 參數化測試覆蓋所有 36 個音符的映射正確性。 | 450 個測試提供回歸保護——改任何程式碼後立刻知道有沒有壞。 |
 
 閱讀本篇後，你將能夠：
 
@@ -2066,7 +2066,7 @@ CI 矩陣：`windows-latest` × Python {3.11, 3.12, 3.13}，加上 `ubuntu-lates
 
 | 低延遲 | 音樂正確 | 可維護 |
 |--------|---------|--------|
-| Mock 讓延遲相關的程式碼可以在 CI 中驗證，不需要真實硬體。 | 參數化測試覆蓋所有 36 鍵 + 所有邊界值。 | 392 個測試 = 強大的回歸保護。~0.3 秒跑完 = 零摩擦。 |
+| Mock 讓延遲相關的程式碼可以在 CI 中驗證，不需要真實硬體。 | 參數化測試覆蓋所有 36 鍵 + 所有邊界值。 | 450 個測試 = 強大的回歸保護。~0.3 秒跑完 = 零摩擦。 |
 
 ---
 
@@ -2100,8 +2100,8 @@ PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的
 ```
 開發者                    GitHub Actions
   │                          │
-  ├─ git tag v0.6.0         │
-  ├─ git push origin v0.6.0 │
+  ├─ git tag v0.7.1         │
+  ├─ git push origin v0.7.1 │
   │                          ├─ 觸發 ci.yml
   │                          ├─ pip install + pytest（3 個 Python 版本）
   │                          ├─ ruff check

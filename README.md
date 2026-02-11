@@ -5,8 +5,8 @@
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.6.0-green)
-![Tests](https://img.shields.io/badge/Tests-392%20passed-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.7.2-green)
+![Tests](https://img.shields.io/badge/Tests-450%20passed-brightgreen)
 
 ---
 
@@ -45,7 +45,7 @@
 | **自動重連** | MIDI 裝置斷線時每 3 秒輪詢，插回自動恢復 |
 | **卡鍵看門狗** | 偵測按住超過 10 秒的按鍵並自動釋放，防止遊戲內角色卡死 |
 
-### Piano Roll 編輯器（v0.6.0）
+### Piano Roll 編輯器
 
 | 功能 | 說明 |
 |------|------|
@@ -73,7 +73,7 @@
 | 功能 | 說明 |
 |------|------|
 | **賽博墨韻主題** | 武俠賽博龐克暗色主題，霓虹青 (`#00F0FF`) + 宣紙白暖色調 |
-| **向量圖示** | 全部以 QPainter 繪製，無外部圖片依賴，任意縮放不失真 |
+| **自訂應用程式圖示** | 自訂插畫 icon.png 轉換為多尺寸 .ico，取代 QPainter 產生的圖示 |
 | **動態鋼琴鍵盤** | 即時顯示按鍵狀態，帶霓虹光暈動畫效果 |
 | **曲庫管理** | 匯入、搜尋、依名稱 / BPM / 音符數 / 時長排序 |
 | **底部播放列** | Spotify 風格，含迷你鋼琴、進度條、速度控制 |
@@ -146,7 +146,7 @@ MIDI Note On 訊號
 | **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒訊號 |
 | **建置** | PyInstaller | 單資料夾可執行檔封裝 |
 | **CI/CD** | GitHub Actions | 多版本測試 + tag 自動發佈 |
-| **程式碼品質** | Ruff + pytest | Linting + 392 項測試 |
+| **程式碼品質** | Ruff + pytest | Linting + 450 項測試 |
 
 ---
 
@@ -182,7 +182,7 @@ cyber-qin
 ### 建置獨立執行檔
 
 ```bash
-python scripts/build.py
+.venv313/Scripts/pyinstaller cyber_qin.spec --clean -y
 # 輸出: dist/賽博琴仙/ (~95 MB)
 ```
 
@@ -193,7 +193,7 @@ python scripts/build.py
 ### 測試
 
 ```bash
-# 執行全部 392 項測試（10 個測試檔案）
+# 執行全部 450 項測試（11 個測試檔案）
 pytest
 
 # 詳細輸出
@@ -216,11 +216,11 @@ ruff check --fix .
 
 | 指標 | 數值 |
 |------|------|
-| 原始碼行數 | ~9,700 LOC |
-| 測試碼行數 | ~3,200 LOC |
-| 模組數量 | 43 |
-| 測試數量 | 392 |
-| 測試檔案 | 10 |
+| 原始碼行數 | ~10,300 LOC |
+| 測試碼行數 | ~4,100 LOC |
+| 模組數量 | 45 |
+| 測試數量 | 450 |
+| 測試檔案 | 11 |
 | 測試涵蓋平台 | Python 3.11 / 3.12 / 3.13 |
 
 ---
@@ -240,6 +240,7 @@ cyber_qin/
 │   ├── midi_writer.py           # 錄音結果匯出 .mid 檔案
 │   ├── auto_tune.py             # 錄音後處理：節拍量化 + 音階校正
 │   ├── beat_sequence.py         # Beat-based 多軌音符序列模型（編輯器核心）
+│   ├── midi_output_player.py    # MIDI 輸出播放器（編輯器播放預覽）
 │   ├── project_file.py          # 專案檔案存取（.cqp = JSON + gzip）
 │   ├── note_sequence.py         # 秒制音符序列模型（舊版編輯器）
 │   ├── mapping_schemes.py       # 5 種可切換鍵位方案註冊表
@@ -353,7 +354,7 @@ def press(self, midi_note, mapping):
 
 ### 4. Piano Roll 編輯器資料模型
 
-v0.6.0 的 `EditorSequence` 以**拍**為時間單位，支援完整的多軌編輯操作：
+`EditorSequence` 以**拍**為時間單位，支援完整的多軌編輯操作：
 
 ```python
 @dataclass
@@ -412,8 +413,8 @@ class INPUT(ctypes.Structure):
 
 ```bash
 # 觸發一次發佈
-git tag v0.6.0
-git push origin v0.6.0
+git tag v0.7.2
+git push origin v0.7.2
 ```
 
 ---
@@ -454,6 +455,24 @@ git push origin v0.6.0
 ---
 
 ## 版本歷程
+
+### v0.7.1 — 自訂應用程式圖示 + 製作者署名
+- 替換應用程式圖示為自訂插畫（icon.png → 多尺寸 .ico）
+- 簡化 `generate_icon.py`，改從 PNG 轉換（不再需要 PyQt6）
+- Sidebar 底部新增「燕雲十六聲 · 葉微雨 製作」署名
+- 版本 0.7.0 → 0.7.1
+
+### v0.7.0 — 編曲器 UX 大改 + PyInstaller 修復
+- **多選/框選** — Ctrl+click 切換選取、Shift+拖曳 marquee selection、Ctrl+A 全選
+- **音符調整大小** — 右邊緣拖曳、Shift+方向鍵批次調整
+- **音符標籤** — 放大後顯示音名（C4、D#5）
+- **軌道面板** — `EditorTrackPanel` 支援 mute/solo 切換、重命名、拖曳排序、新增/刪除
+- **音高尺** — `PitchRuler` 左側顯示 C3..B5 音名，黑鍵暗底
+- **專案檔案** — `.cqp` 格式（JSON + gzip），Ctrl+S/Shift+S 儲存、自動儲存（60 秒）
+- **MIDI 輸出播放器** — 編輯器內播放預覽
+- **PyInstaller 修復** — 補齊 17 個缺失的 hiddenimports
+- **完整快捷鍵** — Ctrl+C/X/V/D、方向鍵、Delete、Space 等
+- 450 項測試全過（+58）
 
 ### v0.6.0 — Piano Roll 完整升級
 - **多選/框選** — Ctrl+click 切換選取、Shift+拖曳 marquee selection、Ctrl+A 全選
@@ -499,6 +518,12 @@ git push origin v0.6.0
 - 賽博墨韻暗色主題
 - 修飾鍵閃擊技術
 - PyInstaller 封裝
+
+---
+
+## 製作者
+
+燕雲十六聲 遊戲 ID: **葉微雨**
 
 ---
 
