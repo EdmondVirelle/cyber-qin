@@ -31,6 +31,8 @@ Desktop.ini
 # Project-specific
 *.bmp
 *.tmp
+*.mid
+*.midi
 
 # Claude Code local config
 .claude/settings.local.json

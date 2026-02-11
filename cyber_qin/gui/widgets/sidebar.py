@@ -78,7 +78,7 @@ class Sidebar(QWidget):
         layout.addWidget(bottom_div)
         layout.addSpacing(4)
 
-        # Credit + version labels
+        # Credit + Ko-fi + version labels
         from PyQt6.QtWidgets import QLabel
 
         from cyber_qin import __version__
@@ -88,6 +88,13 @@ class Sidebar(QWidget):
         credit.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(credit)
+
+        kofi = QLabel('<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">Support on Ko-fi</a>')
+        kofi.setFont(QFont("Microsoft JhengHei", 8))
+        kofi.setStyleSheet("background: transparent;")
+        kofi.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        kofi.setOpenExternalLinks(True)
+        layout.addWidget(kofi)
 
         ver = QLabel(f"v{__version__}")
         ver.setFont(QFont("Microsoft JhengHei", 9))
