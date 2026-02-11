@@ -1,0 +1,223 @@
+"""MIDI output player — sends events to system synthesizer for audio preview.
+
+Uses python-rtmidi to open a MIDI output port (typically Windows GS Wavetable Synth).
+Plays MidiFileEvent list in a background thread with timing, progress, and stop support.
+
+Qt-dependent class uses the lazy-definition pattern (same as midi_file_player.py)
+to avoid module-level Qt imports.
+"""
+
+from __future__ import annotations
+
+import logging
+import threading
+import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .midi_file_player import MidiFileEvent
+
+log = logging.getLogger(__name__)
+
+# ── Lazy Qt class ──────────────────────────────────────────
+
+_MidiOutputPlayerClass = None
+
+
+def _ensure_qt_class():
+    """Define the Qt-dependent MidiOutputPlayer on first use."""
+    global _MidiOutputPlayerClass
+
+    if _MidiOutputPlayerClass is not None:
+        return
+
+    from PyQt6.QtCore import QObject, pyqtSignal
+
+    from .midi_file_player import PlaybackState
+
+    class MidiOutputPlayer(QObject):
+        """Play MidiFileEvent list through system MIDI synthesizer.
+
+        Opens an rtmidi output port to the first available MIDI synth
+        (Windows GS Wavetable Synth on Windows).  Plays events on a
+        background thread with accurate timing.
+        """
+
+        progress_updated = pyqtSignal(float, float)   # current_sec, total_sec
+        state_changed = pyqtSignal(int)                # PlaybackState value
+        playback_finished = pyqtSignal()
+
+        def __init__(self, parent=None) -> None:
+            super().__init__(parent)
+            self._midi_out = None
+            self._port_name: str = ""
+            self._events: list[MidiFileEvent] = []
+            self._duration: float = 0.0
+            self._state = PlaybackState.STOPPED
+            self._stop_flag = threading.Event()
+            self._thread: threading.Thread | None = None
+            self._open_port()
+
+        @property
+        def state(self) -> PlaybackState:
+            return self._state
+
+        @property
+        def available(self) -> bool:
+            return self._midi_out is not None
+
+        def _open_port(self) -> None:
+            """Try to open the first available MIDI output port."""
+            try:
+                import rtmidi
+                out = rtmidi.MidiOut()
+                ports = out.get_ports()
+                if not ports:
+                    log.warning("No MIDI output ports available")
+                    out.delete()
+                    return
+                # Prefer Windows GS Wavetable Synth if present
+                target_idx = 0
+                for i, name in enumerate(ports):
+                    if "wavetable" in name.lower() or "gs" in name.lower():
+                        target_idx = i
+                        break
+                out.open_port(target_idx)
+                self._midi_out = out
+                self._port_name = ports[target_idx]
+                log.info("MIDI output opened: %s", self._port_name)
+            except Exception:
+                log.warning("Failed to open MIDI output port", exc_info=True)
+
+        def preview_note(
+            self, midi_note: int, velocity: int = 100, duration_ms: int = 200,
+        ) -> None:
+            """Play a short preview of a single note."""
+            if self._midi_out is None:
+                return
+            note = midi_note & 0x7F
+            vel = velocity & 0x7F
+            self._midi_out.send_message([0x90, note, vel])
+
+            def _off():
+                if self._midi_out is not None:
+                    try:
+                        self._midi_out.send_message([0x80, note, 0])
+                    except Exception:
+                        pass
+
+            threading.Timer(duration_ms / 1000.0, _off).start()
+
+        def load(self, events: list[MidiFileEvent], duration: float) -> None:
+            """Store events for playback."""
+            self.stop()
+            self._events = list(events)
+            self._duration = duration
+
+        def play(self) -> None:
+            """Start playback on a background thread."""
+            if self._midi_out is None:
+                return
+            if self._state == PlaybackState.PLAYING:
+                return
+            if not self._events:
+                return
+            self._join_thread()
+            self._stop_flag.clear()
+            self._state = PlaybackState.PLAYING
+            self.state_changed.emit(self._state)
+            self._thread = threading.Thread(
+                target=self._run, daemon=True, name="midi-output-preview",
+            )
+            self._thread.start()
+
+        def stop(self) -> None:
+            """Stop playback, send all-notes-off."""
+            if self._state == PlaybackState.STOPPED:
+                return
+            self._stop_flag.set()
+            self._join_thread()
+            self._all_notes_off()
+            self._state = PlaybackState.STOPPED
+            self.state_changed.emit(self._state)
+
+        def cleanup(self) -> None:
+            """Stop and close the MIDI port."""
+            self.stop()
+            if self._midi_out is not None:
+                try:
+                    self._midi_out.close_port()
+                    self._midi_out.delete()
+                except Exception:
+                    pass
+                self._midi_out = None
+
+        def _join_thread(self) -> None:
+            if self._thread is not None and self._thread.is_alive():
+                self._thread.join(timeout=3.0)
+            self._thread = None
+
+        def _all_notes_off(self) -> None:
+            """Send CC 123 (all notes off) on all 16 channels."""
+            if self._midi_out is None:
+                return
+            for ch in range(16):
+                try:
+                    self._midi_out.send_message([0xB0 | ch, 123, 0])
+                except Exception:
+                    pass
+
+        def _run(self) -> None:
+            """Blocking playback loop on background thread."""
+            duration = self._duration
+            start_wall = time.perf_counter()
+
+            for evt in self._events:
+                if self._stop_flag.is_set():
+                    return
+
+                target_wall = start_wall + evt.time_seconds
+                now = time.perf_counter()
+                wait = target_wall - now
+
+                if wait > 0.002:
+                    time.sleep(wait - 0.001)
+                while time.perf_counter() < target_wall:
+                    if self._stop_flag.is_set():
+                        return
+
+                if self._midi_out is None:
+                    return
+
+                ch = getattr(evt, "channel", 0) & 0x0F
+                if evt.event_type == "note_on":
+                    self._midi_out.send_message(
+                        [0x90 | ch, evt.note & 0x7F, evt.velocity & 0x7F],
+                    )
+                elif evt.event_type == "note_off":
+                    self._midi_out.send_message(
+                        [0x80 | ch, evt.note & 0x7F, 0],
+                    )
+
+                self.progress_updated.emit(evt.time_seconds, duration)
+
+            # Playback finished naturally
+            self._all_notes_off()
+            self._state = PlaybackState.STOPPED
+            self.state_changed.emit(self._state)
+            self.playback_finished.emit()
+
+    _MidiOutputPlayerClass = MidiOutputPlayer
+
+
+def create_midi_output_player(parent=None):
+    """Create a MidiOutputPlayer instance (requires running QApplication).
+
+    Returns None if the MIDI output port could not be opened.
+    """
+    _ensure_qt_class()
+    player = _MidiOutputPlayerClass(parent)
+    if not player.available:
+        player.cleanup()
+        return None
+    return player

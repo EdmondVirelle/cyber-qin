@@ -19,7 +19,7 @@
 |------|------|------|
 | **低延遲** | Low Latency | 從琴鍵按下到遊戲角色動作 < 2ms。音樂演奏不容許感知得到的延遲。 |
 | **音樂正確** | Musically Correct | 音符映射精確、時間量化正確、MIDI 協議語義完整。 |
-| **可維護** | Maintainable | 清晰的架構、366 個測試、型別提示、模組化設計。 |
+| **可維護** | Maintainable | 清晰的架構、392 個測試、型別提示、模組化設計。 |
 
 在每篇 Reading 的總結中，我們會用這三個原則來評估所學的技術。
 
@@ -40,8 +40,10 @@
 | 9 | [MIDI 預處理管線](#reading-9-midi-預處理管線) | 9 階段管線、八度摺疊、碰撞去重 | Reading 3, 6 |
 | 10 | [Beat-Based 資料模型](#reading-10-beat-based-資料模型) | BeatNote、EditorSequence、undo/redo | Reading 3 |
 | 11 | [Piano Roll UI](#reading-11-piano-roll-ui) | NoteRoll、QPainter 繪圖、座標系統 | Reading 5, 10 |
-| 12 | [測試與品質保證](#reading-12-測試與品質保證) | pytest、mock、測試設計、CI | Reading 6 |
-| 13 | [打包與發佈](#reading-13-打包與發佈) | PyInstaller、GitHub Actions、CI/CD | Reading 12 |
+| 12 | [編輯器進階：多選、框選、軌道管理](#reading-12-編輯器進階多選框選軌道管理) | marquee、resize、TrackPanel、PitchRuler | Reading 10, 11 |
+| 13 | [專案檔案與序列化](#reading-13-專案檔案與序列化) | JSON + gzip、autosave、.cqp 格式 | Reading 10 |
+| 14 | [測試與品質保證](#reading-14-測試與品質保證) | pytest、mock、測試設計、CI | Reading 6 |
+| 15 | [打包與發佈](#reading-15-打包與發佈) | PyInstaller、GitHub Actions、CI/CD | Reading 14 |
 
 ---
 
@@ -53,7 +55,7 @@
 >
 > | 低延遲 | 音樂正確 | 可維護 |
 > |--------|---------|--------|
-> | 從 MIDI 輸入到 SendInput 輸出的完整路徑在 rtmidi 回呼執行緒上同步完成，不經過 Qt 事件佇列。 | 36 鍵映射表完整覆蓋 C3-B5（MIDI 48-83），包含所有升降號的 Shift/Ctrl 修飾鍵組合。 | 40 個模組、366 個自動化測試、核心與 GUI 完全分離。 |
+> | 從 MIDI 輸入到 SendInput 輸出的完整路徑在 rtmidi 回呼執行緒上同步完成，不經過 Qt 事件佇列。 | 36 鍵映射表完整覆蓋 C3-B5（MIDI 48-83），包含所有升降號的 Shift/Ctrl 修飾鍵組合。 | 43 個模組、392 個自動化測試、核心與 GUI 完全分離。 |
 
 閱讀本篇後，你將能夠：
 
@@ -157,7 +159,7 @@
 
 | 技術 | 角色 | 學習資源 |
 |------|------|----------|
-| **pytest** | 測試框架（366 個測試） | [pytest docs](https://docs.pytest.org/) |
+| **pytest** | 測試框架（392 個測試） | [pytest docs](https://docs.pytest.org/) |
 | **Ruff** | Linter + Formatter | [Ruff docs](https://docs.astral.sh/ruff/) |
 | **PyInstaller** | 打包成 .exe | [PyInstaller docs](https://pyinstaller.org/) |
 | **GitHub Actions** | CI/CD 自動測試+發佈 | [Actions docs](https://docs.github.com/en/actions) |
@@ -180,7 +182,7 @@
 ├── CLAUDE.md               ← AI 助手開發指南
 ├── README.md               ← GitHub 說明
 │
-├── cyber_qin/              ← 原始碼（40 個模組，~8,500 行）
+├── cyber_qin/              ← 原始碼（43 個模組，~9,700 行）
 │   ├── __init__.py
 │   ├── main.py             ← 程式進入點
 │   │
@@ -195,6 +197,7 @@
 │   │   ├── midi_writer.py      ← 錄音匯出 .mid
 │   │   ├── auto_tune.py        ← 量化 + 音階校正
 │   │   ├── beat_sequence.py    ← Beat-based 多軌編輯模型
+│   │   ├── project_file.py     ← 專案存檔（.cqp = JSON + gzip）
 │   │   ├── note_sequence.py    ← 秒制編輯模型（舊版）
 │   │   ├── mapping_schemes.py  ← 5 種鍵位方案
 │   │   └── priority.py         ← 執行緒優先權 + 計時器精度
@@ -209,15 +212,16 @@
 │   │   │   └── editor_view.py
 │   │   └── widgets/            ← 可重用元件
 │   │       ├── piano_display.py, clickable_piano.py
-│   │       ├── note_roll.py, sidebar.py
+│   │       ├── note_roll.py, pitch_ruler.py
+│   │       ├── editor_track_panel.py, sidebar.py
 │   │       ├── now_playing_bar.py, animated_widgets.py
-│   │       └── ...（共 11 個元件）
+│   │       └── ...（共 14 個元件）
 │   │
 │   └── utils/              ← 工具
 │       ├── admin.py            ← UAC 管理員權限
 │       └── ime.py              ← 輸入法偵測
 │
-├── tests/                  ← 366 個測試（9 個檔案，~2,900 行）
+├── tests/                  ← 392 個測試（10 個檔案，~3,200 行）
 ├── docs/                   ← 文件
 └── .github/workflows/      ← CI/CD
 ```
@@ -247,7 +251,7 @@
 | **自動播放** | .mid 檔案自動按鍵演奏 | midi_file_player, midi_preprocessor |
 | **即時錄音** | 錄下演奏 → .mid 檔 | midi_recorder, midi_writer, auto_tune |
 | **虛擬鍵盤** | 滑鼠點琴鍵輸入音符 | clickable_piano, note_sequence |
-| **拍號制編輯器** | 多軌 piano roll、undo/redo | beat_sequence, note_roll, editor_view |
+| **Piano Roll 編輯器** | 多軌 piano roll、undo/redo、專案存檔 | beat_sequence, project_file, note_roll, editor_view |
 
 ### 1.6 安裝與執行
 
@@ -262,7 +266,7 @@ pip install -e .[dev]
 cyber-qin
 
 # 3. 跑測試
-pytest          # 全部 366 個
+pytest          # 全部 392 個
 pytest -q       # 簡短輸出
 pytest tests/test_beat_sequence.py  # 只跑某個檔案
 
@@ -874,7 +878,7 @@ class MyUnion(ctypes.Union):
 - [5.3 QPainter：程式碼畫圖](#53-qpainter程式碼畫圖)
 - [5.4 Lazy Import 模式](#54-lazy-import-模式)
 - [5.5 本專案的 Widget 架構](#55-本專案的-widget-架構)
-- [總結](#總結-4)
+- [總結](#總結-reading-5)
 
 ### 5.1 Qt 物件模型
 
@@ -885,7 +889,10 @@ QApplication（整個 App 的根——必須最先建立）
     ├── QStackedWidget（頁面堆疊——一次只顯示一頁）
     │   ├── LiveModeView（演奏模式, 476 行）
     │   ├── LibraryView（曲庫, 329 行）
-    │   └── EditorView（編輯器, 503 行）
+    │   └── EditorView（Piano Roll 編輯器）
+│       ├── EditorTrackPanel（軌道面板）
+│       ├── PitchRuler（音高尺）
+│       └── NoteRoll（piano roll）
     └── NowPlayingBar（底部播放列, 247 行）
 ```
 
@@ -995,14 +1002,16 @@ def get_worker_class():
 
 ### 5.5 本專案的 Widget 架構
 
-| Widget | 行數 | 職責 | 自繪？ |
-|--------|------|------|--------|
-| `PianoDisplay` | 304 | 鋼琴鍵盤動畫（flash + fade） | Yes |
-| `ClickablePiano` | 185 | 可點擊的鋼琴（編輯器用） | Yes |
-| `NoteRoll` | 379 | Beat-based piano roll 時間軸 | Yes |
-| `Sidebar` | 155 | 左側導航（Live/Library/Editor） | Partial |
-| `NowPlayingBar` | 247 | 底部播放列（進度、速度、迷你鋼琴） | Partial |
-| `AnimatedWidgets` | 380 | TransportButton / IconButton / NavButton | Yes |
+| Widget | 職責 | 自繪？ |
+|--------|------|--------|
+| `PianoDisplay` | 鋼琴鍵盤動畫（flash + fade） | Yes |
+| `ClickablePiano` | 可點擊的鋼琴（編輯器用） | Yes |
+| `NoteRoll` | Beat-based piano roll（多選/框選/resize） | Yes |
+| `PitchRuler` | 音高尺（C3..B5 音名標示） | Yes |
+| `EditorTrackPanel` | 軌道面板（mute/solo/重命名/排序） | Partial |
+| `Sidebar` | 左側導航（Live/Library/Editor） | Partial |
+| `NowPlayingBar` | 底部播放列（進度、速度、迷你鋼琴） | Partial |
+| `AnimatedWidgets` | TransportButton / IconButton / NavButton | Yes |
 
 **賽博墨韻**色彩系統（`theme.py`, 290 行）：
 
@@ -1547,11 +1556,68 @@ def _push_undo(self):
 
 **空間複雜度**：O(N × S)，其中 N = 快照數（最多 100），S = 音符數。對於典型曲子（幾百個音符），這完全可以接受。
 
+### 10.5 快照包含 Tracks（v0.6.0）
+
+早期版本的 `_Snapshot` 只保存 notes、rests、cursor、active_track。但 `remove_track` / `reorder_tracks` 這類軌道操作會修改 `_tracks` 列表——undo 時沒有恢復 tracks，導致軌道被刪除後無法還原。
+
+v0.6.0 修正了這個 bug，`_Snapshot` 現在包含完整的 tracks 資料：
+
+```python
+@dataclass
+class _Snapshot:
+    notes: list[BeatNote]
+    rests: list[BeatRest]
+    cursor_beats: float
+    active_track: int
+    tracks: list[Track] | None = None   # ← v0.6.0 新增
+```
+
+### 10.6 批次操作（v0.6.0）
+
+v0.6.0 新增多項批次操作，每個都是單一 undo 步驟：
+
+```python
+# 批次調整大小：所有選取的音符同時改變持續時間
+seq.resize_notes([0, 2, 5], delta_beats=0.5)
+
+# 批次刪除：同時刪除音符和休止符
+seq.delete_items(note_indices=[0, 1], rest_indices=[2])
+
+# 複製選取：取得 notes + rests 的 deep copy
+copied_notes, copied_rests = seq.copy_items(note_indices=[0], rest_indices=[])
+
+# 軌道重排序：index remapping 確保音符歸屬正確
+seq.reorder_tracks([2, 0, 1, 3])  # 把 Track 2 搬到最前面
+```
+
+**`reorder_tracks` 的 index remapping**：
+
+重排序不只是搬動 Track 物件——所有音符和休止符的 `track` 欄位都必須跟著更新：
+
+```python
+def reorder_tracks(self, new_order: list[int]) -> None:
+    old_to_new = {old: new for new, old in enumerate(new_order)}
+    self._tracks = [self._tracks[i] for i in new_order]
+    for n in self._notes:
+        n.track = old_to_new.get(n.track, n.track)
+    # rests 和 active_track 也做同樣的映射
+```
+
+#### 練習 10.2：index remapping
+
+執行 `reorder_tracks([2, 0, 1])` 前，一個音符的 `track = 1`。執行後它的 `track` 是多少？
+
+<details><summary>答案</summary>
+
+**2**。`old_to_new` = `{2: 0, 0: 1, 1: 2}`，所以原本的 track 1 → 新的 track 2。
+
+</details>
+
 ### 總結
 
 | 低延遲 | 音樂正確 | 可維護 |
 |--------|---------|--------|
-| 編輯時零秒數換算開銷——全部操作在 beat 空間進行。 | BPM 改變不影響拍子位置。拍號轉換公式 `N × (4/D)` 正確。 | 100 步 undo/redo 用 deep copy snapshot，實作簡單可靠。 |
+| 編輯時零秒數換算開銷——全部操作在 beat 空間進行。 | BPM 改變不影響拍子位置。拍號轉換公式 `N × (4/D)` 正確。 | 100 步 undo/redo 用 deep copy snapshot（含 tracks），實作簡單可靠。 |
 
 ---
 
@@ -1611,13 +1677,329 @@ def wheelEvent(self, event):
 
 ---
 
-## Reading 12: 測試與品質保證
+## Reading 12: 編輯器進階：多選、框選、軌道管理
 
 ### 目標
 
 > | 低延遲 | 音樂正確 | 可維護 |
 > |--------|---------|--------|
-> | Mock 掉 `SendInput`，在沒有硬體的環境下驗證按鍵邏輯。 | 參數化測試覆蓋所有 36 個音符的映射正確性。 | 366 個測試提供回歸保護——改任何程式碼後立刻知道有沒有壞。 |
+> | 框選演算法用 rect intersection 一次性計算，不逐音符遍歷多次。 | 批次拖曳保持所有選取音符的相對位置不變——不會因為四捨五入而跑拍。 | 選取狀態集中管理在 `_selected_note_indices` / `_selected_rest_indices`，mutation 後自動清除。 |
+
+閱讀本篇後，你將能夠：
+
+- 實作 marquee selection（框選）的矩形相交演算法
+- 描述多選狀態的資料結構和清除策略
+- 解釋音符 resize（右邊緣拖曳）的偵測邏輯
+- 描述 PitchRuler 和 EditorTrackPanel 的設計
+
+### 12.1 多選架構
+
+v0.6.0 的 NoteRoll 用兩個 `set[int]` 追蹤選取：
+
+```python
+self._selected_note_indices: set[int] = set()
+self._selected_rest_indices: set[int] = set()
+```
+
+**選取模式**：
+
+| 操作 | 行為 |
+|------|------|
+| 左鍵點擊音符 | 清除舊選取，選取該音符 |
+| Ctrl+click | 切換（toggle）該音符的選取狀態 |
+| Shift+拖曳 | 框選（marquee selection） |
+| Ctrl+A | 全選所有活躍軌道的音符和休止符 |
+
+**清除策略**：在 `_update_ui_state()` 中，任何資料 mutation（新增/刪除/移動音符）之後自動清除選取。這避免了選取 index 與資料不同步的問題。
+
+### 12.2 Marquee Selection（框選）
+
+Shift+拖曳時，NoteRoll 繪製一個虛線青色矩形。放開滑鼠時，計算矩形範圍內的所有音符和休止符：
+
+```python
+def _apply_marquee_selection(self):
+    sel_rect = QRectF(
+        QPointF(min(self._marquee_start, self._marquee_end)),
+        QPointF(max(self._marquee_start, self._marquee_end)),
+    ).normalized()
+
+    for i, note in enumerate(self._visible_notes):
+        note_rect = QRectF(
+            self._beat_to_x(note.time_beats),
+            self._y_for_note(note.note),
+            note.duration_beats * self._zoom,
+            self._note_height(),
+        )
+        if sel_rect.intersects(note_rect):
+            self._selected_note_indices.add(i)
+```
+
+**定義**：**rect intersection** 是 O(1) 的幾何運算——只需比較兩個矩形的左/右/上/下邊界。整個框選是 O(N)，N = 可見音符數。
+
+#### 練習 12.1：框選
+
+框選矩形的像素範圍是 x=100..300, y=50..150。一個音符的像素矩形是 x=250..280, y=120..135。這個音符會被選取嗎？
+
+<details><summary>答案</summary>
+
+**會**。矩形 [100,300]×[50,150] 和 [250,280]×[120,135] 有交集（x 交集 [250,280]，y 交集 [120,135]）。`QRectF.intersects()` 會回傳 `True`。
+
+</details>
+
+### 12.3 音符 Resize
+
+滑鼠移到音符右邊緣 6px 以內時，游標變為 `SizeHorCursor`（↔），開始拖曳即可調整持續時間。
+
+```python
+def _is_on_right_edge(self, pos, note) -> bool:
+    """右邊緣 6px 以內？"""
+    right_x = self._beat_to_x(note.time_beats + note.duration_beats)
+    return abs(pos.x() - right_x) < 6
+
+# mouseMoveEvent 中：
+if self._is_on_right_edge(pos, hovered_note):
+    self.setCursor(Qt.CursorShape.SizeHorCursor)
+elif hovered_note:
+    self.setCursor(Qt.CursorShape.OpenHandCursor)
+else:
+    self.setCursor(Qt.CursorShape.ArrowCursor)
+```
+
+Resize 時的 snap-to-grid 確保持續時間對齊到拍線：
+
+```python
+def _snap_beat(self, beat: float) -> float:
+    if not self._snap_enabled:
+        return beat
+    grid = self._snap_resolution  # 例如 0.25（十六分音符）
+    return round(beat / grid) * grid
+```
+
+### 12.4 音符標籤
+
+放大後（音符寬度 > 30px），NoteRoll 在音符內部繪製音名文字：
+
+```python
+note_w = note.duration_beats * self._zoom
+if note_w > 30:
+    names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    octave = note.note // 12 - 1
+    label = f"{names[note.note % 12]}{octave}"
+    painter.drawText(note_rect, Qt.AlignmentFlag.AlignCenter, label)
+```
+
+### 12.5 PitchRuler
+
+`PitchRuler` 是 48px 寬的固定寬度 widget，顯示 C3..B5 的音名，與 NoteRoll 的 Y 軸完美對齊。黑鍵音名用暗底色區分：
+
+```python
+_BLACK_SEMITONES = {1, 3, 6, 8, 10}  # C#, D#, F#, G#, A#
+
+for i in range(range_size):
+    midi_note = self._midi_max - i
+    semitone = midi_note % 12
+    is_black = semitone in _BLACK_SEMITONES
+    # 黑鍵 → 暗底背景 + 灰色文字
+    # 白鍵 → 正常背景 + 白色文字
+```
+
+**設計關鍵**：PitchRuler 和 NoteRoll 共享 `_HEADER_HEIGHT = 22`，放在同一個 `QHBoxLayout` 中確保高度自動同步。
+
+### 12.6 EditorTrackPanel
+
+`EditorTrackPanel` 是 160px 寬的軌道管理面板，包含：
+
+- **_TrackItem** 行：色點 + 名稱 + M（mute）/ S（solo）指示
+- 點擊 → 切換活躍軌道
+- 雙擊 → `QInputDialog` 重命名
+- 右鍵 → 刪除軌道
+- 底部「+ 新增音軌」按鈕
+
+7 個 Qt Signal：`track_activated`、`track_muted`、`track_soloed`、`track_renamed`、`track_removed`、`track_added`、`tracks_reordered`。
+
+```python
+class EditorTrackPanel(QWidget):
+    track_activated = pyqtSignal(int)
+    track_muted = pyqtSignal(int, bool)
+    track_soloed = pyqtSignal(int, bool)
+    track_renamed = pyqtSignal(int, str)
+    track_removed = pyqtSignal(int)
+    track_added = pyqtSignal()
+    tracks_reordered = pyqtSignal(list)
+```
+
+### 12.7 EditorView 佈局
+
+v0.6.0 的 EditorView 佈局使用巢狀的 QHBoxLayout 和 QVBoxLayout：
+
+```
+┌──────────────────────────────────────────────┐
+│                   Toolbar                     │
+├───────────┬─────────┬────────────────────────┤
+│           │         │                        │
+│ TrackPanel│ Pitch   │     NoteRoll           │
+│ (160px)   │ Ruler   │     (flex = 1)         │
+│           │ (48px)  │                        │
+│           │         │                        │
+├───────────┼─────────┼────────────────────────┤
+│           │ spacer  │   ClickablePiano       │
+│           │ (48px)  │                        │
+└───────────┴─────────┴────────────────────────┘
+```
+
+**完整鍵盤快捷鍵**（全部透過 `keyPressEvent` 處理）：
+
+| 類別 | 快捷鍵 |
+|------|--------|
+| 時值 | `1`-`5` 全音符到十六分音符，`0` 休止符 |
+| 編輯 | `Ctrl+Z/Y` undo/redo，`Ctrl+A` 全選 |
+| 剪貼簿 | `Ctrl+C/X/V` 複製/剪下/貼上，`Ctrl+D` 複製選取 |
+| 儲存 | `Ctrl+S` 儲存，`Ctrl+Shift+S` 另存，`Ctrl+E` 匯出 |
+| 移動 | `←→` 時間移動，`↑↓` 音高移動 |
+| 調整大小 | `Shift+←→` 批次 resize |
+| 刪除 | `Delete` 刪除選取 |
+| 播放 | `Space` 播放/暫停 |
+
+#### 練習 12.2：Widget 通訊
+
+使用者在 TrackPanel 中按下 mute 按鈕。從按鈕到資料更新，完整的信號鏈是什麼？
+
+<details><summary>答案</summary>
+
+`_TrackItem.mousePressEvent()` → `EditorTrackPanel.track_muted.emit(index, True)` → `EditorView._on_track_muted(index, True)` → `EditorSequence.set_track_muted(index, True)` → `EditorView._update_ui_state()` → `EditorTrackPanel.set_tracks()` + `NoteRoll.update()`。
+
+</details>
+
+### 總結
+
+| 低延遲 | 音樂正確 | 可維護 |
+|--------|---------|--------|
+| 框選用 O(N) rect intersection，不做逐像素碰撞。 | Snap-to-grid 確保 resize 結果精確對齊拍線。 | 7 個 Signal 清晰定義 TrackPanel↔EditorView 的通訊介面。 |
+
+---
+
+## Reading 13: 專案檔案與序列化
+
+### 目標
+
+> | 低延遲 | 音樂正確 | 可維護 |
+> |--------|---------|--------|
+> | gzip 壓縮讓 autosave 只佔原始 JSON 的 ~30% 大小，寫入時間 < 10ms。 | `to_project_dict()` / `from_project_dict()` 完整序列化所有欄位——不丟失任何音符屬性。 | 分離 `project_file.py`（I/O）和 `EditorSequence`（資料模型），遵循單一職責原則。 |
+
+閱讀本篇後，你將能夠：
+
+- 解釋 .cqp 檔案格式（JSON + gzip）
+- 描述 `to_project_dict()` / `from_project_dict()` 的序列化策略
+- 實作 autosave 機制（QTimer + 固定路徑）
+- 說明為什麼用 gzip 而不是直接寫 JSON
+
+### 13.1 .cqp 格式
+
+賽博琴仙的專案檔案使用 `.cqp` 副檔名（Cyber Qin Project），格式是 **gzipped JSON**：
+
+```python
+def save(path: str | Path, seq: EditorSequence) -> None:
+    data = seq.to_project_dict()
+    raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    with gzip.open(path, "wb") as f:
+        f.write(raw)
+```
+
+**為什麼 JSON + gzip？**
+
+| 替代方案 | 優點 | 缺點 |
+|----------|------|------|
+| 純 JSON | 人類可讀 | 檔案大（重複欄位名佔空間） |
+| pickle | Python 原生 | 安全風險（反序列化可執行任意程式碼） |
+| SQLite | 結構化查詢 | 過度複雜，不需要 |
+| **JSON + gzip** | **人類可讀（解壓後）+ 小檔案** | 需要額外的壓縮步驟 |
+
+`separators=(",", ":")` 去除 JSON 中的空白，進一步減小大小。
+
+### 13.2 序列化策略
+
+`EditorSequence.to_project_dict()` 回傳完整的 Python dict：
+
+```python
+{
+    "tempo_bpm": 120,
+    "time_signature": [4, 4],
+    "cursor_beats": 8.0,
+    "active_track": 0,
+    "tracks": [
+        {"name": "旋律", "color": "#00F0FF", "channel": 0, "muted": false, "solo": false},
+        {"name": "和弦", "color": "#FF6B6B", "channel": 1, "muted": false, "solo": false}
+    ],
+    "notes": [
+        {"time_beats": 0.0, "duration_beats": 1.0, "note": 60, "velocity": 100, "track": 0},
+        {"time_beats": 1.0, "duration_beats": 0.5, "note": 64, "velocity": 100, "track": 0}
+    ],
+    "rests": [
+        {"time_beats": 4.0, "duration_beats": 1.0, "track": 0}
+    ]
+}
+```
+
+`from_project_dict(data)` 反序列化——逐欄位重建 `BeatNote`、`BeatRest`、`Track` 物件。
+
+### 13.3 Autosave
+
+EditorView 用 `QTimer` 每 60 秒自動儲存：
+
+```python
+self._autosave_timer = QTimer()
+self._autosave_timer.setInterval(60_000)  # 60 秒
+self._autosave_timer.timeout.connect(self._on_autosave)
+self._autosave_timer.start()
+
+def _on_autosave(self):
+    project_file.autosave(self._sequence)
+```
+
+Autosave 路徑固定為 `~/.cyber_qin/autosave.cqp`。`project_file.autosave()` 內部會自動建立目錄：
+
+```python
+_AUTOSAVE_DIR = Path.home() / ".cyber_qin"
+
+def autosave(seq: EditorSequence) -> None:
+    save(_AUTOSAVE_FILE, seq)
+    # save() 內部：path.parent.mkdir(parents=True, exist_ok=True)
+```
+
+#### 練習 13.1：序列化完整性
+
+下列哪些欄位在 `to_project_dict()` → `from_project_dict()` 的 roundtrip 中**會遺失**？
+
+- (A) `BeatNote.velocity`
+- (B) `EditorSequence._undo_stack`
+- (C) `Track.color`
+- (D) `BeatRest.track`
+
+<details><summary>答案</summary>
+
+**(B)**。undo/redo 堆疊是暫態（transient state），不序列化。儲存/載入後 undo 堆疊為空。(A)(C)(D) 都完整保存。
+
+</details>
+
+### 總結
+
+| 低延遲 | 音樂正確 | 可維護 |
+|--------|---------|--------|
+| gzip 壓縮 + 無空白 JSON 讓存檔快速且小巧。 | 所有音符屬性完整 roundtrip，不丟資料。 | `project_file.py` 只做 I/O，不碰資料模型邏輯。 |
+
+**延伸學習**：
+- [json 模組文件](https://docs.python.org/3/library/json.html)
+- [gzip 模組文件](https://docs.python.org/3/library/gzip.html)
+
+---
+
+## Reading 14: 測試與品質保證
+
+### 目標
+
+> | 低延遲 | 音樂正確 | 可維護 |
+> |--------|---------|--------|
+> | Mock 掉 `SendInput`，在沒有硬體的環境下驗證按鍵邏輯。 | 參數化測試覆蓋所有 36 個音符的映射正確性。 | 392 個測試提供回歸保護——改任何程式碼後立刻知道有沒有壞。 |
 
 閱讀本篇後，你將能夠：
 
@@ -1626,7 +2008,7 @@ def wheelEvent(self, event):
 - 解釋測試金字塔和本專案的測試分佈
 - 分析為什麼每個預處理 Stage 需要獨立測試
 
-### 12.1 基本 pytest
+### 14.1 基本 pytest
 
 ```python
 def test_lookup_middle_c():
@@ -1638,7 +2020,7 @@ def test_lookup_middle_c():
     assert result.label == "A"
 ```
 
-### 12.2 Mock
+### 14.2 Mock
 
 ```python
 from unittest.mock import patch, MagicMock
@@ -1653,7 +2035,7 @@ def test_press_sends_input():
 
 `mock` 攔截真正的 `SendInput` 呼叫，讓測試可以在沒有 Windows GUI 的 CI 環境中執行。
 
-### 12.3 測試分佈
+### 14.3 測試分佈
 
 | 檔案 | 主題 | 約幾個 |
 |------|------|--------|
@@ -1665,11 +2047,12 @@ def test_press_sends_input():
 | `test_auto_tune.py` | 量化 + 校正 | ~25 |
 | `test_midi_recorder.py` | 錄音 + 匯出 | ~20 |
 | `test_note_sequence.py` | 秒制序列 | ~20 |
-| `test_beat_sequence.py` | Beat 模型 | ~77 |
+| `test_beat_sequence.py` | Beat 模型 | ~103 |
+| `test_project_file.py` | 專案檔案 | ~7 |
 
 CI 矩陣：`windows-latest` × Python {3.11, 3.12, 3.13}，加上 `ubuntu-latest` 的 lint。
 
-#### 練習 12.1：Mock 設計
+#### 練習 14.1：Mock 設計
 
 為什麼我們 mock `_send`（底層函式）而不是 mock `ctypes.windll.user32.SendInput`？
 
@@ -1683,11 +2066,11 @@ CI 矩陣：`windows-latest` × Python {3.11, 3.12, 3.13}，加上 `ubuntu-lates
 
 | 低延遲 | 音樂正確 | 可維護 |
 |--------|---------|--------|
-| Mock 讓延遲相關的程式碼可以在 CI 中驗證，不需要真實硬體。 | 參數化測試覆蓋所有 36 鍵 + 所有邊界值。 | 366 個測試 = 強大的回歸保護。0.34 秒跑完 = 零摩擦。 |
+| Mock 讓延遲相關的程式碼可以在 CI 中驗證，不需要真實硬體。 | 參數化測試覆蓋所有 36 鍵 + 所有邊界值。 | 392 個測試 = 強大的回歸保護。~0.3 秒跑完 = 零摩擦。 |
 
 ---
 
-## Reading 13: 打包與發佈
+## Reading 15: 打包與發佈
 
 ### 目標
 
@@ -1701,7 +2084,7 @@ CI 矩陣：`windows-latest` × Python {3.11, 3.12, 3.13}，加上 `ubuntu-lates
 - 說明為什麼需要 `launcher.py` 作為入口點
 - 描述 CI/CD 流程從 git tag 到 GitHub Release
 
-### 13.1 PyInstaller
+### 15.1 PyInstaller
 
 PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的資料夾：
 
@@ -1712,13 +2095,13 @@ PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的
 
 **注意**：必須用 Python 3.13 的 venv——PyQt6 在 3.14 alpha 上會爆 "Unable to embed qt.conf"。
 
-### 13.2 CI/CD 流程
+### 15.2 CI/CD 流程
 
 ```
 開發者                    GitHub Actions
   │                          │
-  ├─ git tag v0.5.0         │
-  ├─ git push origin v0.5.0 │
+  ├─ git tag v0.6.0         │
+  ├─ git push origin v0.6.0 │
   │                          ├─ 觸發 ci.yml
   │                          ├─ pip install + pytest（3 個 Python 版本）
   │                          ├─ ruff check
@@ -1747,6 +2130,8 @@ PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的
 | 6 | 改 BPM 後音符位移 | 用秒儲存位置 | 用拍（beat）作為主要時間單位 |
 | 7 | 遊戲不認按鍵 | 用了虛擬鍵碼 | 用掃描碼 + `KEYEVENTF_SCANCODE` |
 | 8 | 修飾鍵洩漏到下一音 | Shift/Ctrl 按太久 | 閃按：同批次 down-key-up |
+| 9 | `remove_track` 後 undo 不還原軌道 | `_Snapshot` 沒存 tracks | Snapshot 必須包含 tracks 列表 |
+| 10 | 選取 index 與資料不同步 | 資料 mutation 後沒清選取 | 每次 mutation 後清除 `_selected_*` |
 
 ## 附錄 B：技術學習路線圖
 
@@ -1771,10 +2156,16 @@ PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的
 ├── 讀 theme.py → piano_display.py → app_shell.py
 └── 驗證：能讀懂 NoteRoll.paintEvent
 
-階段 5（持續）：進階
+階段 5（1 週）：編輯器進階
+├── 讀 beat_sequence.py → project_file.py
+├── 讀 note_roll.py → pitch_ruler.py → editor_track_panel.py
+├── 理解多選/框選/resize 的狀態機
+└── 驗證：能追蹤 Ctrl+C → Ctrl+V 的完整信號鏈
+
+階段 6（持續）：進階
 ├── 多執行緒（threading / GIL）
 ├── 測試（pytest + mock）
-├── 資料模型設計（beat_sequence.py）
+├── 序列化設計（JSON + gzip）
 └── CI/CD（GitHub Actions）
 ```
 
@@ -1822,10 +2213,20 @@ PyInstaller 把 Python 程式碼 + 依賴 + 直譯器打包成可獨立執行的
 | **daemon thread** | 背景執行緒——主程式結束時自動終止 |
 | **EMA** | Exponential Moving Average — 指數移動平均，用於平滑追蹤值 |
 | **anchor** | 錨點——播放迴圈中記住的起始時間，用來校正累積漂移 |
+| **marquee selection** | 框選——按住 Shift 拖曳畫矩形，選取矩形內的所有物件 |
+| **resize** | 調整大小——拖曳音符右邊緣改變持續時間 |
+| **snap-to-grid** | 吸附格線——移動或調整時自動對齊到最近的拍子分割點 |
+| **autosave** | 自動儲存——定時將編輯狀態寫入固定路徑，防止意外丟失 |
+| **snapshot** | 快照——undo 系統中對完整狀態的 deep copy，用於還原 |
+| **.cqp** | Cyber Qin Project 檔案格式——gzipped JSON |
+| **index remapping** | 索引重映射——軌道重排序時更新所有音符的 track 欄位 |
+| **PitchRuler** | 音高尺——左側顯示 MIDI 音名的固定寬度 Widget |
+| **EditorTrackPanel** | 軌道面板——管理多軌 mute/solo/重命名/排序的側邊 Widget |
 
 ---
 
 > **本文件參考了 MIT 6.031 Software Construction 的教學格式**（Reading 結構、三大原則、
 > 內嵌練習、漸進式講解），但內容完全針對賽博琴仙專案撰寫。
+> 共 15 篇 Reading，涵蓋從 Python 基礎到完整 Piano Roll 編輯器的全部技術。
 >
 > 授權：本文件隨專案以 MIT License 發佈。

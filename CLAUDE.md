@@ -39,13 +39,14 @@ cyber_qin/
 │   ├── beat_sequence.py    # Beat-based multi-track note model (editor core)
 │   ├── note_sequence.py    # Seconds-based note model (legacy editor)
 │   ├── mapping_schemes.py  # 5 switchable key mapping schemes
+│   ├── project_file.py     # .cqp project save/load (JSON + gzip)
 │   └── priority.py         # Thread priority + high-res timer
 ├── gui/            # PyQt6 UI
 │   ├── app_shell.py        # QMainWindow with sidebar navigation
 │   ├── icons.py            # QPainter vector icon provider
 │   ├── theme.py            # Dark theme QSS
 │   ├── views/              # Full-page views (live_mode, library, editor)
-│   └── widgets/            # Reusable widgets (piano, sidebar, note_roll, etc.)
+│   └── widgets/            # Reusable widgets (piano, sidebar, note_roll, pitch_ruler, editor_track_panel, etc.)
 ├── utils/
 │   ├── admin.py            # UAC elevation check
 │   └── ime.py              # Input method detection
@@ -63,7 +64,7 @@ cyber_qin/
 
 ## Testing
 
-- 366 tests across 9 files in `tests/`
+- 392 tests across 10 files in `tests/`
 - Tests mock `ctypes.windll` and `rtmidi` — no hardware needed
 - Run `pytest` from project root
 

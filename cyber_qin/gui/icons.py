@@ -460,6 +460,112 @@ def draw_live(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.restore()
 
 
+def draw_mute(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Speaker with X (mute icon)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+    pen_w = rect.width() * 0.07
+
+    # Speaker body
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    body = QPainterPath()
+    body.addRect(QRectF(r.left(), r.center().y() - r.height() * 0.15,
+                        r.width() * 0.25, r.height() * 0.3))
+    painter.drawPath(body)
+
+    # Speaker cone
+    cone = QPainterPath()
+    cone.moveTo(r.left() + r.width() * 0.25, r.center().y() - r.height() * 0.15)
+    cone.lineTo(r.left() + r.width() * 0.5, r.top())
+    cone.lineTo(r.left() + r.width() * 0.5, r.bottom())
+    cone.lineTo(r.left() + r.width() * 0.25, r.center().y() + r.height() * 0.15)
+    cone.closeSubpath()
+    painter.drawPath(cone)
+
+    # X mark
+    x_start = r.left() + r.width() * 0.6
+    x_size = r.width() * 0.3
+    cx = x_start + x_size / 2
+    cy = r.center().y()
+    painter.setPen(QPen(color, pen_w))
+    painter.drawLine(QPointF(cx - x_size / 2, cy - x_size / 2),
+                     QPointF(cx + x_size / 2, cy + x_size / 2))
+    painter.drawLine(QPointF(cx + x_size / 2, cy - x_size / 2),
+                     QPointF(cx - x_size / 2, cy + x_size / 2))
+
+    painter.restore()
+
+
+def draw_solo(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Headphones icon (solo)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+    pen_w = rect.width() * 0.08
+
+    # Headband arc
+    painter.setPen(QPen(color, pen_w))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    arc_rect = QRectF(r.left() + r.width() * 0.1, r.top(),
+                      r.width() * 0.8, r.height() * 0.8)
+    painter.drawArc(arc_rect, 0, 180 * 16)
+
+    # Left earpiece
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    painter.drawRoundedRect(
+        QRectF(r.left(), r.center().y(), r.width() * 0.2, r.height() * 0.4),
+        2, 2,
+    )
+
+    # Right earpiece
+    painter.drawRoundedRect(
+        QRectF(r.right() - r.width() * 0.2, r.center().y(),
+               r.width() * 0.2, r.height() * 0.4),
+        2, 2,
+    )
+
+    painter.restore()
+
+
+def draw_save(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Floppy disk (save icon)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.24
+    r = rect.adjusted(m, m, -m, -m)
+
+    # Disk body
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    body = QPainterPath()
+    body.addRoundedRect(r, r.width() * 0.1, r.height() * 0.1)
+    painter.drawPath(body)
+
+    # Top slot (label area) — dark
+    painter.setBrush(QColor(0x0A, 0x0E, 0x14))
+    slot_w = r.width() * 0.6
+    slot_h = r.height() * 0.3
+    slot_x = r.center().x() - slot_w / 2
+    painter.drawRect(QRectF(slot_x, r.top(), slot_w, slot_h))
+
+    # Bottom window — dark
+    win_w = r.width() * 0.5
+    win_h = r.height() * 0.3
+    win_x = r.center().x() - win_w / 2
+    win_y = r.bottom() - win_h - r.height() * 0.08
+    painter.drawRoundedRect(QRectF(win_x, win_y, win_w, win_h), 2, 2)
+
+    painter.restore()
+
+
 def draw_library(painter: QPainter, rect: QRectF, color: QColor) -> None:
     """Grid/folder icon (library mode)."""
     painter.save()

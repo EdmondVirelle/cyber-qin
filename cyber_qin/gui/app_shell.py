@@ -205,6 +205,9 @@ class AppShell(QMainWindow):
         self._editor_view.recording_stopped.connect(self._on_editor_recording_stopped)
         self._editor_view.play_requested.connect(self._on_editor_play)
 
+        # Pass player to editor for playback cursor tracking
+        self._editor_view.set_player(self._player)
+
     # --- Recording ---
 
     def _on_recording_started(self) -> None:
@@ -452,15 +455,21 @@ class AppShell(QMainWindow):
 
     def _setup_shortcuts(self) -> None:
         """Register global keyboard shortcuts."""
-        QShortcut(QKeySequence("Space"), self).activated.connect(
-            self._on_play_pause,
-        )
+        space_shortcut = QShortcut(QKeySequence("Space"), self)
+        space_shortcut.activated.connect(self._on_space_key)
         QShortcut(QKeySequence("Ctrl+Right"), self).activated.connect(
             self._on_next_track,
         )
         QShortcut(QKeySequence("Ctrl+Left"), self).activated.connect(
             self._on_prev_track,
         )
+
+    def _on_space_key(self) -> None:
+        """Handle Space: let EditorView handle it when active, else play/pause."""
+        if self._stack.currentIndex() == 2:
+            # Editor view is active — it handles Space via keyPressEvent
+            return
+        self._on_play_pause()
 
     def _on_next_track(self) -> None:
         file_path = self._library_view.play_next()

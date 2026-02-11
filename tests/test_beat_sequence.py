@@ -657,3 +657,190 @@ class TestAllItems:
         items = seq.all_items
         assert len(items) == 3
         assert items[0].time_beats < items[1].time_beats < items[2].time_beats
+
+
+# ── Snapshot with tracks ──────────────────────────────────
+
+
+class TestSnapshotTracks:
+    def test_undo_remove_track_restores_tracks(self):
+        seq = EditorSequence(num_tracks=3)
+        seq.set_active_track(1)
+        seq.add_note(60)
+        seq.remove_track(1)
+        assert seq.track_count == 2
+        seq.undo()
+        assert seq.track_count == 3
+        assert seq.note_count == 1
+        assert seq.notes[0].track == 1
+
+    def test_undo_preserves_track_metadata(self):
+        seq = EditorSequence(num_tracks=2)
+        seq._tracks[0].name = "Lead"
+        seq._tracks[0].muted = True
+        seq.add_note(60)
+        seq.undo()
+        assert seq._tracks[0].name == "Lead"
+        assert seq._tracks[0].muted is True
+
+
+# ── Reorder tracks ────────────────────────────────────────
+
+
+class TestReorderTracks:
+    def test_reorder_basic(self):
+        seq = EditorSequence(num_tracks=3)
+        seq.set_active_track(0)
+        seq.add_note(60)
+        seq.set_active_track(2)
+        seq.add_note(72)
+        # Swap track 0 and 2: new_order = [2, 1, 0]
+        seq.reorder_tracks([2, 1, 0])
+        # Old track 0 is now track 2, old track 2 is now track 0
+        assert seq.notes_in_track(2)[0].note == 60
+        assert seq.notes_in_track(0)[0].note == 72
+
+    def test_reorder_active_track_follows(self):
+        seq = EditorSequence(num_tracks=3)
+        seq.set_active_track(0)
+        seq.reorder_tracks([2, 1, 0])
+        assert seq.active_track == 2
+
+    def test_reorder_undo(self):
+        seq = EditorSequence(num_tracks=3)
+        original_names = [t.name for t in seq.tracks]
+        seq.reorder_tracks([2, 1, 0])
+        seq.undo()
+        assert [t.name for t in seq.tracks] == original_names
+
+    def test_reorder_invalid_permutation_ignored(self):
+        seq = EditorSequence(num_tracks=3)
+        seq.reorder_tracks([0, 0, 1])  # invalid — not a permutation
+        assert seq.track_count == 3  # unchanged
+
+
+# ── Delete items ──────────────────────────────────────────
+
+
+class TestDeleteItems:
+    def test_delete_mixed(self):
+        seq = EditorSequence()
+        seq.set_step_duration("1/8")
+        seq.add_note(60)
+        seq.add_note(64)
+        seq.add_rest()
+        seq.add_note(67)
+        seq.delete_items([0, 2], [0])
+        assert seq.note_count == 1
+        assert seq.notes[0].note == 64
+        assert seq.rest_count == 0
+
+    def test_delete_items_undo(self):
+        seq = EditorSequence()
+        seq.add_note(60)
+        seq.add_rest()
+        seq.delete_items([0], [0])
+        seq.undo()
+        assert seq.note_count == 1
+        assert seq.rest_count == 1
+
+    def test_delete_items_empty(self):
+        seq = EditorSequence()
+        seq.delete_items([], [])
+        assert not seq.can_undo  # no undo pushed for empty delete
+
+
+# ── Resize notes batch ────────────────────────────────────
+
+
+class TestResizeNotes:
+    def test_resize_batch(self):
+        seq = EditorSequence()
+        seq.set_step_duration("1/4")
+        seq.add_note(60)
+        seq.add_note(64)
+        seq.resize_notes([0, 1], 1.0)
+        assert seq.notes[0].duration_beats == 2.0
+        assert seq.notes[1].duration_beats == 2.0
+
+    def test_resize_clamps_minimum(self):
+        seq = EditorSequence()
+        seq.add_note(60)
+        seq.resize_notes([0], -10.0)
+        assert seq.notes[0].duration_beats == 0.25
+
+    def test_resize_undo(self):
+        seq = EditorSequence()
+        seq.add_note(60)
+        original_dur = seq.notes[0].duration_beats
+        seq.resize_notes([0], 2.0)
+        seq.undo()
+        assert seq.notes[0].duration_beats == original_dur
+
+
+# ── Rest rect query ───────────────────────────────────────
+
+
+class TestRestRect:
+    def test_basic(self):
+        seq = EditorSequence()
+        seq.set_step_duration("1/4")
+        seq.add_rest()   # beat 0
+        seq.add_rest()   # beat 1
+        seq.add_rest()   # beat 2
+        indices = seq.rest_indices_in_rect(0.0, 2.0)
+        assert indices == [0, 1]
+
+    def test_empty(self):
+        seq = EditorSequence()
+        seq.add_rest()
+        assert seq.rest_indices_in_rect(10.0, 20.0) == []
+
+
+# ── Copy items ────────────────────────────────────────────
+
+
+class TestCopyItems:
+    def test_copy_mixed(self):
+        seq = EditorSequence()
+        seq.set_step_duration("1/4")
+        seq.add_note(60)
+        seq.add_rest()
+        seq.copy_items([0], [0])
+        assert not seq.clipboard_empty
+        seq.cursor_beats = 4.0
+        seq.paste_at_cursor()
+        assert seq.note_count == 2
+        assert seq.rest_count == 2
+
+    def test_copy_items_normalizes_time(self):
+        seq = EditorSequence()
+        seq.set_step_duration("1/4")
+        seq.add_note(60)   # beat 0
+        seq.add_note(64)   # beat 1
+        seq.copy_items([1], [])
+        seq.cursor_beats = 0.0
+        seq.paste_at_cursor()
+        # Pasted note should be at beat 0, not beat 1
+        pasted = [n for n in seq.notes if n.time_beats < 0.01]
+        assert len(pasted) == 2  # original + pasted
+
+
+# ── Track management extras ───────────────────────────────
+
+
+class TestTrackExtras:
+    def test_rename_track(self):
+        seq = EditorSequence()
+        seq.rename_track(0, "Melody")
+        assert seq.tracks[0].name == "Melody"
+
+    def test_set_track_muted(self):
+        seq = EditorSequence()
+        seq.set_track_muted(0, True)
+        assert seq.tracks[0].muted is True
+
+    def test_set_track_solo(self):
+        seq = EditorSequence()
+        seq.set_track_solo(1, True)
+        assert seq.tracks[1].solo is True

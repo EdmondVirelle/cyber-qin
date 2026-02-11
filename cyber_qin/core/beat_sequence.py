@@ -106,6 +106,7 @@ class _Snapshot:
     rests: list[BeatRest]
     cursor_beats: float
     active_track: int
+    tracks: list[Track] | None = None
 
 
 # ── EditorSequence ─────────────────────────────────────────
@@ -276,6 +277,7 @@ class EditorSequence:
             rests=[copy.copy(r) for r in self._rests],
             cursor_beats=self._cursor_beats,
             active_track=self._active_track,
+            tracks=[copy.copy(t) for t in self._tracks],
         )
 
     def _restore(self, snap: _Snapshot) -> None:
@@ -283,6 +285,8 @@ class EditorSequence:
         self._rests = snap.rests
         self._cursor_beats = snap.cursor_beats
         self._active_track = snap.active_track
+        if snap.tracks is not None:
+            self._tracks = snap.tracks
 
     def _push_undo(self) -> None:
         self._undo_stack.append(self._snapshot())
@@ -327,6 +331,32 @@ class EditorSequence:
             name = f"Track {idx + 1}"
         self._tracks.append(Track(name=name, color=color, channel=idx))
         return idx
+
+    def rename_track(self, index: int, name: str) -> None:
+        if 0 <= index < len(self._tracks):
+            self._tracks[index].name = name
+
+    def set_track_muted(self, index: int, muted: bool) -> None:
+        if 0 <= index < len(self._tracks):
+            self._tracks[index].muted = muted
+
+    def set_track_solo(self, index: int, solo: bool) -> None:
+        if 0 <= index < len(self._tracks):
+            self._tracks[index].solo = solo
+
+    def reorder_tracks(self, new_order: list[int]) -> None:
+        """Reorder tracks by permutation. new_order[i] = old index for new position i."""
+        if sorted(new_order) != list(range(len(self._tracks))):
+            return
+        self._push_undo()
+        # Build reverse mapping: old_index → new_index
+        old_to_new = {old: new for new, old in enumerate(new_order)}
+        self._tracks = [self._tracks[i] for i in new_order]
+        for n in self._notes:
+            n.track = old_to_new.get(n.track, n.track)
+        for r in self._rests:
+            r.track = old_to_new.get(r.track, r.track)
+        self._active_track = old_to_new.get(self._active_track, 0)
 
     def remove_track(self, index: int) -> None:
         if not (0 <= index < len(self._tracks)):
@@ -429,6 +459,66 @@ class EditorSequence:
         self._push_undo()
         self._notes[index].duration_beats = max(0.25, new_duration)
 
+    def resize_notes(self, indices: list[int], delta_beats: float) -> None:
+        """Batch resize notes by delta, single undo step."""
+        if not indices:
+            return
+        self._push_undo()
+        for i in indices:
+            if 0 <= i < len(self._notes):
+                n = self._notes[i]
+                n.duration_beats = max(0.25, n.duration_beats + delta_beats)
+
+    def add_note_at(
+        self, time_beats: float, midi_note: int, velocity: int = 100,
+    ) -> None:
+        """Add a note at a specific time position (for pencil tool)."""
+        self._push_undo()
+        note = BeatNote(
+            time_beats=max(0.0, time_beats),
+            duration_beats=self._step_duration,
+            note=max(0, min(127, midi_note)),
+            velocity=velocity,
+            track=self._active_track,
+        )
+        self._notes.append(note)
+        self._notes.sort(key=lambda n: n.time_beats)
+
+    def quantize_notes(self, indices: list[int], grid: float) -> None:
+        """Snap selected notes' time_beats to nearest grid multiple."""
+        if not indices or grid <= 0:
+            return
+        self._push_undo()
+        for i in indices:
+            if 0 <= i < len(self._notes):
+                n = self._notes[i]
+                n.time_beats = round(n.time_beats / grid) * grid
+        self._notes.sort(key=lambda n: n.time_beats)
+
+    def set_notes_velocity(self, indices: list[int], velocity: int) -> None:
+        """Set velocity of notes at given indices."""
+        if not indices:
+            return
+        self._push_undo()
+        vel = max(1, min(127, velocity))
+        for i in indices:
+            if 0 <= i < len(self._notes):
+                self._notes[i].velocity = vel
+
+    def delete_items(
+        self, note_indices: list[int], rest_indices: list[int],
+    ) -> None:
+        """Delete notes and rests in one undo step."""
+        if not note_indices and not rest_indices:
+            return
+        self._push_undo()
+        if note_indices:
+            to_remove = set(note_indices)
+            self._notes = [n for i, n in enumerate(self._notes) if i not in to_remove]
+        if rest_indices:
+            to_remove = set(rest_indices)
+            self._rests = [r for i, r in enumerate(self._rests) if i not in to_remove]
+
     def clear(self) -> None:
         if self._notes or self._rests:
             self._push_undo()
@@ -453,6 +543,32 @@ class EditorSequence:
             if n.time_beats >= t0 and n.time_beats < t1 and n0 <= n.note <= n1:
                 result.append(i)
         return result
+
+    def rest_indices_in_rect(self, t0: float, t1: float) -> list[int]:
+        """Return indices of rests within the given time rectangle."""
+        result = []
+        for i, r in enumerate(self._rests):
+            if r.time_beats >= t0 and r.time_beats < t1:
+                result.append(i)
+        return result
+
+    def copy_items(
+        self, note_indices: list[int], rest_indices: list[int],
+    ) -> None:
+        """Copy mixed notes + rests to clipboard."""
+        items: list[BeatItem] = []
+        for i in note_indices:
+            if 0 <= i < len(self._notes):
+                items.append(copy.copy(self._notes[i]))
+        for i in rest_indices:
+            if 0 <= i < len(self._rests):
+                items.append(copy.copy(self._rests[i]))
+        if not items:
+            return
+        min_time = min(it.time_beats for it in items)
+        for it in items:
+            it.time_beats -= min_time
+        self._clipboard = items
 
     def copy_notes(self, indices: list[int]) -> None:
         if not indices:

@@ -4,12 +4,11 @@ Layout:
 ┌──────────────────────────────────────────────┐
 │ Gradient header: "編曲器" (紫霧色)               │
 ├──────────────────────────────────────────────┤
-│ Row 1: [●錄音][▶播放] | [↩][↪][✕]    [匯入][匯出] │
+│ Row 1: [●錄音][▶播放] | [↩][↪][✕]    [存檔][匯入][匯出] │
 │ Row 2: 時值[1/4▾] 拍號[4/4▾] BPM[120] □Snap N音符 │
 ├──────────────────────────────────────────────┤
-│ NoteRoll (timeline, flex=1)                  │
-├──────────────────────────────────────────────┤
-│ ClickablePiano (input keyboard)              │
+│ [TrackPanel | PitchRuler | NoteRoll (flex=1)]│
+│ [           | spacer(48) | ClickablePiano    ]│
 └──────────────────────────────────────────────┘
 """
 
@@ -17,7 +16,7 @@ from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QRectF, Qt, pyqtSignal
+from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QKeyEvent, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -25,12 +24,14 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
+from ...core import project_file
 from ...core.beat_sequence import (
     DURATION_KEYS,
     DURATION_PRESETS,
@@ -42,7 +43,9 @@ from ...core.midi_writer import MidiWriter
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
 from ..widgets.clickable_piano import ClickablePiano
+from ..widgets.editor_track_panel import EditorTrackPanel
 from ..widgets.note_roll import NoteRoll
+from ..widgets.pitch_ruler import PitchRuler
 
 log = logging.getLogger(__name__)
 
@@ -97,10 +100,37 @@ class EditorView(QWidget):
         super().__init__(parent)
         self._sequence = EditorSequence()
         self._is_recording: bool = False
+        self._project_path: str | None = None
+        self._player = None  # set by set_player()
+        self._preview_player = None  # lazy MidiOutputPlayer
+        self._selection_anchor: float | None = None
 
         self._build_ui()
         self._connect_signals()
         self._update_ui_state()
+
+        # Autosave timer — 60s interval
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.timeout.connect(self._on_autosave)
+        self._autosave_timer.start(60_000)
+
+    def set_player(self, player) -> None:
+        """Set the player controller for playback cursor tracking."""
+        self._player = player
+        if player is not None:
+            player.progress_updated.connect(self._on_playback_progress)
+            player.state_changed.connect(self._on_playback_state_changed)
+
+    def _on_playback_progress(self, current: float, total: float) -> None:
+        """Convert seconds to beats for playback cursor."""
+        if self._sequence.tempo_bpm > 0:
+            beats = current / (60.0 / self._sequence.tempo_bpm)
+            self._note_roll.set_playback_beats(beats)
+
+    def _on_playback_state_changed(self, state: int) -> None:
+        from ...core.midi_file_player import PlaybackState
+        if state == PlaybackState.STOPPED:
+            self._note_roll.set_playback_beats(-1)
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -178,15 +208,33 @@ class EditorView(QWidget):
         self._clear_btn.setToolTip("清除全部")
         row1.addWidget(self._clear_btn)
 
+        row1.addWidget(_VSeparator())
+
+        self._pencil_btn = QPushButton("✎ 鉛筆")
+        self._pencil_btn.setCheckable(True)
+        self._pencil_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._pencil_btn.setToolTip("鉛筆工具 — 點擊空白處直接放置音符 (P)")
+        self._pencil_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; }"
+            "QPushButton:checked { background-color: #00F0FF; color: #0A0E14; font-weight: 700; }"
+        )
+        row1.addWidget(self._pencil_btn)
+
         row1.addStretch()
 
         # File group
+        self._save_btn = QPushButton("存檔")
+        self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._save_btn.setToolTip("Ctrl+S")
+        row1.addWidget(self._save_btn)
+
         self._load_btn = QPushButton("匯入")
         self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         row1.addWidget(self._load_btn)
 
         self._export_btn = QPushButton("匯出")
         self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._export_btn.setToolTip("Ctrl+E")
         row1.addWidget(self._export_btn)
 
         toolbar_layout.addLayout(row1)
@@ -236,6 +284,19 @@ class EditorView(QWidget):
         self._auto_tune_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._auto_tune_cb)
 
+        row2.addSpacing(8)
+
+        vel_lbl = QLabel("力度")
+        row2.addWidget(vel_lbl)
+
+        self._velocity_spin = QSpinBox()
+        self._velocity_spin.setRange(1, 127)
+        self._velocity_spin.setValue(100)
+        self._velocity_spin.setToolTip("選取音符的力度 (1-127)")
+        self._velocity_spin.setFixedWidth(60)
+        self._velocity_spin.setEnabled(False)
+        row2.addWidget(self._velocity_spin)
+
         row2.addStretch()
 
         self._note_count_lbl = QLabel("0 音符")
@@ -247,32 +308,76 @@ class EditorView(QWidget):
         toolbar_layout.addLayout(row2)
         content.addWidget(toolbar_card)
 
-        # Note roll (timeline)
-        self._note_roll = NoteRoll()
-        content.addWidget(self._note_roll, 1)
+        # ── Main editor area: [TrackPanel | PitchRuler | NoteRoll] ──
+        editor_area = QHBoxLayout()
+        editor_area.setSpacing(0)
+        editor_area.setContentsMargins(0, 0, 0, 0)
 
-        # Clickable piano
+        self._track_panel = EditorTrackPanel()
+        editor_area.addWidget(self._track_panel)
+
+        self._pitch_ruler = PitchRuler()
+        editor_area.addWidget(self._pitch_ruler)
+
+        self._note_roll = NoteRoll()
+        editor_area.addWidget(self._note_roll, 1)
+
+        content.addLayout(editor_area, 1)
+
+        # ── Piano row: [spacer | ClickablePiano] ──
+        piano_row = QHBoxLayout()
+        piano_row.setSpacing(0)
+        piano_row.setContentsMargins(0, 0, 0, 0)
+
+        # Spacer to align piano with NoteRoll (TrackPanel + PitchRuler widths)
+        piano_spacer = QWidget()
+        piano_spacer.setFixedWidth(160 + 48)  # _PANEL_WIDTH + _RULER_WIDTH
+        piano_row.addWidget(piano_spacer)
+
         self._piano = ClickablePiano()
-        content.addWidget(self._piano)
+        piano_row.addWidget(self._piano, 1)
+
+        content.addLayout(piano_row)
 
         root.addLayout(content, 1)
 
     def _connect_signals(self) -> None:
         self._piano.note_clicked.connect(self._on_note_clicked)
+        self._piano.note_pressed.connect(self._on_piano_key_pressed)
+        self._piano.note_released.connect(self._on_piano_key_released)
         self._load_btn.clicked.connect(self._on_load)
         self._export_btn.clicked.connect(self._on_export)
+        self._save_btn.clicked.connect(self._on_save)
         self._record_btn.clicked.connect(self._on_record_toggle)
         self._play_btn.clicked.connect(self._on_play)
         self._undo_btn.clicked.connect(self._on_undo)
         self._redo_btn.clicked.connect(self._on_redo)
         self._clear_btn.clicked.connect(self._on_clear)
+        self._pencil_btn.toggled.connect(self._on_pencil_toggled)
         self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
         self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
+        self._snap_cb.toggled.connect(self._note_roll.set_snap_enabled)
+        self._velocity_spin.valueChanged.connect(self._on_velocity_changed)
+
+        # NoteRoll signals
         self._note_roll.note_deleted.connect(self._on_note_deleted)
         self._note_roll.note_moved.connect(self._on_note_moved)
+        self._note_roll.note_selected.connect(self._on_note_selected_preview)
         self._note_roll.cursor_moved.connect(self._on_cursor_moved)
-        self._note_roll.note_right_clicked.connect(self._on_note_right_click_delete)
+        self._note_roll.selection_changed.connect(self._on_selection_changed)
+        self._note_roll.note_resized.connect(self._on_note_resized)
+        self._note_roll.notes_moved.connect(self._on_notes_moved)
+        self._note_roll.note_draw_requested.connect(self._on_note_draw)
+        self._note_roll.context_menu_requested.connect(self._on_context_menu)
+
+        # Track panel signals
+        self._track_panel.track_activated.connect(self._on_track_activated)
+        self._track_panel.track_muted.connect(self._on_track_muted)
+        self._track_panel.track_soloed.connect(self._on_track_soloed)
+        self._track_panel.track_renamed.connect(self._on_track_renamed)
+        self._track_panel.track_removed.connect(self._on_track_removed)
+        self._track_panel.track_added.connect(self._on_track_added)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -315,20 +420,218 @@ class EditorView(QWidget):
             stats += f" · {bars} 小節"
         self._note_count_lbl.setText(stats)
 
+        # Update track panel
+        self._track_panel.set_tracks(self._sequence.tracks, active)
+
+    # ── Track panel handlers ─────────────────────────────────
+
+    def _on_track_activated(self, index: int) -> None:
+        self._sequence.set_active_track(index)
+        self._update_ui_state()
+
+    def _on_track_muted(self, index: int, muted: bool) -> None:
+        self._sequence.set_track_muted(index, muted)
+        self._update_ui_state()
+
+    def _on_track_soloed(self, index: int, solo: bool) -> None:
+        self._sequence.set_track_solo(index, solo)
+        self._update_ui_state()
+
+    def _on_track_renamed(self, index: int, name: str) -> None:
+        self._sequence.rename_track(index, name)
+        self._update_ui_state()
+
+    def _on_track_removed(self, index: int) -> None:
+        self._sequence.remove_track(index)
+        self._update_ui_state()
+
+    def _on_track_added(self) -> None:
+        self._sequence.add_track()
+        self._update_ui_state()
+
+    # ── NoteRoll signal handlers ─────────────────────────────
+
+    def _on_selection_changed(self, note_indices: list, rest_indices: list) -> None:
+        # Store selection for copy/paste/delete
+        self._current_note_selection = note_indices
+        self._current_rest_selection = rest_indices
+
+        # Update velocity spinbox
+        if note_indices:
+            self._velocity_spin.setEnabled(True)
+            active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+            velocities = []
+            for i in note_indices:
+                if 0 <= i < len(active_notes):
+                    velocities.append(active_notes[i].velocity)
+            if velocities:
+                self._velocity_spin.blockSignals(True)
+                self._velocity_spin.setValue(velocities[0])
+                self._velocity_spin.blockSignals(False)
+        else:
+            self._velocity_spin.setEnabled(False)
+
+    def _on_note_resized(self, index: int, new_duration: float) -> None:
+        """Handle note resize from NoteRoll."""
+        global_idx = self._map_to_global_note_index(index)
+        if global_idx >= 0:
+            self._sequence.resize_note(global_idx, new_duration)
+        self._update_ui_state()
+
+    def _on_notes_moved(self, indices: list, time_delta: float, pitch_delta: int) -> None:
+        """Handle batch move from NoteRoll."""
+        global_indices = [self._map_to_global_note_index(i) for i in indices]
+        global_indices = [gi for gi in global_indices if gi >= 0]
+        if global_indices:
+            self._sequence.move_notes(global_indices, time_delta, pitch_delta)
+        self._update_ui_state()
+
+    # ── Index mapping helpers ────────────────────────────────
+
+    def _map_to_global_note_index(self, track_local_idx: int) -> int:
+        """Map a track-local note index to a global index in sequence._notes."""
+        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+        if 0 <= track_local_idx < len(active_notes):
+            target = active_notes[track_local_idx]
+            for gi, n in enumerate(self._sequence._notes):
+                if n is target:
+                    return gi
+        return -1
+
+    def _map_to_global_rest_index(self, track_local_idx: int) -> int:
+        """Map a track-local rest index to a global index in sequence._rests."""
+        active_rests = self._sequence.rests_in_track(self._sequence.active_track)
+        if 0 <= track_local_idx < len(active_rests):
+            target = active_rests[track_local_idx]
+            for gi, r in enumerate(self._sequence._rests):
+                if r is target:
+                    return gi
+        return -1
+
+    # ── Note events ──────────────────────────────────────────
+
     def _on_note_clicked(self, midi_note: int) -> None:
         flash_beat = self._sequence.cursor_beats
         self._sequence.add_note(midi_note)
         self._update_ui_state()
         self._note_roll.flash_at_beat(flash_beat)
+        self._preview_midi_note(midi_note)
+
+    def _on_note_draw(self, time_beats: float, midi_note: int) -> None:
+        """Handle pencil tool draw on NoteRoll."""
+        self._sequence.add_note_at(time_beats, midi_note)
+        self._update_ui_state()
+        self._note_roll.flash_at_beat(time_beats)
+        self._preview_midi_note(midi_note)
+
+    def _on_pencil_toggled(self, checked: bool) -> None:
+        self._note_roll.set_pencil_mode(checked)
+
+    def _on_velocity_changed(self, value: int) -> None:
+        """Update velocity of all selected notes."""
+        note_sel = getattr(self, '_current_note_selection', [])
+        if not note_sel:
+            return
+        global_indices = [self._map_to_global_note_index(i) for i in note_sel]
+        global_indices = [gi for gi in global_indices if gi >= 0]
+        if global_indices:
+            self._sequence.set_notes_velocity(global_indices, value)
+            self._update_ui_state()
+
+    def _on_note_selected_preview(self, index: int) -> None:
+        """Play audio preview when a note is clicked in NoteRoll."""
+        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
+        if 0 <= index < len(active_notes):
+            self._preview_midi_note(active_notes[index].note)
+
+    def _on_piano_key_pressed(self, midi_note: int) -> None:
+        """Play audio preview when piano key is pressed."""
+        player = self._ensure_preview_player()
+        if player is not None:
+            # Send note_on directly for held preview
+            if player._midi_out is not None:
+                player._midi_out.send_message([0x90, midi_note & 0x7F, 100])
+
+    def _on_piano_key_released(self, midi_note: int) -> None:
+        """Stop audio when piano key is released."""
+        player = self._ensure_preview_player()
+        if player is not None:
+            if player._midi_out is not None:
+                player._midi_out.send_message([0x80, midi_note & 0x7F, 0])
+
+    def _preview_midi_note(self, midi_note: int) -> None:
+        """Play a short preview of a MIDI note."""
+        player = self._ensure_preview_player()
+        if player is not None:
+            player.preview_note(midi_note, velocity=80, duration_ms=150)
+
+    def _quantize_selection(self) -> None:
+        """Quantize selected notes to the current step grid."""
+        note_sel = getattr(self, '_current_note_selection', [])
+        if not note_sel:
+            return
+        global_indices = [self._map_to_global_note_index(i) for i in note_sel]
+        global_indices = [gi for gi in global_indices if gi >= 0]
+        if global_indices:
+            self._sequence.quantize_notes(global_indices, self._sequence.step_duration)
+            self._update_ui_state()
+
+    def _on_context_menu(self, x: float, y: float) -> None:
+        """Show context menu at NoteRoll position."""
+        menu = QMenu(self)
+        has_sel = bool(getattr(self, '_current_note_selection', [])
+                       or getattr(self, '_current_rest_selection', []))
+        has_clip = not self._sequence.clipboard_empty
+
+        act_select_all = menu.addAction("全選\tCtrl+A")
+        act_select_all.triggered.connect(self._note_roll.select_all)
+
+        menu.addSeparator()
+
+        act_copy = menu.addAction("複製\tCtrl+C")
+        act_copy.setEnabled(has_sel)
+        act_copy.triggered.connect(self._copy_selection)
+
+        act_cut = menu.addAction("剪下\tCtrl+X")
+        act_cut.setEnabled(has_sel)
+        act_cut.triggered.connect(self._cut_selection)
+
+        act_paste = menu.addAction("貼上\tCtrl+V")
+        act_paste.setEnabled(has_clip)
+        act_paste.triggered.connect(self._paste)
+
+        act_delete = menu.addAction("刪除\tDelete")
+        act_delete.setEnabled(has_sel)
+        act_delete.triggered.connect(self._delete_selection)
+
+        menu.addSeparator()
+
+        act_quantize = menu.addAction("量化對齊\tCtrl+Q")
+        act_quantize.setEnabled(has_sel)
+        act_quantize.triggered.connect(self._quantize_selection)
+
+        menu.addSeparator()
+
+        act_pencil = menu.addAction("鉛筆模式\tP")
+        act_pencil.setCheckable(True)
+        act_pencil.setChecked(self._pencil_btn.isChecked())
+        act_pencil.triggered.connect(self._pencil_btn.setChecked)
+
+        from PyQt6.QtCore import QPoint
+        screen_pos = self._note_roll.mapToGlobal(QPoint(int(x), int(y)))
+        menu.exec(screen_pos)
 
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self, "載入 MIDI 檔案", "",
-            "MIDI Files (*.mid *.midi);;All Files (*)",
+            "MIDI Files (*.mid *.midi);;CQP Projects (*.cqp);;All Files (*)",
         )
         if not path:
             return
-        self.load_file(path)
+        if path.endswith(".cqp"):
+            self._load_project(path)
+        else:
+            self.load_file(path)
 
     def load_file(self, file_path: str) -> None:
         """Load a MIDI file into the editor."""
@@ -338,9 +641,20 @@ class EditorView(QWidget):
                 events, tempo_bpm=info.tempo_bpm,
             )
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._project_path = None
             self._update_ui_state()
         except Exception:
             log.exception("Failed to load %s", file_path)
+
+    def _load_project(self, path: str) -> None:
+        """Load a .cqp project file."""
+        try:
+            self._sequence = project_file.load(path)
+            self._project_path = path
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._update_ui_state()
+        except Exception:
+            log.exception("Failed to load project %s", path)
 
     def _on_export(self) -> None:
         if self._sequence.note_count == 0:
@@ -361,6 +675,40 @@ class EditorView(QWidget):
         except Exception:
             log.exception("Failed to export %s", path)
 
+    def _on_save(self) -> None:
+        """Save project (Ctrl+S). If no path, prompt save-as."""
+        if self._project_path:
+            try:
+                project_file.save(self._project_path, self._sequence)
+            except Exception:
+                log.exception("Failed to save project")
+        else:
+            self._on_save_as()
+
+    def _on_save_as(self) -> None:
+        """Save project to a new path (Ctrl+Shift+S)."""
+        path, _ = QFileDialog.getSaveFileName(
+            self, "儲存專案", "",
+            "CQP Projects (*.cqp);;All Files (*)",
+        )
+        if not path:
+            return
+        if not path.endswith(".cqp"):
+            path += ".cqp"
+        try:
+            project_file.save(path, self._sequence)
+            self._project_path = path
+        except Exception:
+            log.exception("Failed to save project %s", path)
+
+    def _on_autosave(self) -> None:
+        """Periodic autosave."""
+        if self._sequence.note_count > 0 or self._sequence.rest_count > 0:
+            try:
+                project_file.autosave(self._sequence)
+            except Exception:
+                log.debug("Autosave failed", exc_info=True)
+
     def _on_record_toggle(self) -> None:
         if self._is_recording:
             self._is_recording = False
@@ -380,26 +728,12 @@ class EditorView(QWidget):
             self.recording_started.emit()
 
     def _on_note_moved(self, index: int, time_delta: float, pitch_delta: int) -> None:
-        # index is relative to active track's notes — map to global
-        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
-        if 0 <= index < len(active_notes):
-            target = active_notes[index]
-            # Find global index
-            for gi, n in enumerate(self._sequence._notes):
-                if n is target:
-                    self._sequence.move_note(gi, time_delta, pitch_delta)
-                    break
+        global_idx = self._map_to_global_note_index(index)
+        if global_idx >= 0:
+            self._sequence.move_note(global_idx, time_delta, pitch_delta)
         self._update_ui_state()
 
-    def _on_note_right_click_delete(self, index: int) -> None:
-        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
-        if 0 <= index < len(active_notes):
-            target = active_notes[index]
-            for gi, n in enumerate(self._sequence._notes):
-                if n is target:
-                    self._sequence.delete_note(gi)
-                    break
-        self._update_ui_state()
+    # _on_note_right_click_delete removed — replaced by context menu
 
     @property
     def auto_tune_enabled(self) -> bool:
@@ -415,9 +749,48 @@ class EditorView(QWidget):
         self._sequence._notes.sort(key=lambda n: n.time_beats)
         self._update_ui_state()
 
+    def _ensure_preview_player(self):
+        """Lazily create the MidiOutputPlayer for piano preview."""
+        if self._preview_player is not None:
+            return self._preview_player
+        try:
+            from ...core.midi_output_player import create_midi_output_player
+            player = create_midi_output_player(self)
+            if player is not None:
+                player.progress_updated.connect(self._on_preview_progress)
+                player.state_changed.connect(self._on_preview_state_changed)
+                self._preview_player = player
+        except Exception:
+            log.debug("Failed to create preview player", exc_info=True)
+        return self._preview_player
+
+    def _on_preview_progress(self, current: float, total: float) -> None:
+        if self._sequence.tempo_bpm > 0:
+            beats = current / (60.0 / self._sequence.tempo_bpm)
+            self._note_roll.set_playback_beats(beats)
+
+    def _on_preview_state_changed(self, state: int) -> None:
+        from ...core.midi_file_player import PlaybackState
+        if state == PlaybackState.STOPPED:
+            self._note_roll.set_playback_beats(-1)
+
     def _on_play(self) -> None:
         if self._sequence.note_count == 0:
             return
+
+        player = self._ensure_preview_player()
+        if player is not None:
+            from ...core.midi_file_player import PlaybackState
+            if player.state == PlaybackState.PLAYING:
+                player.stop()
+                return
+            events = self._sequence.to_midi_file_events()
+            duration = self._sequence.duration_seconds
+            player.load(events, duration)
+            player.play()
+            return
+
+        # Fallback: SendInput player via app_shell
         events = self._sequence.to_midi_file_events()
         self.play_requested.emit(events)
 
@@ -451,48 +824,210 @@ class EditorView(QWidget):
         self._note_roll.set_tempo(self._sequence.tempo_bpm)
 
     def _on_note_deleted(self, index: int) -> None:
-        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
-        if 0 <= index < len(active_notes):
-            target = active_notes[index]
-            for gi, n in enumerate(self._sequence._notes):
-                if n is target:
-                    self._sequence.delete_note(gi)
-                    break
+        if index == -1:
+            # Delete entire selection (triggered by marquee-selected Delete)
+            note_sel = getattr(self, '_current_note_selection', [])
+            rest_sel = getattr(self, '_current_rest_selection', [])
+            global_notes = [self._map_to_global_note_index(i) for i in note_sel]
+            global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
+            global_notes = [gi for gi in global_notes if gi >= 0]
+            global_rests = [gi for gi in global_rests if gi >= 0]
+            if global_notes or global_rests:
+                self._sequence.delete_items(global_notes, global_rests)
+        else:
+            global_idx = self._map_to_global_note_index(index)
+            if global_idx >= 0:
+                self._sequence.delete_note(global_idx)
         self._update_ui_state()
 
     def _on_cursor_moved(self, t: float) -> None:
         self._sequence.cursor_beats = t
         self._note_roll.set_cursor_beats(t)
 
+    # ── Copy / Paste / Duplicate ─────────────────────────────
+
+    def _copy_selection(self) -> None:
+        note_sel = getattr(self, '_current_note_selection', [])
+        rest_sel = getattr(self, '_current_rest_selection', [])
+        global_notes = [self._map_to_global_note_index(i) for i in note_sel]
+        global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
+        global_notes = [gi for gi in global_notes if gi >= 0]
+        global_rests = [gi for gi in global_rests if gi >= 0]
+        if global_notes or global_rests:
+            self._sequence.copy_items(global_notes, global_rests)
+        elif global_notes:
+            self._sequence.copy_notes(global_notes)
+
+    def _cut_selection(self) -> None:
+        self._copy_selection()
+        self._delete_selection()
+
+    def _paste(self) -> None:
+        self._sequence.paste_at_cursor()
+        self._update_ui_state()
+
+    def _duplicate_selection(self) -> None:
+        """Duplicate selected notes at cursor position."""
+        self._copy_selection()
+        self._paste()
+
+    def _delete_selection(self) -> None:
+        note_sel = getattr(self, '_current_note_selection', [])
+        rest_sel = getattr(self, '_current_rest_selection', [])
+        global_notes = [self._map_to_global_note_index(i) for i in note_sel]
+        global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
+        global_notes = [gi for gi in global_notes if gi >= 0]
+        global_rests = [gi for gi in global_rests if gi >= 0]
+        if global_notes or global_rests:
+            self._sequence.delete_items(global_notes, global_rests)
+            self._update_ui_state()
+
+    def _move_selection(self, time_delta: float = 0.0, pitch_delta: int = 0) -> None:
+        """Move selected notes by delta."""
+        note_sel = getattr(self, '_current_note_selection', [])
+        if not note_sel:
+            return
+        global_indices = [self._map_to_global_note_index(i) for i in note_sel]
+        global_indices = [gi for gi in global_indices if gi >= 0]
+        if global_indices:
+            self._sequence.move_notes(global_indices, time_delta, pitch_delta)
+            self._update_ui_state()
+
+    def _resize_selection(self, delta_beats: float) -> None:
+        """Resize selected notes."""
+        note_sel = getattr(self, '_current_note_selection', [])
+        if not note_sel:
+            return
+        global_indices = [self._map_to_global_note_index(i) for i in note_sel]
+        global_indices = [gi for gi in global_indices if gi >= 0]
+        if global_indices:
+            self._sequence.resize_notes(global_indices, delta_beats)
+            self._update_ui_state()
+
+    def _move_cursor(self, delta_beats: float) -> None:
+        """Move cursor by delta, clear selection."""
+        self._selection_anchor = None
+        new_pos = max(0.0, self._sequence.cursor_beats + delta_beats)
+        self._sequence.cursor_beats = new_pos
+        self._note_roll.clear_selection()
+        self._note_roll.set_cursor_beats(new_pos)
+
     # ── Keyboard shortcuts ──────────────────────────────────
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         key = event.key()
         text = event.text()
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
         # Duration keys: 1-5
-        if text in DURATION_KEYS:
+        if not ctrl and text in DURATION_KEYS:
             label = DURATION_KEYS[text]
             self._sequence.set_step_duration(label)
             self._duration_combo.setCurrentText(label)
             return
 
         # Rest key: 0
-        if text == "0":
+        if not ctrl and text == "0":
             flash_beat = self._sequence.cursor_beats
             self._sequence.add_rest()
             self._update_ui_state()
             self._note_roll.flash_at_beat(flash_beat)
             return
 
-        # Ctrl+Z / Ctrl+Y
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        # Pencil mode toggle: P
+        if not ctrl and text.lower() == "p":
+            self._pencil_btn.toggle()
+            return
+
+        # Ctrl shortcuts
+        if ctrl:
             if key == Qt.Key.Key_Z:
                 self._on_undo()
                 return
             if key == Qt.Key.Key_Y:
                 self._on_redo()
                 return
+            if key == Qt.Key.Key_A:
+                self._note_roll.select_all()
+                return
+            if key == Qt.Key.Key_C:
+                self._copy_selection()
+                return
+            if key == Qt.Key.Key_X:
+                self._cut_selection()
+                return
+            if key == Qt.Key.Key_V:
+                self._paste()
+                return
+            if key == Qt.Key.Key_D:
+                self._duplicate_selection()
+                return
+            if key == Qt.Key.Key_Q:
+                self._quantize_selection()
+                return
+            if key == Qt.Key.Key_S:
+                if shift:
+                    self._on_save_as()
+                else:
+                    self._on_save()
+                return
+            if key == Qt.Key.Key_E:
+                self._on_export()
+                return
+
+        # Arrow keys — cursor navigation / note editing
+        alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
+        step = self._sequence.step_duration
+
+        if alt and shift:
+            # Alt+Shift+arrows: resize selected notes
+            if key == Qt.Key.Key_Right:
+                self._resize_selection(step)
+                return
+            if key == Qt.Key.Key_Left:
+                self._resize_selection(-step)
+                return
+        elif alt:
+            # Alt+arrows: move selected notes
+            if key == Qt.Key.Key_Right:
+                self._move_selection(time_delta=step)
+                return
+            if key == Qt.Key.Key_Left:
+                self._move_selection(time_delta=-step)
+                return
+            if key == Qt.Key.Key_Up:
+                self._move_selection(pitch_delta=1)
+                return
+            if key == Qt.Key.Key_Down:
+                self._move_selection(pitch_delta=-1)
+                return
+        elif shift:
+            # Shift+arrows: range selection
+            if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+                if self._selection_anchor is None:
+                    self._selection_anchor = self._sequence.cursor_beats
+                delta = step if key == Qt.Key.Key_Right else -step
+                new_pos = max(0.0, self._sequence.cursor_beats + delta)
+                self._sequence.cursor_beats = new_pos
+                self._note_roll.set_cursor_beats(new_pos)
+                t0 = min(self._selection_anchor, new_pos)
+                t1 = max(self._selection_anchor, new_pos)
+                self._note_roll.select_notes_in_time_range(t0, t1)
+                return
+        else:
+            # Plain arrows: move cursor
+            if key == Qt.Key.Key_Left:
+                self._move_cursor(-step)
+                return
+            if key == Qt.Key.Key_Right:
+                self._move_cursor(step)
+                return
+
+        # Delete key
+        if key == Qt.Key.Key_Delete:
+            self._delete_selection()
+            return
 
         # Space → play
         if key == Qt.Key.Key_Space:

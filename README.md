@@ -5,8 +5,8 @@
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.5.0-green)
-![Tests](https://img.shields.io/badge/Tests-366%20passed-brightgreen)
+![Version](https://img.shields.io/badge/Version-0.6.0-green)
+![Tests](https://img.shields.io/badge/Tests-392%20passed-brightgreen)
 
 ---
 
@@ -14,7 +14,7 @@
 
 **賽博琴仙** 是一款即時 MIDI-to-Keyboard 映射工具，專為《燕雲十六聲》(*Where Winds Meet*) 等遊戲設計。將 USB MIDI 鍵盤（如 Roland FP-30X）的琴鍵訊號，以 **< 2ms 延遲** 轉換為 DirectInput 掃描碼按鍵，讓遊戲角色與你的演奏完全同步。
 
-支援五大模式：即時演奏、MIDI 檔案自動播放、即時錄音、虛擬鍵盤編輯、以及全新的 **拍號制編輯器**（beat-based editor）。內建 9 階段智慧預處理管線、錄音後 Auto-Tune 後處理、5 種可切換鍵位方案，以及多軌音符序列模型。
+支援五大模式：即時演奏、MIDI 檔案自動播放、即時錄音、虛擬鍵盤編輯、以及完整的 **Piano Roll 編輯器**（beat-based editor）。內建 9 階段智慧預處理管線、錄音後 Auto-Tune 後處理、5 種可切換鍵位方案，以及多軌音符序列模型。
 
 ---
 
@@ -39,26 +39,34 @@
 | **9 階段 MIDI 預處理** | 打擊過濾 → 音軌篩選 → 八度去重 → 智慧移調 → 八度摺疊 → 碰撞去重 → 複音限制 → 力度正規化 → 時間量化 |
 | **MIDI 檔案自動播放** | 匯入 `.mid` 檔案，0.25x - 2.0x 變速控制，可拖曳進度條，4 拍節拍器倒數，循環 / 單曲重複 |
 | **即時 MIDI 錄音** | 錄製演奏並儲存為 `.mid` 檔案，錄音後可做 Auto-Tune（節拍量化 + 音階校正） |
-| **拍號制編輯器** | Beat-based 多軌音符序列，undo/redo、copy/paste、拖曳音符、休止符視覺化、ghost notes、鍵盤快捷鍵 |
+| **Piano Roll 編輯器** | Beat-based 多軌 piano roll，多選/框選/拖曳調整大小/複製貼上/快捷鍵、軌道面板、音高尺、播放游標、專案存檔 |
 | **虛擬鍵盤輸入** | 可互動鋼琴點選輸入音符，NoteRoll 時間軸視覺化 |
 | **修飾鍵閃擊技術** | `Shift↓ → Key↓ → Shift↑` 以單一批次送出，防止修飾鍵污染後續和弦 |
 | **自動重連** | MIDI 裝置斷線時每 3 秒輪詢，插回自動恢復 |
 | **卡鍵看門狗** | 偵測按住超過 10 秒的按鍵並自動釋放，防止遊戲內角色卡死 |
 
-### 拍號制編輯器（v0.5.0 新增）
+### Piano Roll 編輯器（v0.6.0）
 
 | 功能 | 說明 |
 |------|------|
 | **Beat-based 時間模型** | 所有音符位置以拍為單位（float），BPM 變更不會破壞音符位置 |
 | **多軌系統** | 預設 4 軌、最多 12 軌，12 色色盤，per-track mute/solo/channel |
+| **軌道面板** | 左側面板顯示軌道列表，支援 mute/solo 切換、雙擊重命名、右鍵刪除、拖曳排序 |
+| **音高尺** | 左側 PitchRuler 顯示 C3..B5 音名，黑鍵暗底，與 NoteRoll Y 軸完美對齊 |
+| **多選模式** | Ctrl+click 切換選擇、Shift+拖曳框選（marquee selection）、Ctrl+A 全選 |
+| **音符調整大小** | 滑鼠移到音符右邊緣自動切換游標，拖曳即可調整持續時間 |
+| **音符標籤** | 放大後音符上顯示音名（C4、D#5 等） |
+| **批次拖曳** | 拖曳已選音符時，所有選取的音符一起移動 |
 | **時值預設** | 全音符 / 二分 / 四分 / 八分 / 十六分，鍵盤快捷鍵 1-5 |
-| **休止符視覺化** | 紅色半透明長條，明確區分有聲/無聲 |
+| **休止符視覺化** | 紅色半透明長條（按 `0` 輸入），明確區分有聲/無聲 |
 | **Ghost Notes** | 非活躍軌道音符以 20% 透明度顯示，提供上下文 |
-| **拖曳編輯** | 左鍵拖曳移動音符（時間 + 音高），右鍵刪除 |
-| **Undo / Redo** | 100 步歷史，Ctrl+Z / Ctrl+Y |
-| **Copy / Paste** | 框選複製，游標位置貼上 |
+| **完整快捷鍵** | Ctrl+C/X/V/D（複製/剪下/貼上/複製）、方向鍵移動/Shift+方向鍵調整大小、Delete 刪除 |
+| **Undo / Redo** | 100 步歷史，Ctrl+Z / Ctrl+Y，支援軌道操作的還原 |
 | **拍號支援** | 4/4、3/4、2/4、6/8、4/8，格線自動調整 |
-| **專案序列化** | `to_project_dict()` / `from_project_dict()` 完整保存/載入 |
+| **專案檔案** | `.cqp` 格式（JSON + gzip），Ctrl+S 儲存 / Ctrl+Shift+S 另存新檔 |
+| **自動儲存** | 每 60 秒自動儲存至 `~/.cyber_qin/autosave.cqp` |
+| **播放游標** | 播放時即時顯示當前位置，拍→秒自動轉換 |
+| **Snap-to-Grid** | 音符移動/調整大小自動吸附到拍線 |
 
 ### 使用者介面
 
@@ -99,14 +107,16 @@
                                                        └───────────┴──────────────┘
 
 
-                          拍號制編輯器
-┌──────────────┐  beat-based  ┌────────────────┐  to_midi_events  ┌──────────────┐
-│ EditorView   │─────────────→│ EditorSequence │────────────────→│ MidiWriter   │→ .mid
-│ (GUI)        │              │ (BeatNote/Rest)│                 └──────────────┘
-│              │←─────────────│ multi-track    │
-│ NoteRoll     │  undo/redo   │ copy/paste     │
-│ ClickPiano   │              │ serialize      │
-└──────────────┘              └────────────────┘
+                          Piano Roll 編輯器
+┌──────────────────────────────────┐  beat-based  ┌────────────────┐  save/load  ┌──────────────┐
+│ EditorView                       │─────────────→│ EditorSequence │────────────→│ project_file │→ .cqp
+│ ┌────────────┬─────────┬───────┐│              │ (BeatNote/Rest)│             └──────────────┘
+│ │TrackPanel  │PitchRuler│NoteRoll││←─────────────│ multi-track    │
+│ │(mute/solo) │(C3..B5)  │(piano ││  undo/redo   │ copy/paste     │  to_midi  ┌──────────────┐
+│ │            │          │ roll) ││              │ multi-select   │──────────→│ MidiWriter   │→ .mid
+│ └────────────┴─────────┴───────┘│              │ resize/marquee │           └──────────────┘
+│ [          ClickablePiano       ]│              └────────────────┘
+└──────────────────────────────────┘
 ```
 
 ### 延遲最佳化路徑
@@ -136,7 +146,7 @@ MIDI Note On 訊號
 | **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒訊號 |
 | **建置** | PyInstaller | 單資料夾可執行檔封裝 |
 | **CI/CD** | GitHub Actions | 多版本測試 + tag 自動發佈 |
-| **程式碼品質** | Ruff + pytest | Linting + 366 項測試 |
+| **程式碼品質** | Ruff + pytest | Linting + 392 項測試 |
 
 ---
 
@@ -183,7 +193,7 @@ python scripts/build.py
 ### 測試
 
 ```bash
-# 執行全部 366 項測試（9 個測試檔案）
+# 執行全部 392 項測試（10 個測試檔案）
 pytest
 
 # 詳細輸出
@@ -206,11 +216,11 @@ ruff check --fix .
 
 | 指標 | 數值 |
 |------|------|
-| 原始碼行數 | ~8,500 LOC |
-| 測試碼行數 | ~2,900 LOC |
-| 模組數量 | 40 |
-| 測試數量 | 366 |
-| 測試檔案 | 9 |
+| 原始碼行數 | ~9,700 LOC |
+| 測試碼行數 | ~3,200 LOC |
+| 模組數量 | 43 |
+| 測試數量 | 392 |
+| 測試檔案 | 10 |
 | 測試涵蓋平台 | Python 3.11 / 3.12 / 3.13 |
 
 ---
@@ -230,22 +240,25 @@ cyber_qin/
 │   ├── midi_writer.py           # 錄音結果匯出 .mid 檔案
 │   ├── auto_tune.py             # 錄音後處理：節拍量化 + 音階校正
 │   ├── beat_sequence.py         # Beat-based 多軌音符序列模型（編輯器核心）
+│   ├── project_file.py          # 專案檔案存取（.cqp = JSON + gzip）
 │   ├── note_sequence.py         # 秒制音符序列模型（舊版編輯器）
 │   ├── mapping_schemes.py       # 5 種可切換鍵位方案註冊表
 │   └── priority.py              # 執行緒優先權 + 高解析度計時器
 ├── gui/                         # PyQt6 使用者介面
 │   ├── app_shell.py             # QMainWindow 主框架（Spotify 風格佈局）
-│   ├── icons.py                 # QPainter 向量圖示提供器
+│   ├── icons.py                 # QPainter 向量圖示提供器（23 種圖示）
 │   ├── theme.py                 # 「賽博墨韻」暗色主題系統
 │   ├── views/
 │   │   ├── live_mode_view.py    # 即時演奏頁面（含錄音控制）
 │   │   ├── library_view.py      # 曲庫管理頁面
-│   │   └── editor_view.py       # 拍號制編輯器頁面
+│   │   └── editor_view.py       # Piano Roll 編輯器頁面
 │   └── widgets/
 │       ├── piano_display.py     # 動態鋼琴鍵盤（霓虹光暈效果）
 │       ├── mini_piano.py        # 底部迷你鋼琴視覺化
 │       ├── clickable_piano.py   # 可互動鋼琴（點選輸入音符）
-│       ├── note_roll.py         # Beat-based piano roll 時間軸
+│       ├── note_roll.py         # Beat-based piano roll（多選/框選/resize）
+│       ├── pitch_ruler.py       # 音高尺（C3..B5 音名標示）
+│       ├── editor_track_panel.py # 軌道面板（mute/solo/重命名/排序）
 │       ├── sidebar.py           # 側邊欄導航
 │       ├── now_playing_bar.py   # 底部播放控制列
 │       ├── track_list.py        # 曲目清單元件
@@ -338,9 +351,9 @@ def press(self, midi_note, mapping):
 處理後事件（按時間排序，note_off 優先於 note_on）
 ```
 
-### 4. Beat-based 編輯器資料模型
+### 4. Piano Roll 編輯器資料模型
 
-v0.5.0 引入 `EditorSequence` — 以**拍**為時間單位的多軌音符序列模型。核心設計：
+v0.6.0 的 `EditorSequence` 以**拍**為時間單位，支援完整的多軌編輯操作：
 
 ```python
 @dataclass
@@ -354,7 +367,7 @@ class BeatNote:
 # 拍轉秒：time_seconds = time_beats * (60.0 / tempo_bpm)
 ```
 
-相較舊版的秒制模型（`NoteSequence`），beat-based 的優勢在於：BPM 變更只影響播放速度，不會破壞音符的相對位置。支援 5 種拍號（4/4、3/4、2/4、6/8、4/8），`beats_per_bar = numerator * (4 / denominator)`。
+核心操作包括：`add_note` / `move_notes` / `resize_notes` / `delete_items` / `copy_items` / `reorder_tracks` / `undo` / `redo`，每個操作都是單一 undo 步驟。快照（`_Snapshot`）包含完整的 notes、rests、tracks 資料，確保任何操作都能完整還原。
 
 ### 5. ctypes INPUT 結構體陷阱
 
@@ -399,8 +412,8 @@ class INPUT(ctypes.Structure):
 
 ```bash
 # 觸發一次發佈
-git tag v0.5.0
-git push origin v0.5.0
+git tag v0.6.0
+git push origin v0.6.0
 ```
 
 ---
@@ -417,7 +430,44 @@ git push origin v0.5.0
 
 ---
 
+## 編輯器快捷鍵
+
+| 快捷鍵 | 動作 |
+|--------|------|
+| `1` - `5` | 選擇時值（全音符 → 十六分音符） |
+| `0` | 輸入休止符 |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / Redo |
+| `Ctrl+A` | 全選 |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | 複製 / 剪下 / 貼上 |
+| `Ctrl+D` | 複製選取 |
+| `Ctrl+S` / `Ctrl+Shift+S` | 儲存 / 另存新檔 |
+| `Ctrl+E` | 匯出 .mid |
+| `←` `→` | 移動選取（時間軸） |
+| `↑` `↓` | 移動選取（音高） |
+| `Shift+←` `Shift+→` | 調整選取大小 |
+| `Delete` | 刪除選取 |
+| `Space` | 播放 / 暫停 |
+| `Ctrl+滾輪` | 縮放 |
+| `Shift+拖曳` | 框選 |
+| `Ctrl+click` | 切換選取 |
+
+---
+
 ## 版本歷程
+
+### v0.6.0 — Piano Roll 完整升級
+- **多選/框選** — Ctrl+click 切換選取、Shift+拖曳 marquee selection、Ctrl+A 全選
+- **音符調整大小** — 右邊緣拖曳、Shift+方向鍵批次調整
+- **音符標籤** — 放大後顯示音名（C4、D#5）
+- **軌道面板** — `EditorTrackPanel` 支援 mute/solo 切換、重命名、拖曳排序、新增/刪除
+- **音高尺** — `PitchRuler` 左側顯示 C3..B5 音名，黑鍵暗底
+- **專案檔案** — `.cqp` 格式（JSON + gzip），Ctrl+S/Shift+S 儲存、自動儲存（60 秒）
+- **播放游標** — 編輯器內顯示播放位置
+- **批次操作** — `resize_notes`、`delete_items`、`copy_items`、`reorder_tracks` 全部支援 undo
+- **`_Snapshot` 含 tracks** — 修復 `remove_track` undo 的既有 bug
+- **完整快捷鍵** — Ctrl+C/X/V/D、方向鍵、Delete、Space 等
+- 新增 3 個向量圖示（mute/solo/save）
+- 392 項測試全過
 
 ### v0.5.0 — 拍號制編輯器 + SDD 設計文件
 - `EditorSequence` — beat-based 多軌音符序列模型（BeatNote / BeatRest / Track）

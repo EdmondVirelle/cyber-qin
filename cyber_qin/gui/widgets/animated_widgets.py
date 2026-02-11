@@ -20,6 +20,7 @@ from ..icons import (
     draw_library,
     draw_live,
     draw_music_note,
+    draw_mute,
     draw_pause,
     draw_play,
     draw_plus,
@@ -29,8 +30,10 @@ from ..icons import (
     draw_remove,
     draw_repeat,
     draw_repeat_one,
+    draw_save,
     draw_skip_next,
     draw_skip_prev,
+    draw_solo,
     draw_stop,
     draw_undo,
 )
@@ -62,6 +65,9 @@ _ICON_DRAWERS: dict[str, Callable] = {
     "repeat": draw_repeat,
     "repeat_one": draw_repeat_one,
     "undo": draw_undo,
+    "mute": draw_mute,
+    "solo": draw_solo,
+    "save": draw_save,
 }
 
 
