@@ -78,10 +78,16 @@ class Sidebar(QWidget):
         layout.addWidget(bottom_div)
         layout.addSpacing(4)
 
-        # Version label
+        # Credit + version labels
         from PyQt6.QtWidgets import QLabel
 
         from cyber_qin import __version__
+
+        credit = QLabel("燕雲十六聲 · 葉微雨 製作")
+        credit.setFont(QFont("Microsoft JhengHei", 9))
+        credit.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(credit)
 
         ver = QLabel(f"v{__version__}")
         ver.setFont(QFont("Microsoft JhengHei", 9))
