@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .utils.admin import is_admin, request_elevation
@@ -19,6 +21,11 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("賽博琴仙")
     app.setOrganizationName("CyberQin")
+
+    # Set window icon (for dev mode; PyInstaller uses icon.ico from spec)
+    icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     # Admin check — warn but don't block
     if not is_admin():

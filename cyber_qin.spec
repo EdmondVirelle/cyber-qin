@@ -6,10 +6,16 @@ from pathlib import Path
 
 block_cipher = None
 
+# Explicitly bundle VC runtime DLLs — CI runners have them as system DLLs,
+# so PyInstaller's automatic collection may skip them.
+_python_dir = Path(sys.executable).parent
+_vcrt = [(str(p), ".") for p in _python_dir.glob("vcruntime*.dll")]
+_vcrt += [(str(p), ".") for p in _python_dir.glob("python3*.dll")]
+
 a = Analysis(
     ["launcher.py"],
     pathex=[],
-    binaries=[],
+    binaries=_vcrt,
     datas=[],
     hiddenimports=[
         # ── mido backend (dynamically loaded) ──
