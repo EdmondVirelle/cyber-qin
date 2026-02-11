@@ -525,6 +525,10 @@ git push origin v0.7.2
 
 燕雲十六聲 遊戲 ID: **葉微雨**
 
+如果這個工具對你有幫助，歡迎支持開發者：
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/virelleedmond)
+
 ---
 
 ## 致謝

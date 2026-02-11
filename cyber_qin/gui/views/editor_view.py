@@ -21,11 +21,13 @@ from PyQt6.QtGui import QColor, QFont, QKeyEvent, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMenu,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -237,6 +239,12 @@ class EditorView(QWidget):
         self._export_btn.setToolTip("Ctrl+E")
         row1.addWidget(self._export_btn)
 
+        row1.addWidget(_VSeparator())
+
+        self._help_btn = IconButton("help", size=32)
+        self._help_btn.setToolTip("操作指南")
+        row1.addWidget(self._help_btn)
+
         toolbar_layout.addLayout(row1)
 
         # Row 2: Duration | Time Sig | BPM | Snap | Stats
@@ -354,6 +362,7 @@ class EditorView(QWidget):
         self._redo_btn.clicked.connect(self._on_redo)
         self._clear_btn.clicked.connect(self._on_clear)
         self._pencil_btn.toggled.connect(self._on_pencil_toggled)
+        self._help_btn.clicked.connect(self._on_help)
         self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
         self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
@@ -805,6 +814,160 @@ class EditorView(QWidget):
     def _on_clear(self) -> None:
         self._sequence.clear()
         self._update_ui_state()
+
+    def _on_help(self) -> None:
+        """Show editor help dialog."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("編曲器操作指南")
+        dlg.resize(600, 700)
+
+        layout = QVBoxLayout(dlg)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet(
+            f"QScrollArea {{ background-color: {BG_PAPER}; border: none; }}"
+        )
+
+        content = QLabel()
+        content.setWordWrap(True)
+        content.setTextFormat(Qt.TextFormat.RichText)
+        content.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        content.setContentsMargins(24, 20, 24, 20)
+        content.setStyleSheet(
+            f"QLabel {{"
+            f"  background-color: {BG_PAPER};"
+            f"  color: {TEXT_SECONDARY};"
+            f"  font-family: 'Microsoft JhengHei';"
+            f"  font-size: 13px;"
+            f"}}"
+        )
+
+        html = (
+            "<h2 style='color:#E8E0D0;'>編曲器操作指南</h2>"
+
+            "<h3 style='color:#00F0FF;'>一、基本輸入</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>點擊底部琴鍵</td>"
+            "<td>在游標位置插入音符</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>數字鍵 1-5</td>"
+            "<td>切換時值（全音符～十六分音符）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>0 鍵</td>"
+            "<td>插入休止符</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>← → 方向鍵</td>"
+            "<td>移動游標</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>二、鉛筆工具</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>P 鍵 或 工具列「✎鉛筆」</td>"
+            "<td>切換鉛筆模式</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>鉛筆模式下點擊音符捲軸空白處</td>"
+            "<td>直接放置音符</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>三、選取與編輯</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>點擊音符</td>"
+            "<td>選取單個音符</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+點擊</td>"
+            "<td>加選／取消選取</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Shift+拖曳</td>"
+            "<td>框選（矩形選取）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+A</td>"
+            "<td>全選</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Delete</td>"
+            "<td>刪除選取的音符</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Alt+方向鍵</td>"
+            "<td>移動選取的音符（上下=音高，左右=時間）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Alt+Shift+左右</td>"
+            "<td>調整選取音符的長度</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>拖曳音符右邊緣</td>"
+            "<td>調整單個音符長度（6px 範圍）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Shift+左右</td>"
+            "<td>游標範圍選取</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>四、剪貼簿</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+C</td>"
+            "<td>複製</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+X</td>"
+            "<td>剪下</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+V</td>"
+            "<td>貼上（在游標位置）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+D</td>"
+            "<td>複製音符到游標位置</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>五、編輯操作</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+Z</td>"
+            "<td>復原</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+Y</td>"
+            "<td>重做</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+Q</td>"
+            "<td>量化對齊（對齊到目前的步長網格）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+S</td>"
+            "<td>存檔（.cqp 專案）</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+Shift+S</td>"
+            "<td>另存新檔</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+E</td>"
+            "<td>匯出為 MIDI (.mid)</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>六、音軌操作</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>點擊音軌</td>"
+            "<td>切換作用中音軌</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>雙擊音軌名稱</td>"
+            "<td>重新命名</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>M 按鈕 / S 按鈕</td>"
+            "<td>靜音 / 獨奏</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>右鍵點擊音軌</td>"
+            "<td>刪除音軌</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>＋ 按鈕</td>"
+            "<td>新增音軌</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>其他音軌的音符</td>"
+            "<td>以半透明「鬼影」顯示</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>七、播放</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>Space</td>"
+            "<td>播放／停止</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>需要 MIDI 輸出裝置</td>"
+            "<td>（如 Microsoft GS Wavetable）</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>八、右鍵選單</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>在音符捲軸上右鍵</td>"
+            "<td>全選、複製、剪下、貼上、刪除、量化對齊、鉛筆模式</td></tr>"
+            "</table>"
+
+            "<h3 style='color:#00F0FF;'>九、其他</h3>"
+            "<table cellpadding='4'>"
+            "<tr><td style='color:#E8E0D0;'>滾輪</td>"
+            "<td>水平捲動時間軸</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Ctrl+滾輪</td>"
+            "<td>縮放時間軸</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>Snap 勾選框</td>"
+            "<td>啟用／停用吸附到網格</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>力度欄位</td>"
+            "<td>選取音符後可調整力度 (1-127)</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>自動校正勾選框</td>"
+            "<td>錄音時自動校正音高</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>自動存檔</td>"
+            "<td>每 60 秒自動存檔</td></tr>"
+            "</table>"
+        )
+        content.setText(html)
+
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
+        dlg.exec()
 
     def _on_duration_changed(self, label: str) -> None:
         self._sequence.set_step_duration(label)

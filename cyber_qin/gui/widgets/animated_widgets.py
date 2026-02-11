@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import QAbstractButton, QWidget
 
 from ..icons import (
     draw_editor,
+    draw_help,
     draw_library,
     draw_live,
     draw_music_note,
@@ -68,6 +69,7 @@ _ICON_DRAWERS: dict[str, Callable] = {
     "mute": draw_mute,
     "solo": draw_solo,
     "save": draw_save,
+    "help": draw_help,
 }
 
 

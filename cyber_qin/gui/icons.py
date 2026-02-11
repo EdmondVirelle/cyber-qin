@@ -566,6 +566,73 @@ def draw_save(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.restore()
 
 
+def draw_help(painter: QPainter, rect: QRectF, color: QColor) -> None:
+    """Open book with question mark (help icon)."""
+    painter.save()
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    m = rect.width() * 0.22
+    r = rect.adjusted(m, m, -m, -m)
+
+    pen_w = rect.width() * 0.06
+    painter.setPen(QPen(color, pen_w))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    # Left page
+    left = QPainterPath()
+    left.moveTo(r.center().x(), r.top() + r.height() * 0.1)
+    left.cubicTo(
+        r.center().x() - r.width() * 0.15, r.top(),
+        r.left() + r.width() * 0.1, r.top(),
+        r.left(), r.top() + r.height() * 0.08,
+    )
+    left.lineTo(r.left(), r.bottom() - r.height() * 0.08)
+    left.cubicTo(
+        r.left() + r.width() * 0.1, r.bottom(),
+        r.center().x() - r.width() * 0.15, r.bottom(),
+        r.center().x(), r.bottom() - r.height() * 0.1,
+    )
+    painter.drawPath(left)
+
+    # Right page
+    right = QPainterPath()
+    right.moveTo(r.center().x(), r.top() + r.height() * 0.1)
+    right.cubicTo(
+        r.center().x() + r.width() * 0.15, r.top(),
+        r.right() - r.width() * 0.1, r.top(),
+        r.right(), r.top() + r.height() * 0.08,
+    )
+    right.lineTo(r.right(), r.bottom() - r.height() * 0.08)
+    right.cubicTo(
+        r.right() - r.width() * 0.1, r.bottom(),
+        r.center().x() + r.width() * 0.15, r.bottom(),
+        r.center().x(), r.bottom() - r.height() * 0.1,
+    )
+    painter.drawPath(right)
+
+    # Spine
+    painter.drawLine(
+        QPointF(r.center().x(), r.top() + r.height() * 0.1),
+        QPointF(r.center().x(), r.bottom() - r.height() * 0.1),
+    )
+
+    # Question mark on right page
+    painter.setPen(color)
+    font = painter.font()
+    font.setPixelSize(int(r.width() * 0.38))
+    font.setBold(True)
+    painter.setFont(font)
+    qm_rect = QRectF(
+        r.center().x() + r.width() * 0.02,
+        r.top() + r.height() * 0.1,
+        r.width() * 0.45,
+        r.height() * 0.8,
+    )
+    painter.drawText(qm_rect.toRect(), Qt.AlignmentFlag.AlignCenter, "?")
+
+    painter.restore()
+
+
 def draw_library(painter: QPainter, rect: QRectF, color: QColor) -> None:
     """Grid/folder icon (library mode)."""
     painter.save()

@@ -40,4 +40,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/賽博琴仙-${{ github.ref_name }}.zip
-          generate_release_notes: true
+          body: |
+            ## Release 說明 (${{ github.ref_name }})
+            ### 安裝須知
+
+            請使用 [**7-Zip**](https://www.7-zip.org/) 解壓縮。
+            Windows 內建解壓工具可能無法正確處理 Unicode 路徑，導致程式啟動失敗。
+
+            ### 免責聲明
+
+            - 本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
+            - 在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
+            - 開發者不對因使用本工具導致的帳號處分或任何損失承擔責任。
+            - 下載或執行本程式即表示您理解並接受上述事項。
