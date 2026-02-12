@@ -1,4 +1,13 @@
-Release 說明 (v0.8.8)
+Release 說明 (v0.8.9)
+
+v0.8.9 — 修復側邊欄 Credit 與 README 重寫
+    • 側邊欄 (Sidebar)：
+        - 更新 Credit 標註為 「Edmond Virelle」。
+        - 新增 「FF14：艾曼維勒」 與 「VTuber: Edmond Virelle」 標註。
+        - 支援多語系切換。
+    • README 重寫：
+        - 轉向通用的「遊戲彈琴工具」定位。
+        - 新增完整的系統使用流程與 MIDI 編輯器說明。
 
 v0.8.8 — I18N 播放列 + 映射方案 + 曲庫排序
     • 播放列 (Now Playing Bar)：
@@ -6,11 +15,9 @@ v0.8.8 — I18N 播放列 + 映射方案 + 曲庫排序
         - 所有播放控制 tooltip（播放/暫停/停止/上下一首/循環模式/準備倒數）全部 I18N。
     • 映射方案 (Live Mode)：
         - 5 組鍵位名稱 + 描述支援多語系（燕雲36鍵/FF14 37鍵/通用24/48/88鍵）。
-        - 移調旋鈕後綴（八度/Octave/オクターブ/옥타브）隨語系變化。
+        - 移調旋鈕後綴隨語系變化。
     • 曲庫 (Library)：
-        - 排序選單（預設順序/名稱/BPM/音符數/時長）支援多語系。
-        - 搜尋列 placeholder 隨語系變化。
-    • 側邊欄修復：Credit 文字啟用自動換行，縮小字體防止裁切。
+        - 排序選單與搜尋列 placeholder 支援多語系。
 
 v0.8.7 — I18N 映射方案名稱/描述、曲庫排序、移調後綴
     • 新增 15 組翻譯 key × 5 語系。
@@ -94,19 +101,26 @@ v0.7.0 — 編輯器 UX 大改版 + 模型重構
 
 --------------------------------------------------------------------------------
 
-Release Notes (v0.8.8)
+Release Notes (v0.8.9)
+
+v0.8.9 — Sidebar Credits & README Rewrite
+    • Sidebar:
+        - Updated credit to 「Edmond Virelle」.
+        - Added 「FF14: Aimant Virelle」 and 「VTuber: Edmond Virelle」 labels.
+        - Full multi-language support for new labels.
+    • README Rewrite:
+        - Pivoted to generic "Game Piano Tool" positioning.
+        - Added detailed usage workflow and MIDI editor (Sequencer) sections.
 
 v0.8.8 — I18N: Player Bar + Mapping Schemes + Library Sort
     • Now Playing Bar:
-        - "No Track Loaded" and "Speed" labels now support language switching.
-        - All transport tooltips (play/pause/stop/prev/next/repeat/countdown) fully internationalized.
+        - "No Track Loaded" and "Speed" labels support multi-language switching.
+        - All transport tooltips fully internationalized.
     • Mapping Schemes (Live Mode):
-        - 5 scheme names + descriptions support all languages (WWM 36/FF14 37/Generic 24/48/88).
-        - Transpose spinner suffix (Octave/八度/オクターブ/옥타브) follows language.
+        - 5 scheme names + descriptions support all languages.
+        - Transpose spinner suffix follows language.
     • Library:
-        - Sort menu (Default/Name/BPM/Notes/Duration) supports all languages.
-        - Search placeholder follows language.
-    • Sidebar fix: Credit text now word-wraps, smaller fonts prevent clipping.
+        - Sort menu and search placeholder support all languages.
 
 v0.8.7 — I18N: Mapping Scheme Names/Descriptions, Sort Labels, Transpose Suffix
     • Added 15 translation keys × 5 languages.
