@@ -30,7 +30,7 @@ class Translator(QObject):
                 "nav.live": "Live Mode",
                 "nav.library": "Library",
                 "nav.editor": "Sequencer",
-                "sidebar.credit": "Created by Ye Weiyu (Where Winds Meet)",
+                "sidebar.credit": "by Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
 
@@ -217,7 +217,7 @@ class Translator(QObject):
                 "nav.live": "演奏モード",
                 "nav.library": "ライブラリ",
                 "nav.editor": "シーケンサー",
-                "sidebar.credit": "製作者: Ye Weiyu (Where Winds Meet)",
+                "sidebar.credit": "by Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Ko-fiでサポート",
                 "sidebar.version": "v{version}",
 
@@ -278,7 +278,7 @@ class Translator(QObject):
                 "nav.live": "연주 모드",
                 "nav.library": "라이브러리",
                 "nav.editor": "시퀀서",
-                "sidebar.credit": "제작: Ye Weiyu (Where Winds Meet)",
+                "sidebar.credit": "by Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Ko-fi 후원하기",
                 "sidebar.version": "v{version}",
 

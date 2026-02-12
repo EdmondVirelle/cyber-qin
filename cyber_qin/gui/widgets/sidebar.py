@@ -30,7 +30,7 @@ class Sidebar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 16, 0, 16)
+        layout.setContentsMargins(0, 16, 0, 10)
         layout.setSpacing(4)
 
         # Logo area
@@ -84,7 +84,7 @@ class Sidebar(QWidget):
             f"margin-left: 16px; margin-right: 16px;"
         )
         layout.addWidget(bottom_div)
-        layout.addSpacing(4)
+        layout.addSpacing(2)
 
         # Credit + Ko-fi + version labels
         from PyQt6.QtWidgets import QLabel
@@ -92,20 +92,27 @@ class Sidebar(QWidget):
         from cyber_qin import __version__
 
         self._credit = QLabel(translator.tr("sidebar.credit"))
-        self._credit.setFont(QFont("Microsoft JhengHei", 9))
+        self._credit.setFont(QFont("Microsoft JhengHei", 8))
+        self._credit.setWordWrap(True)
+        self._credit.setContentsMargins(12, 0, 12, 0)
         self._credit.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         self._credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._credit.setToolTip(translator.tr("sidebar.credit"))
         layout.addWidget(self._credit)
+        layout.addSpacing(2)
 
-        self._kofi = QLabel(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">{translator.tr("sidebar.support")}</a>')
+        self._kofi = QLabel(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
         self._kofi.setFont(QFont("Microsoft JhengHei", 8))
+        self._kofi.setContentsMargins(12, 0, 12, 0)
         self._kofi.setStyleSheet("background: transparent;")
         self._kofi.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._kofi.setOpenExternalLinks(True)
         layout.addWidget(self._kofi)
+        layout.addSpacing(2)
 
         self._ver = QLabel(translator.tr("sidebar.version", version=__version__))
-        self._ver.setFont(QFont("Microsoft JhengHei", 9))
+        self._ver.setFont(QFont("Microsoft JhengHei", 8))
+        self._ver.setContentsMargins(12, 0, 12, 0)
         self._ver.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         self._ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._ver)
@@ -129,8 +136,10 @@ class Sidebar(QWidget):
         self._live_btn.set_text(translator.tr("nav.live"))
         self._library_btn.set_text(translator.tr("nav.library"))
         self._editor_btn.set_text(translator.tr("nav.editor"))
-        self._credit.setText(translator.tr("sidebar.credit"))
-        self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">{translator.tr("sidebar.support")}</a>')
+        credit_text = translator.tr("sidebar.credit")
+        self._credit.setText(credit_text)
+        self._credit.setToolTip(credit_text)
+        self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
         from cyber_qin import __version__
         self._ver.setText(translator.tr("sidebar.version", version=__version__))
 
