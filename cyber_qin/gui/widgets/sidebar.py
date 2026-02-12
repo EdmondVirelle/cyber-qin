@@ -68,8 +68,6 @@ class Sidebar(QWidget):
         layout.addWidget(self._editor_btn)
         self._buttons.append(self._editor_btn)
 
-        self._buttons.append(self._editor_btn)
-
         layout.addSpacing(16)
 
         # Language Selector

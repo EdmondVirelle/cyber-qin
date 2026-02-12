@@ -297,6 +297,11 @@ class AnimatedNavButton(QAbstractButton):
         self._active = value
         self.update()
 
+    def set_text(self, text: str) -> None:
+        """Update the button label text (used for i18n)."""
+        self._text = text
+        self.update()
+
     def sizeHint(self) -> QSize:  # noqa: N802
         return QSize(200, 44)
 
