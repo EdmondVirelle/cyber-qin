@@ -7,7 +7,8 @@ Emits signals for note input in the editor.
 from __future__ import annotations
 
 import time
-from PyQt6.QtCore import QRectF, Qt, pyqtSignal, QTimer
+
+from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
@@ -185,7 +186,7 @@ class ClickablePiano(QWidget):
             is_active_playback = midi_note in self._active_notes
             flash_t = self._flash_notes.get(midi_note)
             fade_t = self._fade_notes.get(midi_note)
-            
+
             # Compute brightness for flash
             brightness = 1.0
             if is_active_playback and flash_t is not None:
@@ -196,8 +197,11 @@ class ClickablePiano(QWidget):
             if is_pressed:
                 bg = _COLOR_ACTIVE
             elif is_active_playback:
-                bg = _COLOR_ACTIVE
-                # apply brightness? simplified for now
+                # Apply brightness (flash effect)
+                r = min(255, int(_COLOR_ACTIVE.red() * brightness))
+                g = min(255, int(_COLOR_ACTIVE.green() * brightness))
+                b = min(255, int(_COLOR_ACTIVE.blue() * brightness))
+                bg = QColor(r, g, b, _COLOR_ACTIVE.alpha())
             elif is_hover:
                 bg = QColor(0x00, 0xF0, 0xFF, 60)
             elif fade_t is not None:

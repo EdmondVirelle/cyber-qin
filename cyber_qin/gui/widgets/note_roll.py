@@ -751,7 +751,7 @@ class NoteRoll(QWidget):
             elif is_active:
                 # Active note glow
                 painter.fillPath(path, QColor(0xFF, 0xFF, 0xFF))  # Bright white center
-                
+
                 # Outer glow
                 glow_path = QPainterPath()
                 glow_path.addRoundedRect(note_rect.adjusted(-2, -2, 2, 2), _NOTE_RADIUS+2, _NOTE_RADIUS+2)

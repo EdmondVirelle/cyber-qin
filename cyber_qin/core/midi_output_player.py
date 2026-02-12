@@ -203,10 +203,10 @@ def _ensure_qt_class():
                         current_time = time.perf_counter()
                         elapsed_so_far = (current_time - start_wall) * speed
                         self.progress_updated.emit(elapsed_so_far, duration)
-                        
+
                         now = time.perf_counter()
                         wait = target_wall - now
-                    
+
                     if wait > 0.002:
                         # wait() returns True if the flag was set (= stop requested)
                         if self._stop_flag.wait(timeout=wait - 0.001):

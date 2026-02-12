@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import copy
-
-import pytest
-
 from cyber_qin.core.beat_sequence import (
-    BeatNote, BeatRest, EditorSequence, Track, _MAX_UNDO,
+    EditorSequence,
 )
 
 

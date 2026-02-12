@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-
 import mido
-import pytest
 
 from cyber_qin.core.midi_file_player import MidiFileEvent
 from cyber_qin.core.midi_recorder import RecordedEvent
 from cyber_qin.core.midi_writer import MidiWriter
-
 
 # ── Helpers ─────────────────────────────────────────────────
 

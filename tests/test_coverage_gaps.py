@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import gzip
-import json
-from pathlib import Path
 from unittest import mock
 
-import pytest
+from cyber_qin.core import project_file
+from cyber_qin.core.mapping_schemes import _build_generic_88
+from cyber_qin.core.midi_file_player import MidiFileEvent
+from cyber_qin.core.midi_preprocessor import normalize_octave_flowing, preprocess
+from cyber_qin.core.note_sequence import _MAX_UNDO, NoteSequence
 
 # ── note_sequence.py edge cases ─────────────────────────────
-
-from cyber_qin.core.note_sequence import NoteSequence, _MAX_UNDO
 
 
 class TestNoteSequenceEdgeCases:
@@ -56,10 +55,7 @@ class TestNoteSequenceEdgeCases:
 
 # ── mapping_schemes.py edge cases ───────────────────────────
 
-from cyber_qin.core.mapping_schemes import (
-    get_scheme, list_schemes, default_scheme_id,
-    _build_generic_88,
-)
+
 
 
 class TestMappingSchemeEdgeCases:
@@ -77,7 +73,7 @@ class TestMappingSchemeEdgeCases:
 
 # ── project_file.py error path ──────────────────────────────
 
-from cyber_qin.core import project_file
+
 
 
 class TestProjectFileEdgeCases:
@@ -92,12 +88,7 @@ class TestProjectFileEdgeCases:
 
 # ── midi_preprocessor.py missing lines ──────────────────────
 
-from cyber_qin.core.midi_file_player import MidiFileEvent
-from cyber_qin.core.midi_preprocessor import (
-    normalize_octave_flowing,
-    preprocess,
-    _get_octave_candidates,
-)
+
 
 
 class TestMidiPreprocessorEdgeCases:

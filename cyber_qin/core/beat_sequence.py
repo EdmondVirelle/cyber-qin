@@ -157,12 +157,12 @@ class EditorSequence:
     def _ensure_cache(self) -> None:
         if self._cache_notes_by_track is not None:
             return
-        
+
         from collections import defaultdict
         self._cache_notes_by_track = defaultdict(list)
         for n in self._notes:
             self._cache_notes_by_track[n.track].append(n)
-            
+
         self._cache_rests_by_track = defaultdict(list)
         for r in self._rests:
             self._cache_rests_by_track[r.track].append(r)
