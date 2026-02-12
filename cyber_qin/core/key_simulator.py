@@ -65,7 +65,7 @@ class INPUT(ctypes.Structure):
     ]
 
 
-_SendInput = ctypes.windll.user32.SendInput
+_SendInput = ctypes.windll.user32.SendInput  # type: ignore[attr-defined]
 _SendInput.argtypes = [ctypes.c_uint, ctypes.POINTER(INPUT), ctypes.c_int]
 _SendInput.restype = ctypes.c_uint
 

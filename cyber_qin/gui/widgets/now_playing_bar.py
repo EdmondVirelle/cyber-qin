@@ -117,6 +117,9 @@ class NowPlayingBar(QWidget):
         self._state = PlaybackState.STOPPED
         self._repeat_mode = RepeatMode.OFF
 
+        self._saved_title: str | None = None
+        self._saved_time: str | None = None
+
         # --- Interpolation timer for smooth progress updates (30 fps) ---
         self._last_position = 0.0
         self._last_update_wall = time.perf_counter()

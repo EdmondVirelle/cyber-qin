@@ -469,7 +469,7 @@ class EditorView(QWidget):
             if i != active and not t.muted:
                 for n in self._sequence.notes_in_track(i):
                     gn = copy.copy(n)
-                    gn._ghost_color = t.color
+                    gn._ghost_color = t.color  # type: ignore[attr-defined]
                     ghost_notes.append(gn)
 
         self._note_roll.set_notes(track_notes)
@@ -677,38 +677,45 @@ class EditorView(QWidget):
         has_clip = not self._sequence.clipboard_empty
 
         act_select_all = menu.addAction("全選\tCtrl+A")
-        act_select_all.triggered.connect(self._note_roll.select_all)
+        if act_select_all:
+            act_select_all.triggered.connect(self._note_roll.select_all)
 
         menu.addSeparator()
 
         act_copy = menu.addAction("複製\tCtrl+C")
-        act_copy.setEnabled(has_sel)
-        act_copy.triggered.connect(self._copy_selection)
+        if act_copy:
+            act_copy.setEnabled(has_sel)
+            act_copy.triggered.connect(self._copy_selection)
 
         act_cut = menu.addAction("剪下\tCtrl+X")
-        act_cut.setEnabled(has_sel)
-        act_cut.triggered.connect(self._cut_selection)
+        if act_cut:
+            act_cut.setEnabled(has_sel)
+            act_cut.triggered.connect(self._cut_selection)
 
         act_paste = menu.addAction("貼上\tCtrl+V")
-        act_paste.setEnabled(has_clip)
-        act_paste.triggered.connect(self._paste)
+        if act_paste:
+            act_paste.setEnabled(has_clip)
+            act_paste.triggered.connect(self._paste)
 
         act_delete = menu.addAction("刪除\tDelete")
-        act_delete.setEnabled(has_sel)
-        act_delete.triggered.connect(self._delete_selection)
+        if act_delete:
+            act_delete.setEnabled(has_sel)
+            act_delete.triggered.connect(self._delete_selection)
 
         menu.addSeparator()
 
         act_quantize = menu.addAction("量化對齊\tCtrl+Q")
-        act_quantize.setEnabled(has_sel)
-        act_quantize.triggered.connect(self._quantize_selection)
+        if act_quantize:
+            act_quantize.setEnabled(has_sel)
+            act_quantize.triggered.connect(self._quantize_selection)
 
         menu.addSeparator()
 
         act_pencil = menu.addAction("鉛筆模式\tP")
-        act_pencil.setCheckable(True)
-        act_pencil.setChecked(self._pencil_btn.isChecked())
-        act_pencil.triggered.connect(self._pencil_btn.setChecked)
+        if act_pencil:
+            act_pencil.setCheckable(True)
+            act_pencil.setChecked(self._pencil_btn.isChecked())
+            act_pencil.triggered.connect(self._pencil_btn.setChecked)
 
         from PyQt6.QtCore import QPoint
         screen_pos = self._note_roll.mapToGlobal(QPoint(int(x), int(y)))

@@ -121,8 +121,8 @@ def deduplicate_octaves(events: list) -> tuple[list, int]:
     for evt in events:
         if evt.event_type == "note_on" and evt.note in drop_pitches:
             key = (evt.time_seconds, evt.note % 12)
-            best = time_pc_best.get(key)
-            if best is not None and evt.note != best:
+            best_note = time_pc_best.get(key)
+            if best_note is not None and evt.note != best_note:
                 continue
         elif evt.event_type == "note_off" and evt.note in drop_pitches:
             removed += 1

@@ -47,7 +47,7 @@ class ProgressBar(QWidget):
         return self._bar_height
 
     @bar_height.setter
-    def bar_height(self, val: float) -> None:
+    def bar_height(self, val: float) -> None:  # type: ignore[no-redef]
         self._bar_height = val
         self.update()
 
@@ -56,7 +56,7 @@ class ProgressBar(QWidget):
         return self._handle_opacity
 
     @handle_opacity.setter
-    def handle_opacity(self, val: float) -> None:
+    def handle_opacity(self, val: float) -> None:  # type: ignore[no-redef]
         self._handle_opacity = val
         self.update()
 
@@ -65,7 +65,7 @@ class ProgressBar(QWidget):
         return self._anim_value
 
     @anim_value.setter
-    def anim_value(self, val: float) -> None:
+    def anim_value(self, val: float) -> None:  # type: ignore[no-redef]
         self._anim_value = val
         self.update()
 
@@ -153,12 +153,14 @@ class ProgressBar(QWidget):
         self._handle_anim.start()
         self.update()
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton and self._duration > 0:
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        if event and event.button() == Qt.MouseButton.LeftButton and self._duration > 0:
             ratio = max(0.0, min(1.0, event.position().x() / self.width()))
             self.seek_requested.emit(ratio * self._duration)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802
+        if event is None:
+            return
         self._hover_pos = max(0.0, min(1.0, event.position().x() / self.width()))
 
         # Show time tooltip

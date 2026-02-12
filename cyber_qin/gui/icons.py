@@ -83,9 +83,9 @@ def draw_refresh(painter: QPainter, rect: QRectF, color: QColor) -> None:
     radius = r.width() / 2
 
     pen = QPen(color, rect.width() * 0.08)
-    pen.setCapStyle(Qt.PenStyle.RoundCap if hasattr(Qt.PenStyle, 'RoundCap') else Qt.PenStyle.NoPen)
-    pen.setCapStyle(Qt.PenStyle.NoPen)
-    painter.setPen(QPen(color, rect.width() * 0.08, cap=Qt.PenStyle.NoPen))
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    # pen.setCapStyle(Qt.PenStyle.NoPen)
+    painter.setPen(QPen(color, rect.width() * 0.08, cap=Qt.PenCapStyle.RoundCap))
 
     # Draw arc (270 degrees)
     arc_rect = QRectF(cx - radius, cy - radius, radius * 2, radius * 2)
@@ -121,7 +121,7 @@ def draw_plus(painter: QPainter, rect: QRectF, color: QColor) -> None:
     thickness = rect.width() * 0.08
 
     pen = QPen(color, thickness)
-    pen.setCapStyle(Qt.PenStyle.NoPen)
+    pen.setCapStyle(Qt.PenCapStyle.FlatCap)
     painter.setPen(QPen(color, thickness))
 
     # Horizontal

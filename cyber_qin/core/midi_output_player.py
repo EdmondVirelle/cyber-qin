@@ -257,6 +257,7 @@ def create_midi_output_player(parent=None):
     Returns None if the MIDI output port could not be opened.
     """
     _ensure_qt_class()
+    assert _MidiOutputPlayerClass is not None
     player = _MidiOutputPlayerClass(parent)
     if not player.available:
         player.cleanup()

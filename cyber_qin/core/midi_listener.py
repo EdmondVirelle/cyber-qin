@@ -28,7 +28,7 @@ class MidiListener:
     @staticmethod
     def list_ports() -> list[str]:
         """Return available MIDI input port names."""
-        return mido.get_input_names()
+        return mido.get_input_names()  # type: ignore[no-any-return]
 
     @property
     def connected(self) -> bool:

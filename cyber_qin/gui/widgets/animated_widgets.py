@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     pyqtProperty,
-)
+)  # type: ignore[attr-defined]
 from PyQt6.QtGui import QColor, QPainter, QPainterPath
 from PyQt6.QtWidgets import QAbstractButton, QWidget
 
@@ -105,7 +105,7 @@ class TransportButton(QAbstractButton):
         return self._hover_progress
 
     @hover_progress.setter
-    def hover_progress(self, val: float) -> None:
+    def hover_progress(self, val: float) -> None:  # type: ignore[no-redef]
         self._hover_progress = val
         self.update()
 
@@ -198,7 +198,7 @@ class IconButton(QAbstractButton):
         return self._hover_progress
 
     @hover_progress.setter
-    def hover_progress(self, val: float) -> None:
+    def hover_progress(self, val: float) -> None:  # type: ignore[no-redef]
         self._hover_progress = val
         self.update()
 
@@ -284,7 +284,7 @@ class AnimatedNavButton(QAbstractButton):
         return self._hover_progress
 
     @hover_progress.setter
-    def hover_progress(self, val: float) -> None:
+    def hover_progress(self, val: float) -> None:  # type: ignore[no-redef]
         self._hover_progress = val
         self.update()
 

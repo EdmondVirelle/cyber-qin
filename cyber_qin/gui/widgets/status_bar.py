@@ -76,22 +76,25 @@ class StatusBar(QWidget):
     def set_connected(self, port_name: str) -> None:
         self._conn_label.setText(f"MIDI: {port_name}")
         self._conn_label.setProperty("class", "status-ok")
-        self._conn_label.style().unpolish(self._conn_label)
-        self._conn_label.style().polish(self._conn_label)
+        if s := self._conn_label.style():
+            s.unpolish(self._conn_label)
+            s.polish(self._conn_label)
         self._conn_dot.set_color(ACCENT)
 
     def set_disconnected(self) -> None:
         self._conn_label.setText("MIDI: 未連線")
         self._conn_label.setProperty("class", "status-off")
-        self._conn_label.style().unpolish(self._conn_label)
-        self._conn_label.style().polish(self._conn_label)
+        if s := self._conn_label.style():
+            s.unpolish(self._conn_label)
+            s.polish(self._conn_label)
         self._conn_dot.set_color(TEXT_DISABLED)
 
     def set_reconnecting(self) -> None:
         self._conn_label.setText("MIDI: 重新連線中...")
         self._conn_label.setProperty("class", "status-warn")
-        self._conn_label.style().unpolish(self._conn_label)
-        self._conn_label.style().polish(self._conn_label)
+        if s := self._conn_label.style():
+            s.unpolish(self._conn_label)
+            s.polish(self._conn_label)
         self._conn_dot.set_color(WARNING)
 
     def set_latency(self, ms: float) -> None:
@@ -113,8 +116,9 @@ class StatusBar(QWidget):
         else:
             self._admin_label.setText("非管理員 (建議提權)")
             self._admin_label.setProperty("class", "status-warn")
-        self._admin_label.style().unpolish(self._admin_label)
-        self._admin_label.style().polish(self._admin_label)
+        if s := self._admin_label.style():
+            s.unpolish(self._admin_label)
+            s.polish(self._admin_label)
 
     def _check_ime(self) -> None:
         try:
@@ -124,7 +128,8 @@ class StatusBar(QWidget):
             else:
                 self._ime_label.setText("IME: EN")
                 self._ime_label.setProperty("class", "status-ok")
-            self._ime_label.style().unpolish(self._ime_label)
-            self._ime_label.style().polish(self._ime_label)
+            if s := self._ime_label.style():
+                s.unpolish(self._ime_label)
+                s.polish(self._ime_label)
         except Exception:
             self._ime_label.setText("")
