@@ -14,6 +14,8 @@ from PyQt6.QtWidgets import (
 from ..icons import draw_music_note
 from ..theme import ACCENT_GOLD, BG_SCROLL, DIVIDER, TEXT_SECONDARY
 from .animated_widgets import AnimatedNavButton
+from .language_selector import LanguageSelector
+from ...core.translator import translator
 
 
 class Sidebar(QWidget):
@@ -66,6 +68,14 @@ class Sidebar(QWidget):
         layout.addWidget(self._editor_btn)
         self._buttons.append(self._editor_btn)
 
+        self._buttons.append(self._editor_btn)
+        
+        layout.addSpacing(16)
+        
+        # Language Selector
+        self._lang_selector = LanguageSelector()
+        layout.addWidget(self._lang_selector)
+        
         layout.addStretch()
 
         # Bottom divider
@@ -83,24 +93,24 @@ class Sidebar(QWidget):
 
         from cyber_qin import __version__
 
-        credit = QLabel("燕雲十六聲 · 葉微雨 製作")
-        credit.setFont(QFont("Microsoft JhengHei", 9))
-        credit.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(credit)
+        self._credit = QLabel(translator.tr("sidebar.credit"))
+        self._credit.setFont(QFont("Microsoft JhengHei", 9))
+        self._credit.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        self._credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._credit)
 
-        kofi = QLabel('<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">Support on Ko-fi</a>')
-        kofi.setFont(QFont("Microsoft JhengHei", 8))
-        kofi.setStyleSheet("background: transparent;")
-        kofi.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        kofi.setOpenExternalLinks(True)
-        layout.addWidget(kofi)
+        self._kofi = QLabel(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">{translator.tr("sidebar.support")}</a>')
+        self._kofi.setFont(QFont("Microsoft JhengHei", 8))
+        self._kofi.setStyleSheet("background: transparent;")
+        self._kofi.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._kofi.setOpenExternalLinks(True)
+        layout.addWidget(self._kofi)
 
-        ver = QLabel(f"v{__version__}")
-        ver.setFont(QFont("Microsoft JhengHei", 9))
-        ver.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(ver)
+        self._ver = QLabel(translator.tr("sidebar.version", version=__version__))
+        self._ver.setFont(QFont("Microsoft JhengHei", 9))
+        self._ver.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        self._ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._ver)
 
         # Drop shadow on right edge
         shadow = QGraphicsDropShadowEffect(self)
@@ -111,6 +121,20 @@ class Sidebar(QWidget):
 
         # Set initial active
         self._set_active(0)
+        
+        # Connect translation signal
+        translator.language_changed.connect(self._update_text)
+        self._update_text()
+        
+    def _update_text(self) -> None:
+        """Update UI text based on current language."""
+        self._live_btn.set_text(translator.tr("nav.live"))
+        self._library_btn.set_text(translator.tr("nav.library"))
+        self._editor_btn.set_text(translator.tr("nav.editor"))
+        self._credit.setText(translator.tr("sidebar.credit"))
+        self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853;">{translator.tr("sidebar.support")}</a>')
+        from cyber_qin import __version__
+        self._ver.setText(translator.tr("sidebar.version", version=__version__))
 
     def paintEvent(self, event) -> None:  # noqa: N802
         """Custom paint for sidebar background."""

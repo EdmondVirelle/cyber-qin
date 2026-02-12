@@ -28,6 +28,7 @@ from ...core.key_mapper import KeyMapper
 from ...core.key_simulator import KeySimulator
 from ...core.mapping_schemes import get_scheme, list_schemes
 from ...core.midi_listener import MidiListener
+from ...core.translator import translator
 from ...utils.admin import is_admin
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.log_viewer import LogViewer
@@ -87,6 +88,7 @@ class LiveModeView(QWidget):
         self._listener = listener
         self._settings = QSettings("CyberQin", "CyberQin")
         self._reconnect_port: str | None = None
+        self._is_recording: bool = False
 
         self._build_ui()
         self._setup_timers()
@@ -111,14 +113,14 @@ class LiveModeView(QWidget):
         overlay_layout = QVBoxLayout(header_overlay)
         overlay_layout.setContentsMargins(24, 20, 24, 8)
 
-        header = QLabel("演奏模式")
-        header.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
-        header.setStyleSheet("background: transparent;")
-        overlay_layout.addWidget(header)
+        self._header_lbl = QLabel()
+        self._header_lbl.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
+        self._header_lbl.setStyleSheet("background: transparent;")
+        overlay_layout.addWidget(self._header_lbl)
 
-        desc = QLabel("連接 MIDI 裝置，即時演奏映射到遊戲按鍵")
-        desc.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        overlay_layout.addWidget(desc)
+        self._desc_lbl = QLabel()
+        self._desc_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        overlay_layout.addWidget(self._desc_lbl)
         overlay_layout.addStretch()
 
         header_overlay.setGeometry(0, 0, 800, 100)
@@ -139,20 +141,20 @@ class LiveModeView(QWidget):
         row1 = QHBoxLayout()
         row1.setSpacing(8)
 
-        lbl = QLabel("MIDI 裝置:")
-        lbl.setStyleSheet("background: transparent;")
-        row1.addWidget(lbl)
+        self._midi_dev_lbl = QLabel()
+        self._midi_dev_lbl.setStyleSheet("background: transparent;")
+        row1.addWidget(self._midi_dev_lbl)
 
         self._port_combo = QComboBox()
         self._port_combo.setMinimumWidth(250)
         row1.addWidget(self._port_combo)
 
-        self._refresh_btn = QPushButton("重新整理")
+        self._refresh_btn = QPushButton()
         self._refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._refresh_btn.clicked.connect(self._refresh_ports)
         row1.addWidget(self._refresh_btn)
 
-        self._connect_btn = QPushButton("連線")
+        self._connect_btn = QPushButton()
         self._connect_btn.setProperty("class", "accent")
         self._connect_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._connect_btn.clicked.connect(self._toggle_connection)
@@ -160,9 +162,9 @@ class LiveModeView(QWidget):
 
         row1.addStretch()
 
-        transpose_lbl = QLabel("移調:")
-        transpose_lbl.setStyleSheet("background: transparent;")
-        row1.addWidget(transpose_lbl)
+        self._transpose_lbl = QLabel()
+        self._transpose_lbl.setStyleSheet("background: transparent;")
+        row1.addWidget(self._transpose_lbl)
         self._transpose_spin = QSpinBox()
         self._transpose_spin.setRange(
             TRANSPOSE_MIN // TRANSPOSE_STEP,
@@ -179,9 +181,9 @@ class LiveModeView(QWidget):
         row2 = QHBoxLayout()
         row2.setSpacing(8)
 
-        scheme_lbl = QLabel("映射方案:")
-        scheme_lbl.setStyleSheet("background: transparent;")
-        row2.addWidget(scheme_lbl)
+        self._scheme_lbl = QLabel()
+        self._scheme_lbl.setStyleSheet("background: transparent;")
+        row2.addWidget(self._scheme_lbl)
 
         self._scheme_combo = QComboBox()
         self._scheme_combo.setMinimumWidth(250)
@@ -204,7 +206,7 @@ class LiveModeView(QWidget):
         row3 = QHBoxLayout()
         row3.setSpacing(8)
 
-        self._record_btn = QPushButton("錄音")
+        self._record_btn = QPushButton()
         self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._record_btn.setStyleSheet(
             "QPushButton { background-color: #3a1a1a; color: #ff4444; "
@@ -240,10 +242,10 @@ class LiveModeView(QWidget):
         log_section = QVBoxLayout()
         log_section.setSpacing(4)
 
-        log_title = QLabel("Event Log")
-        log_title.setFont(QFont("Microsoft JhengHei", 11, QFont.Weight.DemiBold))
-        log_title.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        log_section.addWidget(log_title)
+        self._log_title_lbl = QLabel()
+        self._log_title_lbl.setFont(QFont("Microsoft JhengHei", 11, QFont.Weight.DemiBold))
+        self._log_title_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        log_section.addWidget(self._log_title_lbl)
 
         self._log = LogViewer()
         self._log.setMaximumHeight(140)
@@ -257,6 +259,57 @@ class LiveModeView(QWidget):
         self._status.set_admin_warning(is_admin())
 
         root.addLayout(content, 1)
+        
+        translator.language_changed.connect(self._update_text)
+        self._update_text()
+
+    def _update_text(self) -> None:
+        """Update UI text based on current language."""
+        self._header_lbl.setText(translator.tr("live.title"))
+        self._desc_lbl.setText(translator.tr("live.desc"))
+        self._midi_dev_lbl.setText(translator.tr("live.midi_device") + ":")
+        self._refresh_btn.setText(translator.tr("live.refresh"))
+        # Only update connect btn text if we are not relying on state (handle in separate logic if needed, but here simple is fine for now)
+        # Actually _toggle_connection updates text based on state. 
+        # We should update it here respecting current state if possible, or just update the "Connect" / "Disconnect" strings.
+        # But _connect_btn text is stateful. Let's handle it carefully.
+        if self._listener.connected:
+             self._connect_btn.setText(translator.tr("live.disconnect"))
+        else:
+             self._connect_btn.setText(translator.tr("live.connect"))
+             
+        self._transpose_lbl.setText(translator.tr("live.transpose") + ":")
+        self._scheme_lbl.setText(translator.tr("live.mapping") + ":")
+        
+        # Record button stateful
+        if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr("live.record", language="en"): # Check generic
+            # Just relying on internal flags might be safer if we had them easily accessible here except button text
+            pass 
+        # Better: use self._record_btn.property or just re-eval based on recording signal? 
+        # LiveModeView doesn't track recording state in a simple boolean accessible here easily? 
+        # Ah, self._toggle_recording toggles text.
+        # Let's just reset generic text if not recording? 
+        # The button text toggle logic in `_toggle_recording` uses hardcoded strings. We need to update that too.
+        
+        # update dynamic labels
+        self._auto_tune_check.setText(translator.tr("live.auto_tune"))
+        self._log_title_lbl.setText(translator.tr("live.log"))
+        
+        # Trigger explicit update for stateful buttons
+        self._update_stateful_text()
+
+    def _update_stateful_text(self) -> None:
+        """Update buttons that change text based on state."""
+        if self._listener.connected:
+            self._connect_btn.setText(translator.tr("live.disconnect"))
+        else:
+            self._connect_btn.setText(translator.tr("live.connect"))
+            
+        if self._is_recording:
+             self._record_btn.setText(translator.tr("live.stop_record"))
+             self._recording_status.setText(translator.tr("live.recording"))
+        else:
+             self._record_btn.setText(translator.tr("live.record"))
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -367,7 +420,9 @@ class LiveModeView(QWidget):
                 callback=callback,
                 on_disconnect=self._on_disconnect,
             )
-            self._connect_btn.setText("斷線")
+                on_disconnect=self._on_disconnect,
+            )
+            self._update_stateful_text()
             self._status.set_connected(port_name)
             self._settings.setValue("last_port", port_name)
             self._reconnect_port = port_name
@@ -379,8 +434,9 @@ class LiveModeView(QWidget):
 
     def _disconnect(self) -> None:
         self._simulator.release_all()
+        self._simulator.release_all()
         self._listener.close()
-        self._connect_btn.setText("連線")
+        self._update_stateful_text()
         self._status.set_disconnected()
         self._reconnect_timer.stop()
         self._reconnect_port = None
@@ -390,8 +446,9 @@ class LiveModeView(QWidget):
     def _on_disconnect(self) -> None:
         self._simulator.release_all()
         self._piano.set_active_notes(set())
+        self._piano.set_active_notes(set())
         self._status.set_reconnecting()
-        self._connect_btn.setText("連線")
+        self._update_stateful_text()
         self._log.log("MIDI 裝置斷線，嘗試重新連線...")
         self._reconnect_timer.start(int(RECONNECT_INTERVAL * 1000))
 
@@ -443,18 +500,23 @@ class LiveModeView(QWidget):
 
     def _toggle_recording(self) -> None:
         """Toggle recording state — delegates actual logic to AppShell."""
-        if self._record_btn.text() == "錄音":
-            self._record_btn.setText("停止錄音")
+        if not self._is_recording:
+            self._is_recording = True
+            
+            # Update style for recording state
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #ff4444; color: #0A0E14; "
                 "border: none; border-radius: 16px; padding: 8px 20px; "
                 "font-weight: 700; }"
                 "QPushButton:hover { background-color: #ff6666; }"
             )
-            self._recording_status.setText("錄音中...")
+            self._recording_status.setText(translator.tr("live.recording"))
             self.recording_started.emit()
+            self._update_stateful_text()
         else:
-            self._record_btn.setText("錄音")
+            self._is_recording = False
+            
+            # Update style for idle state
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #3a1a1a; color: #ff4444; "
                 "border: 1px solid #ff4444; border-radius: 16px; padding: 8px 20px; "
@@ -463,6 +525,7 @@ class LiveModeView(QWidget):
             )
             self._recording_status.setText("")
             self.recording_stopped.emit("")
+            self._update_stateful_text()
 
     def on_recording_saved(self, file_path: str) -> None:
         """Called after recording is saved successfully."""

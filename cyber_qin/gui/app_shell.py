@@ -21,6 +21,7 @@ from ..core.auto_tune import auto_tune
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
+from ..core.translator import translator
 from ..core.midi_file_player import PlaybackState, create_player_controller
 from ..core.midi_listener import MidiListener
 from ..core.midi_recorder import MidiRecorder
@@ -101,7 +102,7 @@ class AppShell(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("賽博琴仙 — Cyber Qin Xian")
+        self.setWindowTitle(translator.tr("app.title") + " — " + translator.tr("app.subtitle"))
         self.setMinimumSize(900, 600)
         self.resize(1100, 700)
 
@@ -116,6 +117,12 @@ class AppShell(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._setup_shortcuts()
+        
+        translator.language_changed.connect(self._update_text)
+
+    def _update_text(self) -> None:
+        """Update window title and other shell elements."""
+        self.setWindowTitle(translator.tr("app.title") + " — " + translator.tr("app.subtitle"))
 
     def _build_ui(self) -> None:
         central = QWidget()

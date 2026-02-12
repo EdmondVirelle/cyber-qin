@@ -11,6 +11,9 @@ Release 說明 (v0.8.0)
     • MIDI 匯出增強：支援 Type 1 多軌 MIDI 檔案匯出 (保留音軌分離與頻道資訊)。
     • 效能優化：大幅提升編輯器在多音符專案下的索引效能 (O(N²) → O(N))。
     • 穩定性修復：修正快速拖曳或播放時可能導致的崩潰問題。
+    • 多語言支援 (I18N)：
+        - 新增繁體中文、簡體中文、日文、韓文與英文介面切換。
+        - 側邊欄新增語言選擇按鈕。
 
 安裝須知
     請使用 7-Zip 解壓縮。
@@ -40,6 +43,9 @@ New Features & Enhancements
     • Enhanced MIDI Export: Support for Type 1 multi-track MIDI export (preserves track separation and channel info).
     • Performance Optimization: Significantly improved indexing performance for projects with many notes (O(N²) → O(N)).
     • Stability Fixes: Fixed crashes that could occur during rapid scrubbing or playback.
+    • Multi-Language Support (I18N):
+        - Added interface support for Traditional Chinese, Simplified Chinese, Japanese, Korean, and English.
+        - Added language selector to the sidebar.
 
 Installation Note
     Please use 7-Zip to extract the archive.

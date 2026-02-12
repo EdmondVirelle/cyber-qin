@@ -22,6 +22,7 @@ from ...core.midi_file_player import MidiFileInfo, MidiFileParser
 from ..icons import draw_library
 from ..theme import TEXT_SECONDARY
 from ..widgets.track_list import TrackList
+from ...core.translator import translator
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +71,8 @@ class _EmptyStateWidget(QWidget):
         painter.drawText(
             0, int(text_y), w, 30,
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-            "尚未匯入任何 MIDI 檔案",
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+            translator.tr("lib.empty.title"),
         )
 
         sub_font = QFont("Microsoft JhengHei", 12)
@@ -78,7 +80,7 @@ class _EmptyStateWidget(QWidget):
         painter.drawText(
             0, int(text_y + 35), w, 25,
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-            "點擊「+ 匯入 MIDI」開始",
+            translator.tr("lib.empty.sub"),
         )
 
         painter.end()
@@ -118,14 +120,14 @@ class LibraryView(QWidget):
 
         header_row = QHBoxLayout()
 
-        title = QLabel("曲庫")
-        title.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
-        title.setStyleSheet("background: transparent;")
-        header_row.addWidget(title)
+        self._title_lbl = QLabel()
+        self._title_lbl.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
+        self._title_lbl.setStyleSheet("background: transparent;")
+        header_row.addWidget(self._title_lbl)
 
         header_row.addStretch()
 
-        self._import_btn = QPushButton("+ 匯入 MIDI")
+        self._import_btn = QPushButton()
         self._import_btn.setProperty("class", "accent")
         self._import_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._import_btn.clicked.connect(self._on_import)
@@ -133,9 +135,9 @@ class LibraryView(QWidget):
 
         overlay_layout.addLayout(header_row)
 
-        desc = QLabel("匯入 MIDI 檔案，雙擊或按播放鍵自動演奏")
-        desc.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        overlay_layout.addWidget(desc)
+        self._desc_lbl = QLabel()
+        self._desc_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        overlay_layout.addWidget(self._desc_lbl)
         overlay_layout.addStretch()
 
         header_overlay.setGeometry(0, 0, 800, 100)
@@ -149,16 +151,16 @@ class LibraryView(QWidget):
         # Column headers
         cols = QHBoxLayout()
         cols.setContentsMargins(12 + 40 + 12, 0, 12, 0)  # Account for track icon
-        col_num = QLabel("#")
-        col_num.setFixedWidth(24)
-        col_num.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
-        cols.addWidget(col_num)
-        col_title = QLabel("標題")
-        col_title.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
-        cols.addWidget(col_title, 1)
-        col_dur = QLabel("時長")
-        col_dur.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
-        cols.addWidget(col_dur)
+        self._col_num = QLabel()
+        self._col_num.setFixedWidth(24)
+        self._col_num.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        cols.addWidget(self._col_num)
+        self._col_title = QLabel()
+        self._col_title.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        cols.addWidget(self._col_title, 1)
+        self._col_dur = QLabel()
+        self._col_dur.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        cols.addWidget(self._col_dur)
         cols.addSpacing(80)  # Space for buttons
         content.addLayout(cols)
 
@@ -175,7 +177,21 @@ class LibraryView(QWidget):
         content.addWidget(self._empty_state)
 
         root.addLayout(content, 1)
+        root.addLayout(content, 1)
+        
+        translator.language_changed.connect(self._update_text)
+        self._update_text()
         self._update_empty_state()
+        
+    def _update_text(self) -> None:
+        """Update UI text based on current language."""
+        self._title_lbl.setText(translator.tr("lib.title"))
+        self._import_btn.setText(translator.tr("lib.import"))
+        self._desc_lbl.setText(translator.tr("lib.desc"))
+        self._col_num.setText(translator.tr("lib.col.num"))
+        self._col_title.setText(translator.tr("lib.col.title"))
+        self._col_dur.setText(translator.tr("lib.col.duration"))
+        self._empty_state.update() # Trigger repaint for empty state text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)

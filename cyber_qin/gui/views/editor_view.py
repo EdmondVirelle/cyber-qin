@@ -46,6 +46,7 @@ from ...core.midi_writer import MidiWriter
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
 from ..widgets.clickable_piano import ClickablePiano
+from ...core.translator import translator
 from ..widgets.editor_track_panel import EditorTrackPanel
 from ..widgets.note_roll import NoteRoll
 from ..widgets.pitch_ruler import PitchRuler
@@ -159,14 +160,14 @@ class EditorView(QWidget):
         overlay_layout = QVBoxLayout(header_overlay)
         overlay_layout.setContentsMargins(24, 20, 24, 8)
 
-        header = QLabel("編曲器")
-        header.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
-        header.setStyleSheet("background: transparent;")
-        overlay_layout.addWidget(header)
+        self._header_lbl = QLabel()
+        self._header_lbl.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
+        self._header_lbl.setStyleSheet("background: transparent;")
+        overlay_layout.addWidget(self._header_lbl)
 
-        desc = QLabel("點擊琴鍵輸入音符，拖曳時間軸編輯旋律")
-        desc.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
-        overlay_layout.addWidget(desc)
+        self._desc_lbl = QLabel()
+        self._desc_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        overlay_layout.addWidget(self._desc_lbl)
         overlay_layout.addStretch()
 
         header_overlay.setGeometry(0, 0, 800, 100)
@@ -188,7 +189,7 @@ class EditorView(QWidget):
         row1.setSpacing(6)
 
         # Transport group
-        self._record_btn = QPushButton("● 錄音")
+        self._record_btn = QPushButton()
         self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._record_btn.setStyleSheet(
             "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
@@ -196,7 +197,7 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._record_btn)
 
-        self._play_btn = QPushButton("▶ 播放")
+        self._play_btn = QPushButton()
         self._play_btn.setProperty("class", "accent")
         self._play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         row1.addWidget(self._play_btn)
@@ -218,10 +219,11 @@ class EditorView(QWidget):
 
         row1.addWidget(_VSeparator())
 
-        self._pencil_btn = QPushButton("✎ 鉛筆")
+        row1.addWidget(_VSeparator())
+
+        self._pencil_btn = QPushButton()
         self._pencil_btn.setCheckable(True)
         self._pencil_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._pencil_btn.setToolTip("鉛筆工具 — 點擊空白處直接放置音符 (P)")
         self._pencil_btn.setStyleSheet(
             "QPushButton { padding: 4px 8px; }"
             "QPushButton:checked { background-color: #00F0FF; color: #0A0E14; font-weight: 700; }"
@@ -231,16 +233,16 @@ class EditorView(QWidget):
         row1.addStretch()
 
         # File group
-        self._save_btn = QPushButton("存檔")
+        self._save_btn = QPushButton()
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._save_btn.setToolTip("Ctrl+S")
         row1.addWidget(self._save_btn)
 
-        self._load_btn = QPushButton("匯入")
+        self._load_btn = QPushButton()
         self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         row1.addWidget(self._load_btn)
 
-        self._export_btn = QPushButton("匯出")
+        self._export_btn = QPushButton()
         self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._export_btn.setToolTip("Ctrl+E")
         row1.addWidget(self._export_btn)
@@ -257,8 +259,8 @@ class EditorView(QWidget):
         row2 = QHBoxLayout()
         row2.setSpacing(8)
 
-        dur_lbl = QLabel("時值")
-        row2.addWidget(dur_lbl)
+        self._dur_lbl = QLabel()
+        row2.addWidget(self._dur_lbl)
 
         self._duration_combo = QComboBox()
         for label in DURATION_PRESETS:
@@ -268,8 +270,8 @@ class EditorView(QWidget):
 
         row2.addSpacing(8)
 
-        ts_lbl = QLabel("拍號")
-        row2.addWidget(ts_lbl)
+        self._ts_lbl = QLabel()
+        row2.addWidget(self._ts_lbl)
 
         self._ts_combo = QComboBox()
         for num, denom in TIME_SIGNATURES:
@@ -279,8 +281,8 @@ class EditorView(QWidget):
 
         row2.addSpacing(8)
 
-        tempo_lbl = QLabel("BPM")
-        row2.addWidget(tempo_lbl)
+        self._bpm_lbl = QLabel()
+        row2.addWidget(self._bpm_lbl)
 
         self._tempo_spin = QSpinBox()
         self._tempo_spin.setRange(40, 300)
@@ -294,14 +296,14 @@ class EditorView(QWidget):
         self._snap_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._snap_cb)
 
-        self._auto_tune_cb = QCheckBox("自動校正")
+        self._auto_tune_cb = QCheckBox()
         self._auto_tune_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._auto_tune_cb)
 
         row2.addSpacing(8)
 
-        vel_lbl = QLabel("力度")
-        row2.addWidget(vel_lbl)
+        self._vel_lbl = QLabel()
+        row2.addWidget(self._vel_lbl)
 
         self._velocity_spin = QSpinBox()
         self._velocity_spin.setRange(1, 127)
@@ -318,9 +320,10 @@ class EditorView(QWidget):
 
         row2.addSpacing(8)
 
-        self._shortcuts_cb = QCheckBox("⌨ 快捷鍵")
+        row2.addSpacing(8)
+
+        self._shortcuts_cb = QCheckBox()
         self._shortcuts_cb.setChecked(True)
-        self._shortcuts_cb.setToolTip("啟用／停用單鍵快捷鍵 (1-5, 0, P, 方向鍵)")
         self._shortcuts_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._shortcuts_cb)
 
@@ -367,6 +370,44 @@ class EditorView(QWidget):
         content.addLayout(piano_row)
 
         root.addLayout(content, 1)
+        
+        translator.language_changed.connect(self._update_text)
+        self._update_text()
+        
+    def _update_text(self) -> None:
+        """Update UI text based on current language."""
+        self._header_lbl.setText(translator.tr("editor.title"))
+        self._desc_lbl.setText(translator.tr("editor.desc"))
+        
+        self._play_btn.setText(translator.tr("editor.play"))
+        self._undo_btn.setToolTip(translator.tr("editor.undo"))
+        self._redo_btn.setToolTip(translator.tr("editor.redo"))
+        self._clear_btn.setToolTip(translator.tr("editor.clear"))
+        self._pencil_btn.setText(translator.tr("editor.pencil"))
+        self._save_btn.setText(translator.tr("editor.save"))
+        self._load_btn.setText(translator.tr("editor.import"))
+        self._export_btn.setText(translator.tr("editor.export"))
+        self._help_btn.setToolTip(translator.tr("editor.help"))
+        
+        self._dur_lbl.setText(translator.tr("editor.duration"))
+        self._ts_lbl.setText(translator.tr("editor.time_sig"))
+        self._bpm_lbl.setText(translator.tr("editor.bpm"))
+        self._snap_cb.setText(translator.tr("editor.snap"))
+        self._auto_tune_cb.setText(translator.tr("live.auto_tune"))
+        self._vel_lbl.setText(translator.tr("editor.velocity"))
+        self._shortcuts_cb.setText(translator.tr("editor.shortcuts"))
+        
+        # Stateful record button
+        if self._is_recording:
+             self._record_btn.setText(translator.tr("live.stop_record")) # Use generic stop or editor specific? 
+             # Editor doesn't have specific stop_record key, reuse live? Or create generic `stop`?
+             # live.stop_record is "Stop Rec". 
+             self._record_btn.setText("■ " + translator.tr("live.stop_record"))
+        else:
+             self._record_btn.setText(translator.tr("editor.record"))
+
+        # Update note count label format
+        self._update_ui_state()
 
     def _connect_signals(self) -> None:
         self._piano.note_clicked.connect(self._on_note_clicked)
@@ -446,10 +487,9 @@ class EditorView(QWidget):
 
         total = self._sequence.note_count
         bars = self._sequence.bar_count
-        stats = f"{total} 音符"
-        if bars > 0:
-            stats += f" · {bars} 小節"
-        self._note_count_lbl.setText(stats)
+        total = self._sequence.note_count
+        bars = self._sequence.bar_count
+        self._note_count_lbl.setText(translator.tr("editor.note_count", notes=total, bars=bars))
 
         # Update track panel
         self._track_panel.set_tracks(self._sequence.tracks, active)
@@ -794,19 +834,23 @@ class EditorView(QWidget):
     def _on_record_toggle(self) -> None:
         if self._is_recording:
             self._is_recording = False
-            self._record_btn.setText("● 錄音")
+            self._record_btn.setText(translator.tr("editor.record"))
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
                 "QPushButton:hover { background-color: #882222; }"
             )
+            self._update_text() # Enforce correct text
             self.recording_stopped.emit()
         else:
             self._is_recording = True
-            self._record_btn.setText("■ 停止")
+            self._record_btn.setText("■ " + translator.tr("live.stop_record"))
             self._record_btn.setStyleSheet(
-                "QPushButton { background-color: #FF4444; color: #0A0E14; font-weight: 700; }"
-                "QPushButton:hover { background-color: #FF6666; }"
+                "QPushButton { background-color: #ff4444; color: #0A0E14; "
+                "border: none; border-radius: 16px; padding: 8px 20px; "
+                "font-weight: 700; }"
+                "QPushButton:hover { background-color: #ff6666; }"
             )
+            self._update_text() # Enforce text
             self.recording_started.emit()
 
     def _on_note_moved(self, index: int, time_delta: float, pitch_delta: int) -> None:
