@@ -209,10 +209,10 @@ class ClickablePiano(QWidget):
                 ratio = max(0.0, 1.0 - elapsed / 0.25)
                 base = _COLOR_SHARP if is_black else _COLOR_NATURAL
                 # lerp
-                r = base.red() + (_COLOR_ACTIVE.red() - base.red()) * ratio
-                g = base.green() + (_COLOR_ACTIVE.green() - base.green()) * ratio
-                b = base.blue() + (_COLOR_ACTIVE.blue() - base.blue()) * ratio
-                bg = QColor(int(r), int(g), int(b))
+                r_val = base.red() + (_COLOR_ACTIVE.red() - base.red()) * ratio
+                g_val = base.green() + (_COLOR_ACTIVE.green() - base.green()) * ratio
+                b_val = base.blue() + (_COLOR_ACTIVE.blue() - base.blue()) * ratio
+                bg = QColor(int(r_val), int(g_val), int(b_val))
             elif is_black:
                 bg = _COLOR_SHARP
             else:

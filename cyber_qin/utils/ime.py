@@ -8,8 +8,8 @@ import logging
 
 log = logging.getLogger(__name__)
 
-_imm32 = ctypes.windll.imm32
-_user32 = ctypes.windll.user32
+_imm32 = ctypes.windll.imm32  # type: ignore[attr-defined]
+_user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
 
 def is_ime_active() -> bool:

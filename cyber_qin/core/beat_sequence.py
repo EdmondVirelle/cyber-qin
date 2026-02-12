@@ -158,14 +158,15 @@ class EditorSequence:
         if self._cache_notes_by_track is not None:
             return
 
-        from collections import defaultdict
-        self._cache_notes_by_track = defaultdict(list)
-        for n in self._notes:
-            self._cache_notes_by_track[n.track].append(n)
-
-        self._cache_rests_by_track = defaultdict(list)
-        for r in self._rests:
-            self._cache_rests_by_track[r.track].append(r)
+        if self._cache_notes_by_track is None or self._cache_rests_by_track is None:
+            # Should not happen due to initial checks, but strict mypy needs this
+            from collections import defaultdict
+            self._cache_notes_by_track = defaultdict(list)
+            self._cache_rests_by_track = defaultdict(list)
+            for n in self._notes:
+                self._cache_notes_by_track[n.track].append(n)
+            for r in self._rests:
+                self._cache_rests_by_track[r.track].append(r)
 
     # ── Properties ──────────────────────────────────────────
 
@@ -566,11 +567,11 @@ class EditorSequence:
 
     def notes_in_track(self, track: int) -> list[BeatNote]:
         self._ensure_cache()
-        return self._cache_notes_by_track.get(track, [])
+        return self._cache_notes_by_track.get(track, []) if self._cache_notes_by_track else []
 
     def rests_in_track(self, track: int) -> list[BeatRest]:
         self._ensure_cache()
-        return self._cache_rests_by_track.get(track, [])
+        return self._cache_rests_by_track.get(track, []) if self._cache_rests_by_track else []
 
     def note_indices_in_rect(
         self, t0: float, t1: float, n0: int, n1: int,
@@ -618,7 +619,7 @@ class EditorSequence:
         min_time = min(it.time_beats for it in items)
         for it in items:
             it.time_beats -= min_time
-        self._clipboard = items
+        self._clipboard = list(items)  # Explicit cast for invariance
 
     def paste_at_cursor(self) -> None:
         if not self._clipboard:
@@ -651,10 +652,10 @@ class EditorSequence:
         # Determine which tracks are audible (solo logic)
         any_solo = any(t.solo for t in self._tracks)
         audible = set()
-        for i, t in enumerate(self._tracks):
-            if t.muted:
+        for i, track in enumerate(self._tracks):
+            if track.muted:
                 continue
-            if any_solo and not t.solo:
+            if any_solo and not track.solo:
                 continue
             audible.add(i)
 
@@ -691,10 +692,10 @@ class EditorSequence:
         # Determine which tracks are audible (solo logic)
         any_solo = any(t.solo for t in self._tracks)
         audible = set()
-        for i, t in enumerate(self._tracks):
-            if t.muted:
+        for i, track in enumerate(self._tracks):
+            if track.muted:
                 continue
-            if any_solo and not t.solo:
+            if any_solo and not track.solo:
                 continue
             audible.add(i)
 

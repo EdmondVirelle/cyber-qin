@@ -100,7 +100,7 @@ class MidiFileParser:
             prev_tick = map_tick
             prev_tempo = map_tempo
         seconds += mido.tick2second(abs_tick - prev_tick, tpb, prev_tempo)
-        return seconds
+        return float(seconds)
 
     @staticmethod
     def parse(file_path: str) -> tuple[list[MidiFileEvent], MidiFileInfo]:
@@ -337,7 +337,7 @@ def _ensure_qt_classes():
             """Play a short metronome tick via winsound.Beep (Windows only)."""
             try:
                 import winsound
-                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)
+                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)  # type: ignore[attr-defined]
             except Exception:
                 pass  # Graceful fallback on non-Windows or error
 

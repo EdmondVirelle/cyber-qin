@@ -588,7 +588,7 @@ class NoteRoll(QWidget):
                 pass
         super().keyPressEvent(event)
 
-    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802
+    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802, type: ignore[override]
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             delta = event.angleDelta().y()
             factor = 1.15 if delta > 0 else 1 / 1.15

@@ -524,7 +524,7 @@ class Translator(QObject):
             self._current_lang = lang_code
             self.language_changed.emit()
 
-    def tr(self, key: str, **kwargs) -> str:
+    def tr(self, key: str, **kwargs) -> str:  # type: ignore[override]
         """Translate key to current language. Returns key if not found."""
         lang_data = self._data.get(self._current_lang, {})
         text = lang_data.get(key)
@@ -539,4 +539,4 @@ class Translator(QObject):
             return text
 
 # Global singleton instance
-translator = Translator()
+translator: Translator = Translator()
