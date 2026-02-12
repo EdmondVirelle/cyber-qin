@@ -99,6 +99,22 @@ class Sidebar(QWidget):
         self._credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._credit.setToolTip(translator.tr("sidebar.credit"))
         layout.addWidget(self._credit)
+
+        self._ff14 = QLabel(translator.tr("sidebar.ff14"))
+        self._ff14.setFont(QFont("Microsoft JhengHei", 8))
+        self._ff14.setWordWrap(True)
+        self._ff14.setContentsMargins(12, 0, 12, 0)
+        self._ff14.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        self._ff14.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._ff14)
+
+        self._vtuber = QLabel(translator.tr("sidebar.vtuber"))
+        self._vtuber.setFont(QFont("Microsoft JhengHei", 8))
+        self._vtuber.setWordWrap(True)
+        self._vtuber.setContentsMargins(12, 0, 12, 0)
+        self._vtuber.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        self._vtuber.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._vtuber)
         layout.addSpacing(2)
 
         self._kofi = QLabel(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
@@ -139,6 +155,8 @@ class Sidebar(QWidget):
         credit_text = translator.tr("sidebar.credit")
         self._credit.setText(credit_text)
         self._credit.setToolTip(credit_text)
+        self._ff14.setText(translator.tr("sidebar.ff14"))
+        self._vtuber.setText(translator.tr("sidebar.vtuber"))
         self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
         from cyber_qin import __version__
         self._ver.setText(translator.tr("sidebar.version", version=__version__))
