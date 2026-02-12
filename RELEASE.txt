@@ -1,19 +1,83 @@
-Release 說明 (v0.8.2)
+Release 說明 (v0.8.8)
 
-新功能與優化
+v0.8.8 — I18N 播放列 + 映射方案 + 曲庫排序
+    • 播放列 (Now Playing Bar)：
+        - 「未載入曲目」、「速度」標籤支援多語系切換。
+        - 所有播放控制 tooltip（播放/暫停/停止/上下一首/循環模式/準備倒數）全部 I18N。
+    • 映射方案 (Live Mode)：
+        - 5 組鍵位名稱 + 描述支援多語系（燕雲36鍵/FF14 37鍵/通用24/48/88鍵）。
+        - 移調旋鈕後綴（八度/Octave/オクターブ/옥타브）隨語系變化。
+    • 曲庫 (Library)：
+        - 排序選單（預設順序/名稱/BPM/音符數/時長）支援多語系。
+        - 搜尋列 placeholder 隨語系變化。
+    • 側邊欄修復：Credit 文字啟用自動換行，縮小字體防止裁切。
+
+v0.8.7 — I18N 映射方案名稱/描述、曲庫排序、移調後綴
+    • 新增 15 組翻譯 key × 5 語系。
+    • mapping_schemes.py 新增 translated_name() / translated_desc() 方法。
+    • track_list.py 排序選單與搜尋列改用 translator。
+    • live_mode_view.py 映射下拉、描述、移調後綴全部 I18N。
+
+v0.8.6 — 修復側邊欄底部文字裁切
+    • 啟用 Credit 標籤 word-wrap。
+    • 字體縮小至 8pt，增加 12px 水平 padding。
+    • 精簡 EN/JA/KO Credit 字串長度。
+
+v0.8.5 — 修復 AnimatedNavButton 缺少 set_text 方法
+    • 新增 set_text() 方法至 AnimatedNavButton。
+    • 移除重複的按鈕 append 操作。
+
+v0.8.4 — 修復主題常數 AttributeError
+    • 移除對字串常數的 .name() 呼叫。
+
+v0.8.3 — 修復語言選擇器 ModuleNotFoundError
+    • 修正 language_selector 中的 theme import 路徑。
+
+v0.8.2 — CI/CD 修復 + 編輯器 UX 大改版
     • 編輯器 UX 大改版：
         - 新增平滑播放游標 (30ms 更新率)。
-        - 鋼琴鍵盤 (PianoDisplay) 與捲軸 (NoteRoll) 支援播放時的動態發光回饋。
-        - 播放按鈕狀態回饋 (播放時顯示紅色停止鈕)。
-    • FF14 鍵位更新：
-        - 新增 "FF14 37-Key" 方案 (C3-C6 Diatonic)，取代舊版 32 鍵方案。
-        - 支援自然音階 (1-7, Q-U, A-K) 與 Ctrl 升降號。
-    • MIDI 匯出增強：支援 Type 1 多軌 MIDI 檔案匯出 (保留音軌分離與頻道資訊)。
-    • 效能優化：大幅提升編輯器在多音符專案下的索引效能 (O(N²) → O(N))。
-    • 穩定性修復：修正快速拖曳或播放時可能導致的崩潰問題。
-    • 多語言支援 (I18N)：
-        - 新增繁體中文、簡體中文、日文、韓文與英文介面切換。
-        - 側邊欄新增語言選擇按鈕。
+        - 鋼琴鍵盤與捲軸支援播放時的動態發光回饋。
+        - 播放按鈕狀態回饋。
+    • FF14 鍵位更新：新增 FF14 37-Key 方案 (C3-C6 Diatonic)。
+    • MIDI 匯出增強：支援 Type 1 多軌 MIDI 檔案匯出。
+    • 效能優化：多音符專案索引效能 O(N²) → O(N)。
+    • 多語言支援 (I18N)：繁中/簡中/日/韓/英 介面切換 + 側邊欄語言選擇按鈕。
+
+v0.8.1 — 版本號修正
+    • 修正 release asset 衝突。
+
+v0.8.0 — 多語言支援 (Multi-Language Support)
+    • 新增繁體中文、簡體中文、日文、韓文與英文介面切換。
+    • 側邊欄新增語言選擇按鈕。
+    • 新增 FF14 37-Key 方案、英文 README。
+
+v0.7.5 — 編輯器說明對話框 + Release 模板
+    • 新增編輯器 Help 按鈕（書本+? 圖示）→ 操作指南對話框。
+    • 修正 release workflow 範本（7-Zip 提示 + 免責聲明）。
+    • 新增 Ko-fi 贊助連結。
+
+v0.7.4 — 編輯器說明對話框 + Ko-fi 連結
+    • 新增編輯器 Help 對話框，涵蓋所有快捷鍵與編輯操作。
+    • 新增 Ko-fi 贊助連結至側邊欄與 README。
+    • .gitignore 新增 .mid/.midi 檔案忽略規則。
+
+v0.7.3 — 修復捆綁 VC Runtime DLLs
+    • 捆綁 Visual C++ Runtime DLL，解決部分使用者啟動失敗。
+    • 新增開發模式視窗圖示。
+
+v0.7.2 — 重寫 README + 更新 ONBOARDING
+    • 重寫 README.md。
+    • 更新 ONBOARDING.md 統計資料。
+
+v0.7.1 — 自訂應用圖示 + 側邊欄 Credit
+    • 新增自訂應用程式圖示。
+    • 側邊欄新增 Credit 標籤。
+
+v0.7.0 — 編輯器 UX 大改版 + 模型重構
+    • 編輯器 UX 大改版：Beat model、專案檔案系統。
+    • 修復 PyInstaller 打包問題。
+
+--------------------------------------------------------------------------------
 
 安裝須知
     請使用 7-Zip 解壓縮。
@@ -30,22 +94,81 @@ Release 說明 (v0.8.2)
 
 --------------------------------------------------------------------------------
 
-Release Notes (v0.8.2)
+Release Notes (v0.8.8)
 
-New Features & Enhancements
-    • Editor UX Overhaul:
-        - Smooth playback cursor (30ms refresh rate).
-        - Dynamic active note glow in PianoDisplay and NoteRoll during playback.
-        - Play button state feedback (Shows red "Stop" button when playing).
-    • FF14 Key Mapping Update:
-        - Added "FF14 37-Key" scheme (C3-C6 Diatonic), replacing the old 32-key scheme.
-        - Supports natural scale (1-7, Q-U, A-K) with Ctrl-modifier for accidentals.
-    • Enhanced MIDI Export: Support for Type 1 multi-track MIDI export (preserves track separation and channel info).
-    • Performance Optimization: Significantly improved indexing performance for projects with many notes (O(N²) → O(N)).
-    • Stability Fixes: Fixed crashes that could occur during rapid scrubbing or playback.
-    • Multi-Language Support (I18N):
-        - Added interface support for Traditional Chinese, Simplified Chinese, Japanese, Korean, and English.
-        - Added language selector to the sidebar.
+v0.8.8 — I18N: Player Bar + Mapping Schemes + Library Sort
+    • Now Playing Bar:
+        - "No Track Loaded" and "Speed" labels now support language switching.
+        - All transport tooltips (play/pause/stop/prev/next/repeat/countdown) fully internationalized.
+    • Mapping Schemes (Live Mode):
+        - 5 scheme names + descriptions support all languages (WWM 36/FF14 37/Generic 24/48/88).
+        - Transpose spinner suffix (Octave/八度/オクターブ/옥타브) follows language.
+    • Library:
+        - Sort menu (Default/Name/BPM/Notes/Duration) supports all languages.
+        - Search placeholder follows language.
+    • Sidebar fix: Credit text now word-wraps, smaller fonts prevent clipping.
+
+v0.8.7 — I18N: Mapping Scheme Names/Descriptions, Sort Labels, Transpose Suffix
+    • Added 15 translation keys × 5 languages.
+    • mapping_schemes.py: added translated_name() / translated_desc() methods.
+    • track_list.py: sort menu and search placeholder use translator.
+    • live_mode_view.py: scheme combo, description, transpose suffix all I18N.
+
+v0.8.6 — Fix Sidebar Bottom Text Clipping
+    • Enable word-wrap on Credit label.
+    • Reduce font to 8pt, add 12px horizontal padding.
+    • Shorten EN/JA/KO credit strings.
+
+v0.8.5 — Fix Missing set_text on AnimatedNavButton
+    • Add set_text() method to AnimatedNavButton.
+    • Remove duplicate button append.
+
+v0.8.4 — Fix Theme Constant AttributeError
+    • Remove .name() calls on string theme constants.
+
+v0.8.3 — Fix LanguageSelector ModuleNotFoundError
+    • Correct theme import path in language_selector.
+
+v0.8.2 — CI/CD Fixes + Editor UX Overhaul
+    • Editor UX overhaul: smooth playback cursor, dynamic glow, button state feedback.
+    • FF14 37-Key scheme (C3-C6 Diatonic).
+    • Type 1 multi-track MIDI export.
+    • Performance: note indexing O(N²) → O(N).
+    • Multi-language support (I18N): ZH-TW/ZH-CN/JA/KO/EN with sidebar language selector.
+
+v0.8.1 — Version Bump
+    • Fix release asset conflict.
+
+v0.8.0 — Multi-Language Support
+    • Interface support for Traditional Chinese, Simplified Chinese, Japanese, Korean, and English.
+    • Language selector in sidebar.
+    • Added FF14 37-Key scheme, English README.
+
+v0.7.5 — Editor Help Dialog + Release Template
+    • Help button (book+? icon) → scrollable 操作指南 dialog.
+    • Fix release workflow template (7-Zip notice + disclaimer).
+    • Ko-fi support link.
+
+v0.7.4 — Editor Help Dialog + Ko-fi Link
+    • Editor Help dialog covering all shortcuts and operations.
+    • Ko-fi link in sidebar and README.
+    • .gitignore: ignore .mid/.midi files.
+
+v0.7.3 — Bundle VC Runtime DLLs
+    • Bundle Visual C++ Runtime DLLs for users without VC Redistributable.
+    • Add window icon for dev mode.
+
+v0.7.2 — Rewrite README + Update ONBOARDING
+    • Rewrite README.md.
+    • Update ONBOARDING.md stats.
+
+v0.7.1 — Custom App Icon + Sidebar Credit
+    • Custom application icon.
+    • Sidebar credit label.
+
+v0.7.0 — Editor UX Overhaul + Model Refactor
+    • Editor UX overhaul: beat model, project file system.
+    • PyInstaller bundling fix.
 
 Installation Note
     Please use 7-Zip to extract the archive.
