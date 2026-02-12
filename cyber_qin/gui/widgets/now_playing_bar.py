@@ -10,6 +10,7 @@ from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from ...core.midi_file_player import PlaybackState
+from ...core.translator import translator
 from ..theme import ACCENT, BG_SCROLL, DIVIDER, TEXT_PRIMARY, TEXT_SECONDARY
 from .animated_widgets import TransportButton
 from .mini_piano import MiniPiano
@@ -55,7 +56,7 @@ class NowPlayingBar(QWidget):
         # Track info (left)
         info_layout = QVBoxLayout()
         info_layout.setSpacing(0)
-        self._title_label = QLabel("未載入曲目")
+        self._title_label = QLabel(translator.tr("player.no_track"))
         self._title_label.setFont(QFont("Microsoft JhengHei", 12, QFont.Weight.DemiBold))
         self._title_label.setStyleSheet(f"color: {TEXT_PRIMARY}; background: transparent;")
         info_layout.addWidget(self._title_label)
@@ -73,27 +74,27 @@ class NowPlayingBar(QWidget):
         transport.setSpacing(8)
 
         self._repeat_btn = TransportButton("repeat", size=32, accent=False)
-        self._repeat_btn.setToolTip("循環模式: 關閉")
+        self._repeat_btn.setToolTip(translator.tr("player.repeat.mode.off"))
         self._repeat_btn.clicked.connect(self.repeat_clicked)
         transport.addWidget(self._repeat_btn)
 
         self._prev_btn = TransportButton("skip_prev", size=36, accent=False)
-        self._prev_btn.setToolTip("上一首 (Ctrl+←)")
+        self._prev_btn.setToolTip(translator.tr("player.prev"))
         self._prev_btn.clicked.connect(self.prev_clicked)
         transport.addWidget(self._prev_btn)
 
         self._stop_btn = TransportButton("stop", size=36, accent=False)
-        self._stop_btn.setToolTip("停止")
+        self._stop_btn.setToolTip(translator.tr("player.stop"))
         self._stop_btn.clicked.connect(self.stop_clicked)
         transport.addWidget(self._stop_btn)
 
         self._play_btn = TransportButton("play", size=48, accent=True)
-        self._play_btn.setToolTip("播放 / 暫停 (Space)")
+        self._play_btn.setToolTip(translator.tr("player.play"))
         self._play_btn.clicked.connect(self.play_pause_clicked)
         transport.addWidget(self._play_btn)
 
         self._next_btn = TransportButton("skip_next", size=36, accent=False)
-        self._next_btn.setToolTip("下一首 (Ctrl+→)")
+        self._next_btn.setToolTip(translator.tr("player.next"))
         self._next_btn.clicked.connect(self.next_clicked)
         transport.addWidget(self._next_btn)
 
@@ -126,6 +127,8 @@ class NowPlayingBar(QWidget):
         self._interp_timer = QTimer(self)
         self._interp_timer.setInterval(33)  # ~30 fps
         self._interp_timer.timeout.connect(self._on_interpolation_tick)
+
+        translator.language_changed.connect(self._update_text)
 
     def paintEvent(self, event) -> None:  # noqa: N802
         """Gradient background: 墨色 top fading to BG_SCROLL."""
@@ -167,13 +170,13 @@ class NowPlayingBar(QWidget):
         self._state = PlaybackState(state)
         if self._state == PlaybackState.PLAYING:
             self._play_btn.icon_type = "pause"
-            self._play_btn.setToolTip("暫停")
+            self._play_btn.setToolTip(translator.tr("player.pause"))
             self._is_playing = True
             self._last_update_wall = time.perf_counter()
             self._interp_timer.start()
         else:
             self._play_btn.icon_type = "play"
-            self._play_btn.setToolTip("播放")
+            self._play_btn.setToolTip(translator.tr("player.play"))
             self._is_playing = False
             self._interp_timer.stop()
 
@@ -183,8 +186,8 @@ class NowPlayingBar(QWidget):
             if not hasattr(self, "_saved_time") or self._saved_time is None:
                 self._saved_title = self._title_label.text()
                 self._saved_time = self._time_label.text()
-            self._title_label.setText(f"準備中... {remaining}")
-            self._time_label.setText("切換到遊戲視窗")
+            self._title_label.setText(translator.tr("player.countdown", n=remaining))
+            self._time_label.setText(translator.tr("player.switch_window"))
         else:
             # Count-in done — restore the saved title AND time label
             saved = getattr(self, "_saved_title", None)
@@ -221,9 +224,9 @@ class NowPlayingBar(QWidget):
         """Update the repeat button icon and tooltip to reflect *mode*."""
         self._repeat_mode = mode
         _labels = {
-            RepeatMode.OFF: ("repeat", "循環模式: 關閉", TEXT_SECONDARY),
-            RepeatMode.REPEAT_ALL: ("repeat", "循環模式: 全部循環", ACCENT),
-            RepeatMode.REPEAT_ONE: ("repeat_one", "循環模式: 單曲重複", ACCENT),
+            RepeatMode.OFF: ("repeat", translator.tr("player.repeat.mode.off"), TEXT_SECONDARY),
+            RepeatMode.REPEAT_ALL: ("repeat", translator.tr("player.repeat.mode.all"), ACCENT),
+            RepeatMode.REPEAT_ONE: ("repeat_one", translator.tr("player.repeat.mode.one"), ACCENT),
         }
         icon, tip, _color = _labels[mode]
         self._repeat_btn.icon_type = icon
@@ -232,8 +235,24 @@ class NowPlayingBar(QWidget):
         self._repeat_btn._accent = mode != RepeatMode.OFF
         self._repeat_btn.update()
 
+    def _update_text(self) -> None:
+        """Refresh all translatable labels and tooltips."""
+        # Only update title if no track is loaded (playing track name is data, not i18n)
+        if self._state == PlaybackState.STOPPED and self._duration == 0.0:
+            self._title_label.setText(translator.tr("player.no_track"))
+        # Tooltips
+        self._prev_btn.setToolTip(translator.tr("player.prev"))
+        self._next_btn.setToolTip(translator.tr("player.next"))
+        self._stop_btn.setToolTip(translator.tr("player.stop"))
+        if self._state == PlaybackState.PLAYING:
+            self._play_btn.setToolTip(translator.tr("player.pause"))
+        else:
+            self._play_btn.setToolTip(translator.tr("player.play"))
+        # Re-apply repeat tooltip
+        self.set_repeat_mode(self._repeat_mode)
+
     def reset(self) -> None:
-        self._title_label.setText("未載入曲目")
+        self._title_label.setText(translator.tr("player.no_track"))
         self._time_label.setText("0:00 / 0:00")
         self._progress.set_progress(0, 0)
         self._play_btn.icon_type = "play"

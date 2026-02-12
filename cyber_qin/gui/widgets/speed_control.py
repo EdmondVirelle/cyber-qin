@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QWidget
 
 from ...core.constants import DEFAULT_PLAYBACK_SPEED, PLAYBACK_SPEED_PRESETS
+from ...core.translator import translator
 from ..theme import TEXT_SECONDARY
 
 
@@ -20,9 +21,9 @@ class SpeedControl(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
-        label = QLabel("速度")
-        label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
-        layout.addWidget(label)
+        self._label = QLabel(translator.tr("player.speed"))
+        self._label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        layout.addWidget(self._label)
 
         self._combo = QComboBox()
         self._combo.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -35,6 +36,12 @@ class SpeedControl(QWidget):
         self._combo.currentIndexChanged.connect(self._on_changed)
         self._combo.setFixedWidth(70)
         layout.addWidget(self._combo)
+
+        translator.language_changed.connect(self._update_text)
+
+    def _update_text(self) -> None:
+        """Update label text on language change."""
+        self._label.setText(translator.tr("player.speed"))
 
     def _on_changed(self, index: int) -> None:
         speed = self._combo.itemData(index)

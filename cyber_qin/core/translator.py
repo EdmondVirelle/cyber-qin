@@ -110,6 +110,20 @@ class Translator(QObject):
 
                 # Transpose suffix
                 "live.transpose.suffix": " Octave",
+
+                # Player bar
+                "player.no_track": "No Track Loaded",
+                "player.speed": "Speed",
+                "player.countdown": "Get Ready... {n}",
+                "player.switch_window": "Switch to game window",
+                "player.play": "Play / Pause (Space)",
+                "player.pause": "Pause",
+                "player.stop": "Stop",
+                "player.prev": "Previous (Ctrl+←)",
+                "player.next": "Next (Ctrl+→)",
+                "player.repeat.mode.off": "Repeat: Off",
+                "player.repeat.mode.all": "Repeat: All",
+                "player.repeat.mode.one": "Repeat: One",
             },
             "zh_tw": {
                 "app.title": "賽博琴仙",
@@ -190,6 +204,19 @@ class Translator(QObject):
                 "lib.sort.duration": "時長",
 
                 "live.transpose.suffix": " 八度",
+
+                "player.no_track": "未載入曲目",
+                "player.speed": "速度",
+                "player.countdown": "準備中... {n}",
+                "player.switch_window": "切換到遊戲視窗",
+                "player.play": "播放 / 暫停 (Space)",
+                "player.pause": "暫停",
+                "player.stop": "停止",
+                "player.prev": "上一首 (Ctrl+←)",
+                "player.next": "下一首 (Ctrl+→)",
+                "player.repeat.mode.off": "循環模式: 關閉",
+                "player.repeat.mode.all": "循環模式: 全部循環",
+                "player.repeat.mode.one": "循環模式: 單曲重複",
             },
             "zh_cn": {
                 "app.title": "赛博琴仙",
@@ -270,6 +297,19 @@ class Translator(QObject):
                 "lib.sort.duration": "时长",
 
                 "live.transpose.suffix": " 八度",
+
+                "player.no_track": "未载入曲目",
+                "player.speed": "速度",
+                "player.countdown": "准备中... {n}",
+                "player.switch_window": "切换到游戏窗口",
+                "player.play": "播放 / 暂停 (Space)",
+                "player.pause": "暂停",
+                "player.stop": "停止",
+                "player.prev": "上一首 (Ctrl+←)",
+                "player.next": "下一首 (Ctrl+→)",
+                "player.repeat.mode.off": "循环模式: 关闭",
+                "player.repeat.mode.all": "循环模式: 全部循环",
+                "player.repeat.mode.one": "循环模式: 单曲重复",
             },
              "ja": {
                 "app.title": "サイバー琴仙",
@@ -350,6 +390,19 @@ class Translator(QObject):
                 "lib.sort.duration": "時間",
 
                 "live.transpose.suffix": " オクターブ",
+
+                "player.no_track": "トラック未読み込み",
+                "player.speed": "速度",
+                "player.countdown": "準備中... {n}",
+                "player.switch_window": "ゲームウィンドウへ切替",
+                "player.play": "再生 / 一時停止 (Space)",
+                "player.pause": "一時停止",
+                "player.stop": "停止",
+                "player.prev": "前の曲 (Ctrl+←)",
+                "player.next": "次の曲 (Ctrl+→)",
+                "player.repeat.mode.off": "リピート: オフ",
+                "player.repeat.mode.all": "リピート: 全曲",
+                "player.repeat.mode.one": "リピート: 1曲",
             },
             "ko": {
                 "app.title": "사이버 琴仙",
@@ -430,6 +483,19 @@ class Translator(QObject):
                 "lib.sort.duration": "시간",
 
                 "live.transpose.suffix": " 옥타브",
+
+                "player.no_track": "트랙 미로드",
+                "player.speed": "속도",
+                "player.countdown": "준비 중... {n}",
+                "player.switch_window": "게임 창으로 전환",
+                "player.play": "재생 / 일시정지 (Space)",
+                "player.pause": "일시정지",
+                "player.stop": "정지",
+                "player.prev": "이전 곡 (Ctrl+←)",
+                "player.next": "다음 곡 (Ctrl+→)",
+                "player.repeat.mode.off": "반복: 끔",
+                "player.repeat.mode.all": "반복: 전체",
+                "player.repeat.mode.one": "반복: 한 곡",
             }
         }
 
