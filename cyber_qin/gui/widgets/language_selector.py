@@ -7,7 +7,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QPushButton, QWidget
 
 from ...core.translator import LANGUAGES, translator
-from ...theme import ACCENT_GOLD, BG_HOVER, TEXT_PRIMARY, TEXT_SECONDARY
+from ..theme import ACCENT_GOLD, BG_HOVER, TEXT_PRIMARY, TEXT_SECONDARY
 
 
 class LanguageSelector(QPushButton):
