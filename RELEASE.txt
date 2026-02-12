@@ -5,6 +5,9 @@ Release 說明 (v0.8.0)
         - 新增平滑播放游標 (30ms 更新率)。
         - 鋼琴鍵盤 (PianoDisplay) 與捲軸 (NoteRoll) 支援播放時的動態發光回饋。
         - 播放按鈕狀態回饋 (播放時顯示紅色停止鈕)。
+    • FF14 鍵位更新：
+        - 新增 "FF14 37-Key" 方案 (C3-C6 Diatonic)，取代舊版 32 鍵方案。
+        - 支援自然音階 (1-7, Q-U, A-K) 與 Ctrl 升降號。
     • MIDI 匯出增強：支援 Type 1 多軌 MIDI 檔案匯出 (保留音軌分離與頻道資訊)。
     • 效能優化：大幅提升編輯器在多音符專案下的索引效能 (O(N²) → O(N))。
     • 穩定性修復：修正快速拖曳或播放時可能導致的崩潰問題。
@@ -16,9 +19,37 @@ Release 說明 (v0.8.0)
 燕雲十六聲：葉微雨
     贊助連結：https://ko-fi.com/virelleedmond
 
-
 免責聲明
     本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
     在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
     開發者不對因使用本工具導致的帳號處分或任何損失承擔責任。
     下載或執行本程式即表示您理解並接受上述事項。
+
+--------------------------------------------------------------------------------
+
+Release Notes (v0.8.0)
+
+New Features & Enhancements
+    • Editor UX Overhaul:
+        - Smooth playback cursor (30ms refresh rate).
+        - Dynamic active note glow in PianoDisplay and NoteRoll during playback.
+        - Play button state feedback (Shows red "Stop" button when playing).
+    • FF14 Key Mapping Update:
+        - Added "FF14 37-Key" scheme (C3-C6 Diatonic), replacing the old 32-key scheme.
+        - Supports natural scale (1-7, Q-U, A-K) with Ctrl-modifier for accidentals.
+    • Enhanced MIDI Export: Support for Type 1 multi-track MIDI export (preserves track separation and channel info).
+    • Performance Optimization: Significantly improved indexing performance for projects with many notes (O(N²) → O(N)).
+    • Stability Fixes: Fixed crashes that could occur during rapid scrubbing or playback.
+
+Installation Note
+    Please use 7-Zip to extract the archive.
+    Windows built-in extraction tools may not correctly handle Unicode paths, causing the application to fail on startup.
+
+Where Winds Meet: Ye Weiyu
+    Sponsor: https://ko-fi.com/virelleedmond
+
+Disclaimer
+    This tool is an open-source personal project for MIDI music performance enthusiasts.
+    Using third-party tools in games may violate the game's Terms of Service. Please use at your own risk.
+    The developer is not responsible for any account penalties or losses resulting from the use of this tool.
+    Downloading or running this program constitutes your understanding and acceptance of these terms.

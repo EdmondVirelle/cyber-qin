@@ -43,39 +43,59 @@ def _build_wwm_36() -> MappingScheme:
     )
 
 
-def _build_ff14_32() -> MappingScheme:
-    """FF14 32鍵 — 4 rows of 8 keys."""
+def _build_ff14_37() -> MappingScheme:
+    """FF14 37鍵 — 3 Octaves + High C (Diatonic)."""
     m: dict[int, KeyMapping] = {}
-    # Row 1 (low): A S D F G H J K — MIDI 48-55
-    row1_keys = ["A", "S", "D", "F", "G", "H", "J", "K"]
-    for i, key in enumerate(row1_keys):
-        m[48 + i] = _km(key)
 
-    # Row 2: Q W E R T Y U I — MIDI 56-63
-    row2_keys = ["Q", "W", "E", "R", "T", "Y", "U", "I"]
-    for i, key in enumerate(row2_keys):
-        m[56 + i] = _km(key)
+    def map_octave(base_note, keys):
+        # keys: [C, D, E, F, G, A, B]
+        # C
+        m[base_note + 0] = _km(keys[0], Modifier.NONE)
+        # C# (Ctrl + C)
+        m[base_note + 1] = _km(keys[0], Modifier.CTRL)
+        # D
+        m[base_note + 2] = _km(keys[1], Modifier.NONE)
+        # D# (Ctrl + D)
+        m[base_note + 3] = _km(keys[1], Modifier.CTRL)
+        # E
+        m[base_note + 4] = _km(keys[2], Modifier.NONE)
+        # F
+        m[base_note + 5] = _km(keys[3], Modifier.NONE)
+        # F# (Ctrl + F)
+        m[base_note + 6] = _km(keys[3], Modifier.CTRL)
+        # G
+        m[base_note + 7] = _km(keys[4], Modifier.NONE)
+        # G# (Ctrl + G)
+        m[base_note + 8] = _km(keys[4], Modifier.CTRL)
+        # A
+        m[base_note + 9] = _km(keys[5], Modifier.NONE)
+        # A# (Ctrl + A)
+        m[base_note + 10] = _km(keys[5], Modifier.CTRL)
+        # B
+        m[base_note + 11] = _km(keys[6], Modifier.NONE)
 
-    # Row 3: 1 2 3 4 5 6 7 8 — MIDI 64-71
-    row3_keys = ["1", "2", "3", "4", "5", "6", "7", "8"]
-    for i, key in enumerate(row3_keys):
-        m[64 + i] = _km(key)
+    # Row 1 (Low C3-B3): 1 2 3 4 5 6 7
+    map_octave(48, ["1", "2", "3", "4", "5", "6", "7"])
 
-    # Row 4: Ctrl+1 through Ctrl+8 — MIDI 72-79
-    for i in range(8):
-        key = str(i + 1)
-        m[72 + i] = _km(key, Modifier.CTRL)
+    # Row 2 (Mid C4-B4): Q W E R T Y U
+    map_octave(60, ["Q", "W", "E", "R", "T", "Y", "U"])
+
+    # Row 3 (High C5-B5): A S D F G H J
+    map_octave(72, ["A", "S", "D", "F", "G", "H", "J"])
+
+    # High C (C6): K
+    m[84] = _km("K", Modifier.NONE)
 
     return MappingScheme(
-        id="ff14_32",
-        name="FF14 32鍵",
+        id="ff14_37",
+        name="FF14 37鍵",
         game="FF14",
-        key_count=32,
-        midi_range=(48, 79),
+        key_count=37,
+        midi_range=(48, 84),
         mapping=m,
-        description="4×8 佈局：ASDFGHJK / QWERTYUI / 12345678 / Ctrl+1~8",
-        rows=4,
-        keys_per_row=8,
+        description="3×12 Diatonic: 數字(低) / QWER(中) / ASDF(高)，Ctrl=升降",
+        rows=3,
+        keys_per_row=12,  # Approx width for display (7 diatonic + accidentals visually compressed)
     )
 
 
@@ -256,7 +276,7 @@ def _init_registry() -> None:
         return
     for builder in [
         _build_wwm_36,
-        _build_ff14_32,
+        _build_ff14_37,
         _build_generic_24,
         _build_generic_48,
         _build_generic_88,

@@ -1,6 +1,6 @@
-# 賽博琴仙 Cyber Qin Xian
+# Cyber Qin
 
-**用真實鋼琴演奏遊戲中的古琴 — Play a real piano, and the game character plays in sync.**
+**Play a real piano, and the game character plays in sync.**
 
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
@@ -8,56 +8,58 @@
 ![Version](https://img.shields.io/badge/Version-0.8.0-green)
 ![Tests](https://img.shields.io/badge/Tests-180%20passed-brightgreen)
 
----
-
-## 簡介
-
-**賽博琴仙** 是一款即時 MIDI-to-Keyboard 映射工具，專為《燕雲十六聲》(*Where Winds Meet*) 等遊戲設計。將 USB MIDI 鍵盤（如 Roland FP-30X）的琴鍵訊號，以 **< 2ms 延遲** 轉換為 DirectInput 掃描碼按鍵，讓遊戲角色與你的演奏完全同步。
-
-支援即時演奏與 MIDI 檔案自動播放兩種模式，內建智慧移調、八度摺疊、碰撞去重等預處理管線，並提供 5 種可切換的鍵位配置方案。
+[中文說明 (Traditional Chinese)](README_TW.md)
 
 ---
 
-## 展示
+## Introduction
+
+**Cyber Qin** is a real-time MIDI-to-Keyboard mapping tool designed for games like *Where Winds Meet*. It converts signals from a USB MIDI keyboard (e.g., Roland FP-30X) into DirectInput scan codes with **< 2ms latency**, allowing your in-game character to perform in perfect sync with your real-world playing.
+
+It supports both real-time performance and MIDI file auto-playback modes. Built-in features include an intelligent preprocessing pipeline for transposition, octave folding, and collision deduplication, along with 5 switchable key mapping schemes.
+
+---
+
+## Demo
 
 > ![Demo Screenshot](docs/screenshot-placeholder.png)
 >
-> *即時演奏模式 — 鋼琴鍵盤視覺化 + 低延遲監控*
+> *Real-time Performance Mode — Visualized Piano Keyboard + Low-Latency Monitoring*
 
 ---
 
-## 功能特色
+## Features
 
-### 核心能力
+### Core Capabilities
 
-| 功能 | 說明 |
-|------|------|
-| **即時 MIDI 映射** | MIDI callback 直接在 rtmidi 執行緒上觸發 `SendInput`，不經過 Qt 事件佇列，延遲 < 2ms |
-| **5 種鍵位方案** | 燕雲十六聲 36 鍵、FF14 32 鍵、通用 24/48/88 鍵，執行時即時切換 |
-| **智慧 MIDI 預處理** | 3 階段管線：全曲智慧移調 → 八度摺疊 → 碰撞去重（詳見[技術深潛](#智慧-midi-預處理管線)） |
-| **MIDI 檔案自動播放** | 匯入 `.mid` 檔案，0.25x - 2.0x 變速控制，可拖曳進度條，4 拍節拍器倒數 |
-| **修飾鍵閃擊技術** | `Shift↓ → Key↓ → Shift↑` 以單一批次送出，防止修飾鍵污染後續和弦 |
-| **自動重連** | MIDI 裝置斷線時每 3 秒輪詢，插回自動恢復 |
-| **卡鍵看門狗** | 偵測按住超過 10 秒的按鍵並自動釋放，防止遊戲內角色卡死 |
+| Feature | Description |
+|---------|-------------|
+| **Real-time MIDI Mapping** | MIDI callbacks trigger `SendInput` directly on the rtmidi thread, bypassing the Qt event queue for < 2ms latency. |
+| **5 Key Schemes** | Includes *Where Winds Meet* (36-key), FF14 (32-key), and generic 24/48/88-key layouts, switchable at runtime. |
+| **Smart Preprocessing** | 3-stage pipeline: Smart Transposition → Octave Folding → Collision Deduplication (see [Tech Deep Dive](#tech-deep-dive)). |
+| **MIDI Auto-Playback** | Import `.mid` files with 0.25x - 2.0x speed control, draggable progress bar, and 4-beat countdown. |
+| **Modifier Flash Tech** | Sends `Shift↓ → Key↓ → Shift↑` as a single batch to prevent modifier keys from polluting subsequent chords. |
+| **Auto-Reconnect** | Polls every 3 seconds if the MIDI device disconnects and automatically restores connection upon reconnection. |
+| **Anti-Stuck Watchdog** | Detects keys held for more than 10 seconds and automatically releases them to prevent in-game character lock-ups. |
 
-### 使用者介面
+### User Interface
 
-| 功能 | 說明 |
-|------|------|
-| **賽博墨韻主題** | 武俠賽博龐克暗色主題，霓虹青 (`#00F0FF`) + 宣紙白暖色調 |
-| **向量圖示** | 全部以 QPainter 繪製，無外部圖片依賴，任意縮放不失真 |
-| **動態鋼琴鍵盤** | 即時顯示按鍵狀態，帶霓虹光暈動畫效果 |
-| **曲庫管理** | 匯入、搜尋、依名稱 / BPM / 音符數 / 時長排序 |
-| **底部播放列** | Spotify 風格，含迷你鋼琴、進度條、速度控制 |
+| Feature | Description |
+|---------|-------------|
+| **Cyber Ink Theme** | Wuxia Cyberpunk dark theme featuring Neon Cyan (`#00F0FF`) + Rice Paper White warm tones. |
+| **Vector Icons** | All icons drawn via `QPainter` with no external image dependencies, scaling perfectly at any resolution. |
+| **Dynamic Piano** | Real-time key state visualization with neon glow animation effects. |
+| **Library Management** | Import, search, and sort tracks by Name, BPM, Note Count, or Duration. |
+| **Player Bar** | Spotify-style bottom bar with mini-piano, progress slider, and speed controls. |
 
 ---
 
-## 系統架構
+## System Architecture
 
-### 資料流
+### Data Flow
 
 ```
-                          即時演奏模式
+                          Real-time Mode
 ┌─────────────┐    USB    ┌──────────────┐  callback  ┌───────────┐  lookup  ┌──────────────┐  SendInput  ┌──────┐
 │ Roland FP-30X│─────────→│ python-rtmidi │──────────→│ KeyMapper │────────→│ KeySimulator │───────────→│ Game │
 └─────────────┘           └──────────────┘            └───────────┘         └──────────────┘            └──────┘
@@ -65,12 +67,12 @@
                                   │
                            Qt signals (async)
                                   │
-                         Qt Main Thread → GUI 更新
+                         Qt Main Thread → GUI Update
 
 
-                          自動播放模式
+                          Auto-Playback Mode
 ┌───────────┐  parse  ┌─────────────────┐  preprocess  ┌──────────────────┐  timed events  ┌──────────────┐
-│ .mid 檔案 │────────→│ MidiFileParser  │────────────→│ MidiPreprocessor │──────────────→│ PlaybackWorker│
+│ .mid File │────────→│ MidiFileParser  │────────────→│ MidiPreprocessor │──────────────→│ PlaybackWorker│
 └───────────┘         └─────────────────┘              └──────────────────┘               └──────┬───────┘
                                                                                                  │
                                                               lookup + SendInput                 │
@@ -79,186 +81,186 @@
                                                        └───────────┴──────────────┘
 ```
 
-### 延遲最佳化路徑
+### Latency Optimization Path
 
 ```
-MIDI Note On 訊號
+MIDI Note On Signal
     │
     ├── [rtmidi C++ thread] ← SetThreadPriority(TIME_CRITICAL)
     │       │
-    │       ├── KeyMapper.lookup()        ~0.01ms  (dict 查表)
+    │       ├── KeyMapper.lookup()        ~0.01ms  (dict lookup)
     │       ├── KeySimulator.press()      ~0.05ms  (SendInput syscall)
-    │       └── Qt signal emit            ~0.00ms  (跨執行緒佇列，非同步)
+    │       └── Qt signal emit            ~0.00ms  (Cross-thread queue, async)
     │
-    └── 總延遲: < 2ms (MIDI USB polling + callback + SendInput)
+    └── Total Latency: < 2ms (MIDI USB polling + callback + SendInput)
 
-    ※ GUI 更新走 Qt 訊號佇列，不佔用關鍵路徑
+    ※ GUI updates use the Qt signal queue and do not block the critical path.
 ```
 
 ---
 
-## 技術棧
+## Tech Stack
 
-| 層級 | 技術 | 用途 |
-|------|------|------|
-| **MIDI I/O** | `mido` + `python-rtmidi` | MIDI 裝置通訊、`.mid` 檔案解析 |
-| **鍵盤模擬** | `ctypes` + Win32 `SendInput` | DirectInput 掃描碼按鍵注入 |
-| **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒訊號 |
-| **建置** | PyInstaller | 單資料夾可執行檔封裝 |
-| **CI/CD** | GitHub Actions | 多版本測試 + tag 自動發佈 |
-| **程式碼品質** | Ruff + pytest | Linting + 180 項測試 |
+| Layer | Technology | Usage |
+|-------|------------|-------|
+| **MIDI I/O** | `mido` + `python-rtmidi` | MIDI device communication, `.mid` file parsing. |
+| **Input Sim** | `ctypes` + Win32 `SendInput` | DirectInput scan code injection. |
+| **GUI** | PyQt6 | Desktop interface, event loop, cross-thread signals. |
+| **Build** | PyInstaller | Single-folder executable packaging. |
+| **CI/CD** | GitHub Actions | Multi-version testing + automated tag releases. |
+| **Quality** | Ruff + pytest | Linting + 180 tests. |
 
 ---
 
-## 快速開始
+## Quick Start
 
-### 系統需求
+### System Requirements
 
-- **作業系統**: Windows 10 / 11（DirectInput 掃描碼僅 Windows 支援）
-- **Python**: 3.11 或以上
-- **MIDI 裝置**: 任何 USB MIDI 鍵盤（已測試 Roland FP-30X）
-- **權限**: 需要以 **系統管理員** 身分執行（`SendInput` 對 DirectInput 遊戲需要提權）
+- **OS**: Windows 10 / 11 (DirectInput scan codes are Windows-only).
+- **Python**: 3.11 or higher.
+- **MIDI Device**: Any USB MIDI keyboard (tested with Roland FP-30X).
+- **Permissions**: Must run as **Administrator** (`SendInput` requires elevation for DirectInput games).
 
-### 安裝
+### Installation
 
 ```bash
-# 1. 複製專案
+# 1. Clone the repository
 git clone https://github.com/EdmondVirelle/cyber-qin.git
 cd cyber-qin
 
-# 2. 安裝（含開發依賴）
+# 2. Install (with dev dependencies)
 pip install -e .[dev]
 ```
 
-### 執行
+### Usage
 
 ```bash
-# 以管理員身分執行
+# Run as Administrator
 cyber-qin
 ```
 
-> **提示**: 若未以管理員身分執行，`SendInput` 對全螢幕 DirectInput 遊戲的按鍵注入會靜默失敗。
+> **Tip**: If not run as Administrator, key injection into full-screen DirectInput games will fail silently.
 
-### 建置獨立執行檔
+### Build Standalone Executable
 
 ```bash
 python scripts/build.py
-# 輸出: dist/賽博琴仙/ (~95 MB)
+# Output: dist/CyberQin/ (~95 MB)
 ```
 
 ---
 
-## 開發
+## Development
 
-### 測試
+### Testing
 
 ```bash
-# 執行全部 180 項測試（5 個測試檔案）
+# Run all 180 tests (5 test files)
 pytest
 
-# 詳細輸出
+# Verbose output
 pytest -v
 ```
 
-測試完全模擬 `ctypes.windll` 和 `rtmidi`，不需要實體硬體即可執行。
+Tests fully mock `ctypes.windll` and `rtmidi`, allowing execution without physical hardware.
 
-### Lint
+### Linting
 
 ```bash
-# 檢查
+# Check
 ruff check .
 
-# 自動修復
+# Auto-fix
 ruff check --fix .
 ```
 
-### 專案統計
+### Project Stats
 
-| 指標 | 數值 |
-|------|------|
-| 原始碼行數 | ~5,000 LOC |
-| 模組數量 | 26 |
-| 測試數量 | 180 |
-| 測試檔案 | 5 |
-| 測試涵蓋平台 | Python 3.11 / 3.12 / 3.13 |
+| Metric | Value |
+|--------|-------|
+| Source Lines | ~5,000 LOC |
+| Modules | 26 |
+| Tests | 180 |
+| Test Files | 5 |
+| Platforms | Python 3.11 / 3.12 / 3.13 |
 
 ---
 
-## 專案結構
+## Project Structure
 
 ```
 cyber_qin/
-├── core/                        # 平台無關核心邏輯
-│   ├── constants.py             # Win32 掃描碼、MIDI 範圍、計時常數
-│   ├── key_mapper.py            # MIDI 音符 → 按鍵映射查表
-│   ├── key_simulator.py         # ctypes SendInput 封裝（DirectInput 掃描碼）
-│   ├── midi_listener.py         # python-rtmidi 即時輸入 + 自動重連
-│   ├── midi_file_player.py      # MIDI 檔案播放引擎（精準計時 + 4 拍倒數）
-│   ├── midi_preprocessor.py     # 智慧移調 + 八度摺疊 + 碰撞去重管線
-│   ├── mapping_schemes.py       # 5 種可切換鍵位方案註冊表
-│   └── priority.py              # 執行緒優先權 + 高解析度計時器
-├── gui/                         # PyQt6 使用者介面
-│   ├── app_shell.py             # QMainWindow 主框架（Spotify 風格佈局）
-│   ├── icons.py                 # QPainter 向量圖示提供器
-│   ├── theme.py                 # 「賽博墨韻」暗色主題系統
+├── core/                        # Platform-agnostic core logic
+│   ├── constants.py             # Win32 scan codes, MIDI ranges, timing constants
+│   ├── key_mapper.py            # MIDI Note → Key Mapping lookup
+│   ├── key_simulator.py         # ctypes SendInput wrapper (DirectInput scan codes)
+│   ├── midi_listener.py         # python-rtmidi real-time input + auto-reconnect
+│   ├── midi_file_player.py      # MIDI file playback engine (precision timing + countdown)
+│   ├── midi_preprocessor.py     # Smart transposition + octave folding + deduplication pipeline
+│   ├── mapping_schemes.py       # Registry for the 5 switchable key schemes
+│   └── priority.py              # Thread priority + High-resolution timer
+├── gui/                         # PyQt6 User Interface
+│   ├── app_shell.py             # QMainWindow Main Frame (Spotify-style layout)
+│   ├── icons.py                 # QPainter vector icon provider
+│   ├── theme.py                 # "Cyber Ink" dark theme system
 │   ├── views/
-│   │   ├── live_mode_view.py    # 即時演奏頁面
-│   │   └── library_view.py      # 曲庫管理頁面
+│   │   ├── live_mode_view.py    # Real-time performance view
+│   │   └── library_view.py      # Library management view
 │   └── widgets/
-│       ├── piano_display.py     # 動態鋼琴鍵盤（霓虹光暈效果）
-│       ├── mini_piano.py        # 底部迷你鋼琴視覺化
-│       ├── sidebar.py           # 側邊欄導航
-│       ├── now_playing_bar.py   # 底部播放控制列
-│       ├── track_list.py        # 曲目清單元件
-│       ├── progress_bar.py      # 可拖曳進度條
-│       ├── speed_control.py     # 播放速度控制器
-│       ├── log_viewer.py        # 即時事件日誌
-│       ├── status_bar.py        # 狀態列
-│       └── animated_widgets.py  # 動畫基礎元件
+│       ├── piano_display.py     # Dynamic piano keyboard (Neon glow effects)
+│       ├── mini_piano.py        # Bottom mini-piano visualization
+│       ├── sidebar.py           # Sidebar navigation
+│       ├── now_playing_bar.py   # Bottom playback control bar
+│       ├── track_list.py        # Track list component
+│       ├── progress_bar.py      # Draggable progress bar
+│       ├── speed_control.py     # Playback speed controller
+│       ├── log_viewer.py        # Real-time event log
+│       ├── status_bar.py        # Status bar
+│       └── animated_widgets.py  # Base animation components
 └── utils/
-    ├── admin.py                 # UAC 提權檢查
-    └── ime.py                   # 輸入法偵測
+    ├── admin.py                 # UAC elevation check
+    └── ime.py                   # IME detection
 ```
 
 ---
 
-## 技術深潛
+## Tech Deep Dive
 
-### 1. 延遲最佳化：為何不走 Qt 事件佇列
+### 1. Latency Optimization: Why bypass the Qt Event Queue?
 
-遊戲演奏的核心需求是 **低延遲** — 從按下琴鍵到遊戲角色出聲，玩家可感知的上限約 10ms。
+The core requirement for game performance is **low latency** — the imperceptible limit from key press to in-game sound is about 10ms.
 
-典型架構會將 MIDI 事件透過 Qt 訊號傳遞到主執行緒再處理，但 Qt 的事件佇列在 GUI 繁忙時（如重繪動畫）可能引入 5-15ms 的額外延遲。
+Typical architectures pass MIDI events to the main thread via Qt signals, but the Qt event queue can introduce 5-15ms of extra latency when the GUI is busy (e.g., repainting animations).
 
-本專案的做法是 **直接在 rtmidi 的 C++ callback 執行緒上** 執行鍵盤模擬：
+This project executes keyboard simulation **directly on the rtmidi C++ callback thread**:
 
 ```python
 # app_shell.py — MidiProcessor.on_midi_event()
-# 此函式在 rtmidi callback thread 上執行
+# This function runs on the rtmidi callback thread
 
 def on_midi_event(self, event_type, note, velocity):
-    # 1. 首次呼叫時提升執行緒優先權
+    # 1. Boost thread priority on first call
     if not self._priority_set:
         set_thread_priority_realtime()  # TIME_CRITICAL
         self._priority_set = True
 
-    # 2. 關鍵路徑：查表 + SendInput（< 0.1ms）
+    # 2. Critical Path: Lookup + SendInput (< 0.1ms)
     if event_type == "note_on":
         mapping = self._mapper.lookup(note)      # dict lookup
         if mapping is not None:
             self._simulator.press(note, mapping)  # SendInput syscall
 
-    # 3. GUI 更新走非同步訊號（不阻塞關鍵路徑）
+    # 3. GUI updates via async signal (Doesn't block critical path)
     self.note_event.emit(event_type, note, velocity)
 ```
 
-配合 `timeBeginPeriod(1)` 將系統計時器解析度降至 1ms，以及 `SetThreadPriority(TIME_CRITICAL)` 提升執行緒排程優先權，實現端到端 < 2ms 延遲。
+Combined with `timeBeginPeriod(1)` to lower system timer resolution to 1ms and `SetThreadPriority(TIME_CRITICAL)` to boost scheduling priority, end-to-end latency is kept < 2ms.
 
-### 2. 修飾鍵閃擊技術（Modifier Flash）
+### 2. Modifier Flash Technology
 
-遊戲的 36 鍵模式使用 Shift / Ctrl 修飾鍵表示升降號。若在和弦中先按下 Shift 再按 Key，Shift 可能「洩漏」到同時按下的其他音符，導致遊戲誤判按鍵。
+The game's 36-key mode uses Shift / Ctrl modifiers for sharps/flats. If Shift is pressed before the Key in a chord, Shift might "leak" to other notes pressed simultaneously, causing misinterpretation.
 
-解決方案：將修飾鍵的按下與釋放 **包裹在同一次 `SendInput` 批次呼叫** 中：
+Solution: Wrap the press and release of the modifier key **in a single `SendInput` batch call**:
 
 ```python
 # key_simulator.py — KeySimulator.press()
@@ -266,7 +268,7 @@ def on_midi_event(self, event_type, note, velocity):
 def press(self, midi_note, mapping):
     mod_scan = _modifier_scan(mapping.modifier)
     if mod_scan is not None:
-        # 三個事件作為一個原子批次送出
+        # Send three events as an atomic batch
         _send(
             _make_input(mod_scan, key_up=False),           # Shift ↓
             _make_input(mapping.scan_code, key_up=False),  # Key ↓
@@ -276,63 +278,65 @@ def press(self, midi_note, mapping):
         _send(_make_input(mapping.scan_code, key_up=False))
 ```
 
-`SendInput` 的設計保證同一批次中的事件不會被其他行程的輸入事件插隊，確保修飾鍵的作用範圍精確限定在單一按鍵上。
+`SendInput` guarantees that events in the same batch are not interleaved with input from other processes, ensuring the modifier's scope is precisely limited to a single key.
 
-### 3. 智慧 MIDI 預處理管線
+### 3. Smart MIDI Preprocessing Pipeline
 
-將任意 MIDI 檔案適配到遊戲有限的音域範圍（如 36 鍵 = C3-B5），需要一套自動化的音符轉換管線：
+Adapting arbitrary MIDI files to the game's limited range (e.g., 36 keys = C3-B5) requires an automated note conversion pipeline:
 
 ```
-原始 MIDI 事件
+Raw MIDI Events
     │
     ▼
 ┌──────────────────────────────────────────────────────┐
-│ Stage 1: 智慧全曲移調                                  │
-│ 嘗試 -48 ~ +48 半音（12 的倍數），選擇使最多音符        │
-│ 落入可演奏範圍的位移量。同分時取絕對值最小者。           │
+│ Stage 1: Smart Transposition                           │
+│ Try -48 ~ +48 semitones (multiples of 12). Select the  │
+│ offset that fits the most notes into playable range.   │
+│ Tie-break using smallest absolute offset.              │
 └──────────────────────────────────────────────────────┘
     │
     ▼
 ┌──────────────────────────────────────────────────────┐
-│ Stage 2: 八度摺疊                                      │
-│ 剩餘超出範圍的音符逐一 ±12 半音摺疊至範圍內。           │
+│ Stage 2: Octave Folding                                │
+│ Remaining out-of-range notes are folded ±12 semitones  │
+│ until they fit within range.                           │
 └──────────────────────────────────────────────────────┘
     │
     ▼
 ┌──────────────────────────────────────────────────────┐
-│ Stage 3: 碰撞去重                                      │
-│ 摺疊後可能產生同一時間點、同一音高的重複音符。            │
-│ 移除重複，保留最後一個 note_off（最長延音）。            │
+│ Stage 3: Collision Deduplication                       │
+│ Folding may produce duplicate notes (same time/pitch). │
+│ Remove duplicates, keeping the last note_off (sustain).│
 └──────────────────────────────────────────────────────┘
     │
     ▼
 ┌──────────────────────────────────────────────────────┐
-│ Stage 4: 力度正規化                                    │
-│ 所有 note_on 力度統一為 127（遊戲不區分力度）。          │
+│ Stage 4: Velocity Normalization                        │
+│ All note_on velocities set to 127 (game ignores vel).  │
 └──────────────────────────────────────────────────────┘
     │
     ▼
 ┌──────────────────────────────────────────────────────┐
-│ Stage 5: 60fps 時間量化                                │
-│ 將事件時間對齊至 ~16.67ms 格線，消除微延遲。            │
+│ Stage 5: 60fps Quantization                            │
+│ Align events to ~16.67ms grid to eliminate micro-lag.  │
 └──────────────────────────────────────────────────────┘
     │
     ▼
-處理後事件（按時間排序，note_off 優先於 note_on）
+Processed Events (Sorted by time, note_off priority)
 ```
 
-### 4. ctypes INPUT 結構體陷阱
+### 4. ctypes INPUT Structure Trap
 
-Windows `SendInput` API 要求 `INPUT` 結構體的大小精確為 40 bytes（64-bit）。結構體內部使用 union 包含 `MOUSEINPUT`、`KEYBDINPUT`、`HARDWAREINPUT` 三種類型。
+The Windows `SendInput` API requires the `INPUT` structure size to be exactly 40 bytes (64-bit). The structure uses a union containing `MOUSEINPUT`, `KEYBDINPUT`, and `HARDWAREINPUT`.
 
-若 union 中 **省略了最大的成員 `MOUSEINPUT`**（32 bytes），`sizeof(INPUT)` 會變成 32 而非 40，導致 `SendInput` **靜默返回 0** 且不送出任何按鍵 — 不報錯、不丟例外，只是完全無效。
+If the union **omits the largest member `MOUSEINPUT`** (32 bytes), `sizeof(INPUT)` becomes 32 instead of 40, causing `SendInput` to **silently return 0** and send no input — no error, no exception, just completely ineffective.
 
 ```python
-# 必須包含 MOUSEINPUT 作為 union 成員
+# Must include MOUSEINPUT as a union member
 class INPUT(ctypes.Structure):
     class _INPUT_UNION(ctypes.Union):
         _fields_ = [
-            ("mi", MOUSEINPUT),      # ← 最大成員，決定 union 大小
+            ("mi", MOUSEINPUT),      # ← Largest member determines union size
             ("ki", KEYBDINPUT),
             ("hi", HARDWAREINPUT),
         ]
@@ -342,51 +346,23 @@ class INPUT(ctypes.Structure):
 
 ---
 
-## CI/CD
+## Mapping Schemes
 
-### 持續整合
-
-每次推送至 `main` 或開啟 Pull Request 時自動執行：
-
-| 工作 | 環境 | 內容 |
-|------|------|------|
-| **測試** | `windows-latest` x Python 3.11 / 3.12 / 3.13 | `pip install -e .[dev]` → `pytest -q` |
-| **Lint** | `ubuntu-latest` x Python 3.13 | `ruff check .` |
-
-### 自動發佈
-
-推送 `v*` 標籤時觸發：
-
-1. 安裝依賴 + 生成圖示
-2. PyInstaller 建置（`onedir` + `windowed` + `uac_admin`）
-3. 壓縮為 `.zip`
-4. 建立 GitHub Release 並上傳附件
-
-```bash
-# 觸發一次發佈
-git tag v0.2.0
-git push origin v0.2.0
-```
+| Scheme | Keys | MIDI Range | Layout | Target Game |
+|--------|------|------------|--------|-------------|
+| **Where Winds Meet 36-Key** | 36 | C3 - B5 | 3 x 12 (ZXC / ASD / QWE + Shift/Ctrl) | Where Winds Meet |
+| **FF14 37-Key** | 37 | C3 - C6 | 3×12 Diatonic (Nums/QWER/ASDF) | Final Fantasy XIV |
+| **Generic 24-Key** | 24 | C3 - B4 | 2 x 12 (ZXC / QWE + Shift/Ctrl) | Generic |
+| **Generic 48-Key** | 48 | C2 - B5 | 4 x 12 (Num Row / ZXC / ASD / QWE) | Generic |
+| **Generic 88-Key** | 88 | A0 - C8 | 8 x 11 (Multi-layer Shift/Ctrl combos) | Generic (Full Piano) |
 
 ---
 
-## 鍵位方案一覽
+## Acknowledgments
 
-| 方案 | 鍵數 | MIDI 範圍 | 佈局 | 適用遊戲 |
-|------|------|-----------|------|----------|
-| **燕雲十六聲 36 鍵** | 36 | C3 - B5 | 3 x 12 (ZXC / ASD / QWE + Shift/Ctrl) | 燕雲十六聲 |
-| **FF14 32 鍵** | 32 | C3 - G5 | 4 x 8 (ASDF / QWER / 1234 / Ctrl+1~8) | Final Fantasy XIV |
-| **通用 24 鍵** | 24 | C3 - B4 | 2 x 12 (ZXC / QWE + Shift/Ctrl) | 通用 |
-| **通用 48 鍵** | 48 | C2 - B5 | 4 x 12 (數字行 / ZXC / ASD / QWE) | 通用 |
-| **通用 88 鍵** | 88 | A0 - C8 | 8 x 11 (多層 Shift/Ctrl 組合) | 通用（全鋼琴） |
-
----
-
-## 致謝
-
-- [mido](https://github.com/mido/mido) — Python MIDI 程式庫
-- [python-rtmidi](https://github.com/SpotlightKid/python-rtmidi) — 低延遲跨平台 MIDI I/O
-- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) — Python Qt 6 綁定
-- [PyInstaller](https://pyinstaller.org/) — Python 應用程式封裝工具
-- [Ruff](https://github.com/astral-sh/ruff) — 極速 Python linter
-- 《燕雲十六聲》(*Where Winds Meet*) — 網易旗下 Everstone Studio 開發的武俠開放世界遊戲
+- [mido](https://github.com/mido/mido) — Python MIDI library
+- [python-rtmidi](https://github.com/SpotlightKid/python-rtmidi) — Low-latency cross-platform MIDI I/O
+- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) — Python Qt 6 bindings
+- [PyInstaller](https://pyinstaller.org/) — Python application packaging tool
+- [Ruff](https://github.com/astral-sh/ruff) — Extremely fast Python linter
+- *Where Winds Meet* — Wuxia open-world game developed by Everstone Studio (NetEase)
