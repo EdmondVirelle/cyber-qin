@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PyQt6.QtCore import (
+from PyQt6.QtCore import (  # type: ignore[attr-defined]
     QEasingCurve,
     QPropertyAnimation,
     QRectF,
     QSize,
     Qt,
-    pyqtProperty,  # type: ignore[attr-defined]
+    pyqtProperty,
 )
 from PyQt6.QtGui import QColor, QPainter, QPainterPath
 from PyQt6.QtWidgets import QAbstractButton, QWidget
