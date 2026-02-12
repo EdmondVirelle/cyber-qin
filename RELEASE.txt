@@ -98,9 +98,6 @@ v0.7.0 — 編輯器 UX 大改版 + 模型重構
     請使用 7-Zip 解壓縮。
     Windows 內建解壓工具可能無法正確處理 Unicode 路徑，導致程式啟動失敗。
 
-燕雲十六聲：葉微雨
-    贊助連結：https://ko-fi.com/virelleedmond
-
 免責聲明
     本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
     在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
@@ -201,14 +198,40 @@ v0.7.0 — Editor UX Overhaul + Model Refactor
     • PyInstaller bundling fix.
 
 Installation Note
-    Please use 7-Zip to extract the archive.
-    Windows built-in extraction tools may not correctly handle Unicode paths, causing the application to fail on startup.
-
-Where Winds Meet: Ye Weiyu
-    Sponsor: https://ko-fi.com/virelleedmond
+    Please use 7-Zip for extraction.
+    Windows built-in extraction tools may not correctly handle Unicode paths, leading to application startup failure.
 
 Disclaimer
     This tool is an open-source personal project for MIDI music performance enthusiasts.
     Using third-party tools in games may violate the game's Terms of Service. Please use at your own risk.
     The developer is not responsible for any account penalties or losses resulting from the use of this tool.
-    Downloading or running this program constitutes your understanding and acceptance of these terms.
+    Downloading or executing this program constitutes your understanding and acceptance of these terms.
+
+--------------------------------------------------------------------------------
+
+インストール時の注意
+    展開には 7-Zip を使用してください。
+    Windows 標準の展開ツールでは Unicode パスが正しく処理されず、プログラムの起動に失敗する可能性があります。
+
+免責事項
+    本ツールは MIDI 演奏愛好家の学習・交流を目的としたオープンソースの個人プロジェクトです。
+    ゲーム内でのサードパーティ製ツールの使用は、当該ゲームの利用規約に抵触する恐れがあります。利用のリスクはユーザー自身が判断してください。
+    本ツールの使用によるアカウントの処罰やいかなる損失についても、開發者は一切の責任を負いません。
+    本プログラムをダウンロードまたは実行した時点で、上記の内容を理解し承諾したものとみなされます。
+
+--------------------------------------------------------------------------------
+
+설치 시 주의사항
+    압축 해제 시 7-Zip을 사용해 주세요.
+    Windows 기본 압축 해제 도구는 유니코드 경로를 제대로 처리하지 못해 프로그램 실행이 실패할 수 있습니다.
+
+면책 조항
+    본 도구는 MIDI 연주 애호가들의 교류와 학습을 위한 오픈 소스 개인 프로젝트입니다.
+    게임 내에서 서드파티 도구를 사용하는 것은 해당 게임의 이용 약관에 위배될 수 있습니다. 사용에 따른 리스크는 사용자가 직접 판단하시기 바랍니다.
+    개발자는 본 도구 사용으로 인한 계정 제재 및 어떠한 손해에 대해서도 책임을 지지 않습니다.
+    본 프로그램을 다운로드하거나 실행하는 것은 위의 사항을 이해하고 수락함을 의미합니다.
+
+--------------------------------------------------------------------------------
+
+Where Winds Meet: Ye Weiyu
+    Sponsor: https://ko-fi.com/virelleedmond
