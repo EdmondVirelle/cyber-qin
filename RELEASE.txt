@@ -1,3 +1,10 @@
+Release 說明 (v0.9.1)
+
+v0.9.1 — 專案整潔化維護
+    • 移除 git 倉庫中的測試產物 (`results.txt`, `test_output.txt`) 與覆蓋率報告。
+    • 更新 `.gitignore` 以排除測試相關檔案。
+    • 修正 GUI 組件中的 MyPy 類型錯誤與 import 排序 (Round 5)。
+
 Release 說明 (v0.9.0)
 
 v0.9.0 — 擴充側邊欄 Credit 資訊
