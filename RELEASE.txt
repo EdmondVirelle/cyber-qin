@@ -1,4 +1,4 @@
-Release 說明 (v0.8.0)
+Release 說明 (v0.8.1)
 
 新功能與優化
     • 編輯器 UX 大改版：
@@ -30,7 +30,7 @@ Release 說明 (v0.8.0)
 
 --------------------------------------------------------------------------------
 
-Release Notes (v0.8.0)
+Release Notes (v0.8.1)
 
 New Features & Enhancements
     • Editor UX Overhaul:

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cyber-qin"
-version = "0.8.0"
+version = "0.8.1"
 description = "MIDI-to-Keyboard mapper for 燕雲十六聲 36-key mode"
 requires-python = ">=3.11"
 dependencies = [
