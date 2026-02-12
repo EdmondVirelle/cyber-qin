@@ -19,6 +19,7 @@ dev = [
     "ruff>=0.8",
     "pyinstaller>=6.0",
     "pillow>=10.0",
+    "mypy>=1.6",
 ]
 
 [project.scripts]
@@ -39,3 +40,23 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 "cyber_qin/core/key_simulator.py" = ["N801"]  # ctypes inner union naming
 "cyber_qin/gui/theme.py" = ["N806"]           # Win32 constant naming
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+disallow_any_unimported = false # Too noisy with PyQt
+disallow_untyped_defs = false   # Gradual adoption
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "mido.*",
+    "rtmidi.*",
+    "PIL.*",
+    "win32con.*",
+    "win32api.*",
+]
+ignore_missing_imports = true

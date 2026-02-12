@@ -148,6 +148,9 @@ python scripts/build.py
 
 ## Development
 
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on code style, testing, and contribution workflow.
+
+
 ### Testing
 
 ```bash

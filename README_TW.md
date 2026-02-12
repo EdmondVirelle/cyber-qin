@@ -148,6 +148,9 @@ python scripts/build.py
 
 ## 開發
 
+關於程式碼風格、測試及貢獻流程的詳細規範，請參閱 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+
 ### 測試
 
 ```bash

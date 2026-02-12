@@ -29,3 +29,14 @@ jobs:
           python-version: "3.13"
       - run: pip install ruff
       - run: ruff check .
+      - run: python scripts/check_i18n.py
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install .[dev] mypy
+      - run: mypy cyber_qin
