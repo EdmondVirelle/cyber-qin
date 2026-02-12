@@ -28,16 +28,16 @@ class LanguageSelector(QPushButton):
                 padding: 4px;
             }}
             QMenu::item {{
-                color: {TEXT_PRIMARY.name()};
+                color: {TEXT_PRIMARY};
                 padding: 8px 16px;
                 border-radius: 4px;
                 font-family: "Microsoft JhengHei";
             }}
             QMenu::item:selected {{
-                background-color: {BG_HOVER.name()};
+                background-color: {BG_HOVER};
             }}
             QMenu::item:checked {{
-                color: {ACCENT_GOLD.name()};
+                color: {ACCENT_GOLD};
                 font-weight: bold;
             }}
         """)
@@ -76,18 +76,18 @@ class LanguageSelector(QPushButton):
         self.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
-                border: 1px solid {TEXT_SECONDARY.name()};
+                border: 1px solid {TEXT_SECONDARY};
                 border-radius: 20px;
-                color: {TEXT_PRIMARY.name()};
+                color: {TEXT_PRIMARY};
                 font-family: "Microsoft JhengHei";
                 font-size: 14px;
                 text-align: left;
                 padding-left: 16px;
             }}
             QPushButton:hover {{
-                border-color: {ACCENT_GOLD.name()};
-                color: {ACCENT_GOLD.name()};
-                background-color: {BG_HOVER.name()};
+                border-color: {ACCENT_GOLD};
+                color: {ACCENT_GOLD};
+                background-color: {BG_HOVER};
             }}
             QPushButton::menu-indicator {{
                 subcontrol-origin: padding;
