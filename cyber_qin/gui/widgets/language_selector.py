@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QAction, QColor, QIcon
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QPushButton, QWidget
 
-from ...core.translator import translator, LANGUAGES
-from ...theme import ACCENT_GOLD, TEXT_PRIMARY, TEXT_SECONDARY, BG_HOVER
+from ...core.translator import LANGUAGES, translator
+from ...theme import ACCENT_GOLD, BG_HOVER, TEXT_PRIMARY, TEXT_SECONDARY
+
 
 class LanguageSelector(QPushButton):
     """A prominent button to switch languages."""
@@ -16,7 +17,7 @@ class LanguageSelector(QPushButton):
         super().__init__(parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedHeight(40)
-        
+
         # Setup menu
         self._menu = QMenu(self)
         self._menu.setStyleSheet(f"""
@@ -40,7 +41,7 @@ class LanguageSelector(QPushButton):
                 font-weight: bold;
             }}
         """)
-        
+
         # Add actions
         self._actions = {}
         for code, name in LANGUAGES.items():
@@ -50,27 +51,27 @@ class LanguageSelector(QPushButton):
             action.triggered.connect(lambda checked, c=code: translator.set_language(c))
             self._menu.addAction(action)
             self._actions[code] = action
-            
+
         self.setMenu(self._menu)
-        
+
         # Initial update
         self._update_display()
-        
+
         # Connect signals
         translator.language_changed.connect(self._update_display)
 
     def _update_display(self) -> None:
         """Update button text and menu state based on current language."""
         current = translator.current_language
-        
+
         # Update button text
         lang_name = LANGUAGES.get(current, "English")
         self.setText(f"🌐 {lang_name}")
-        
+
         # Update menu selection
         for code, action in self._actions.items():
             action.setChecked(code == current)
-            
+
         # Update styling (Dynamic border color based on accent)
         self.setStyleSheet(f"""
             QPushButton {{

@@ -19,10 +19,10 @@ from PyQt6.QtWidgets import (
 )
 
 from ...core.midi_file_player import MidiFileInfo, MidiFileParser
+from ...core.translator import translator
 from ..icons import draw_library
 from ..theme import TEXT_SECONDARY
 from ..widgets.track_list import TrackList
-from ...core.translator import translator
 
 log = logging.getLogger(__name__)
 
@@ -178,11 +178,11 @@ class LibraryView(QWidget):
 
         root.addLayout(content, 1)
         root.addLayout(content, 1)
-        
+
         translator.language_changed.connect(self._update_text)
         self._update_text()
         self._update_empty_state()
-        
+
     def _update_text(self) -> None:
         """Update UI text based on current language."""
         self._title_lbl.setText(translator.tr("lib.title"))

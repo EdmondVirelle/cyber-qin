@@ -259,7 +259,7 @@ class LiveModeView(QWidget):
         self._status.set_admin_warning(is_admin())
 
         root.addLayout(content, 1)
-        
+
         translator.language_changed.connect(self._update_text)
         self._update_text()
 
@@ -270,31 +270,31 @@ class LiveModeView(QWidget):
         self._midi_dev_lbl.setText(translator.tr("live.midi_device") + ":")
         self._refresh_btn.setText(translator.tr("live.refresh"))
         # Only update connect btn text if we are not relying on state (handle in separate logic if needed, but here simple is fine for now)
-        # Actually _toggle_connection updates text based on state. 
+        # Actually _toggle_connection updates text based on state.
         # We should update it here respecting current state if possible, or just update the "Connect" / "Disconnect" strings.
         # But _connect_btn text is stateful. Let's handle it carefully.
         if self._listener.connected:
              self._connect_btn.setText(translator.tr("live.disconnect"))
         else:
              self._connect_btn.setText(translator.tr("live.connect"))
-             
+
         self._transpose_lbl.setText(translator.tr("live.transpose") + ":")
         self._scheme_lbl.setText(translator.tr("live.mapping") + ":")
-        
+
         # Record button stateful
         if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr("live.record", language="en"): # Check generic
             # Just relying on internal flags might be safer if we had them easily accessible here except button text
-            pass 
-        # Better: use self._record_btn.property or just re-eval based on recording signal? 
-        # LiveModeView doesn't track recording state in a simple boolean accessible here easily? 
+            pass
+        # Better: use self._record_btn.property or just re-eval based on recording signal?
+        # LiveModeView doesn't track recording state in a simple boolean accessible here easily?
         # Ah, self._toggle_recording toggles text.
-        # Let's just reset generic text if not recording? 
+        # Let's just reset generic text if not recording?
         # The button text toggle logic in `_toggle_recording` uses hardcoded strings. We need to update that too.
-        
+
         # update dynamic labels
         self._auto_tune_check.setText(translator.tr("live.auto_tune"))
         self._log_title_lbl.setText(translator.tr("live.log"))
-        
+
         # Trigger explicit update for stateful buttons
         self._update_stateful_text()
 
@@ -304,7 +304,7 @@ class LiveModeView(QWidget):
             self._connect_btn.setText(translator.tr("live.disconnect"))
         else:
             self._connect_btn.setText(translator.tr("live.connect"))
-            
+
         if self._is_recording:
              self._record_btn.setText(translator.tr("live.stop_record"))
              self._recording_status.setText(translator.tr("live.recording"))
@@ -420,8 +420,6 @@ class LiveModeView(QWidget):
                 callback=callback,
                 on_disconnect=self._on_disconnect,
             )
-                on_disconnect=self._on_disconnect,
-            )
             self._update_stateful_text()
             self._status.set_connected(port_name)
             self._settings.setValue("last_port", port_name)
@@ -433,7 +431,6 @@ class LiveModeView(QWidget):
             log.exception("Failed to connect to %s", port_name)
 
     def _disconnect(self) -> None:
-        self._simulator.release_all()
         self._simulator.release_all()
         self._listener.close()
         self._update_stateful_text()
@@ -502,7 +499,7 @@ class LiveModeView(QWidget):
         """Toggle recording state — delegates actual logic to AppShell."""
         if not self._is_recording:
             self._is_recording = True
-            
+
             # Update style for recording state
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #ff4444; color: #0A0E14; "
@@ -515,7 +512,7 @@ class LiveModeView(QWidget):
             self._update_stateful_text()
         else:
             self._is_recording = False
-            
+
             # Update style for idle state
             self._record_btn.setStyleSheet(
                 "QPushButton { background-color: #3a1a1a; color: #ff4444; "

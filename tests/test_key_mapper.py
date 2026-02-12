@@ -166,23 +166,23 @@ class TestKeyMapperScheme:
         from cyber_qin.core.mapping_schemes import get_scheme
 
         km = KeyMapper()
-        scheme = get_scheme("ff14_32")
+        scheme = get_scheme("ff14_37")
         km.set_scheme(scheme)
         assert km.scheme is scheme
-        # MIDI 48 in ff14_32 → A (plain)
+        # MIDI 48 in ff14_37 → 1 (plain)
         result = km.lookup(48)
         assert result is not None
-        assert result.scan_code == SCAN["A"]
+        assert result.scan_code == SCAN["1"]
         assert result.modifier == Modifier.NONE
 
     def test_set_scheme_changes_range(self):
         from cyber_qin.core.mapping_schemes import get_scheme
 
         km = KeyMapper()
-        scheme = get_scheme("ff14_32")
+        scheme = get_scheme("ff14_37")
         km.set_scheme(scheme)
-        # MIDI 80+ should be out of range for ff14_32 (range 48-79)
-        assert km.lookup(80) is None
+        # MIDI 85+ should be out of range for ff14_37 (range 48-84)
+        assert km.lookup(85) is None
 
     def test_current_mappings(self):
         km = KeyMapper()

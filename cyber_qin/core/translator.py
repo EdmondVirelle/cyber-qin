@@ -15,13 +15,13 @@ LANGUAGES = {
 
 class Translator(QObject):
     """Global translation manager singleton."""
-    
+
     language_changed = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
         self._current_lang = "en"  # Default
-        
+
         # Define translations
         self._data = {
             "en": {
@@ -33,7 +33,7 @@ class Translator(QObject):
                 "sidebar.credit": "Created by Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-                
+
                 # Live Mode
                 "live.title": "Live Mode",
                 "live.desc": "Connect MIDI device and play in real-time.",
@@ -50,7 +50,7 @@ class Translator(QObject):
                 "live.log": "Event Log",
                 "live.status.connected": "Connected: {port}",
                 "live.status.disconnected": "Disconnected",
-                
+
                 # Library
                 "lib.title": "Library",
                 "lib.desc": "Import MIDI files, double-click or press play to listen.",
@@ -61,7 +61,7 @@ class Translator(QObject):
                 "lib.col.duration": "Duration",
                 "lib.empty.title": "No MIDI files imported",
                 "lib.empty.sub": "Click '+ Import MIDI' to start",
-                
+
                 # Editor
                 "editor.title": "Sequencer",
                 "editor.desc": "Compose via piano keys or drag on timeline.",
@@ -83,7 +83,7 @@ class Translator(QObject):
                 "editor.velocity": "Velocity",
                 "editor.shortcuts": "⌨ Shortcuts",
                 "editor.note_count": "{notes} Notes · {bars} Bars",
-                
+
                  # Now Playing
                 "player.repeat.off": "Repeat Off",
                 "player.repeat.one": "Repeat One",
@@ -98,7 +98,7 @@ class Translator(QObject):
                 "sidebar.credit": "燕雲十六聲 · 葉微雨 製作",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-                
+
                 "live.title": "演奏模式",
                 "live.desc": "連接 MIDI 裝置，即時演奏映射到遊戲按鍵。",
                 "live.midi_device": "MIDI 裝置",
@@ -114,7 +114,7 @@ class Translator(QObject):
                 "live.log": "事件紀錄",
                 "live.status.connected": "已連線: {port}",
                 "live.status.disconnected": "未連線",
-                
+
                 "lib.title": "曲庫",
                 "lib.desc": "匯入 MIDI 檔案，雙擊或按播放鍵自動演奏。",
                 "lib.search": "搜尋曲目...",
@@ -124,7 +124,7 @@ class Translator(QObject):
                 "lib.col.duration": "時長",
                 "lib.empty.title": "尚未匯入任何 MIDI 檔案",
                 "lib.empty.sub": "點擊「+ 匯入 MIDI」開始",
-                
+
                 "editor.title": "編曲器",
                 "editor.desc": "點擊琴鍵輸入音符，拖曳時間軸編輯旋律。",
                 "editor.record": "● 錄音",
@@ -159,7 +159,7 @@ class Translator(QObject):
                 "sidebar.credit": "燕云十六声 · 叶微雨 制作",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-                
+
                 "live.title": "演奏模式",
                 "live.desc": "连接 MIDI 设备，即时演奏映射到游戏按键。",
                 "live.midi_device": "MIDI 设备",
@@ -175,7 +175,7 @@ class Translator(QObject):
                 "live.log": "事件记录",
                 "live.status.connected": "已连接: {port}",
                 "live.status.disconnected": "未连接",
-                
+
                 "lib.title": "曲库",
                 "lib.desc": "导入 MIDI 文件，双击或按播放键自动演奏。",
                 "lib.search": "搜索曲目...",
@@ -185,7 +185,7 @@ class Translator(QObject):
                 "lib.col.duration": "时长",
                 "lib.empty.title": "尚未导入任何 MIDI 文件",
                 "lib.empty.sub": "点击“+ 导入 MIDI”开始",
-                
+
                 "editor.title": "编曲器",
                 "editor.desc": "点击琴键输入音符，拖拽时间轴编辑旋律。",
                 "editor.record": "● 录音",
@@ -220,7 +220,7 @@ class Translator(QObject):
                 "sidebar.credit": "製作者: Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Ko-fiでサポート",
                 "sidebar.version": "v{version}",
-                
+
                 "live.title": "演奏モード",
                 "live.desc": "MIDIデバイスを接続して、リアルタイムで演奏します。",
                 "live.midi_device": "MIDIデバイス",
@@ -236,7 +236,7 @@ class Translator(QObject):
                 "live.log": "イベントログ",
                 "live.status.connected": "接続済み: {port}",
                 "live.status.disconnected": "未接続",
-                
+
                 "lib.title": "ライブラリ",
                 "lib.desc": "MIDIファイルをインポートし、ダブルクリックまたは再生ボタンで演奏します。",
                 "lib.search": "検索...",
@@ -246,7 +246,7 @@ class Translator(QObject):
                 "lib.col.duration": "時間",
                 "lib.empty.title": "MIDIファイルがありません",
                 "lib.empty.sub": "「+ MIDIインポート」をクリックして開始",
-                
+
                 "editor.title": "シーケンサー",
                 "editor.desc": "鍵盤をクリックして音符を入力、タイムラインで編集。",
                 "editor.record": "● 録音",
@@ -281,7 +281,7 @@ class Translator(QObject):
                 "sidebar.credit": "제작: Ye Weiyu (Where Winds Meet)",
                 "sidebar.support": "Ko-fi 후원하기",
                 "sidebar.version": "v{version}",
-                
+
                 "live.title": "연주 모드",
                 "live.desc": "MIDI 장치를 연결하고 실시간으로 연주하세요.",
                 "live.midi_device": "MIDI 장치",
@@ -297,7 +297,7 @@ class Translator(QObject):
                 "live.log": "이벤트 로그",
                 "live.status.connected": "연결됨: {port}",
                 "live.status.disconnected": "연결 안 됨",
-                
+
                 "lib.title": "라이브러리",
                 "lib.desc": "MIDI 파일을 가져오고 더블 클릭하거나 재생 버튼을 누르세요.",
                 "lib.search": "검색...",
@@ -307,7 +307,7 @@ class Translator(QObject):
                 "lib.col.duration": "시간",
                 "lib.empty.title": "가져온 MIDI 파일 없음",
                 "lib.empty.sub": "시작하려면 '+ MIDI 가져오기'를 클릭하세요",
-                
+
                 "editor.title": "시퀀서",
                 "editor.desc": "피아노 건반을 클릭하여 음표 입력, 타임라인에서 편집.",
                 "editor.record": "● 녹음",
@@ -349,11 +349,11 @@ class Translator(QObject):
         """Translate key to current language. Returns key if not found."""
         lang_data = self._data.get(self._current_lang, {})
         text = lang_data.get(key)
-        
+
         if text is None:
             # Fallback to English
             text = self._data.get("en", {}).get(key, key)
-            
+
         try:
             return text.format(**kwargs)
         except (KeyError, ValueError):

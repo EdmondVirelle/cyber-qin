@@ -21,12 +21,12 @@ from ..core.auto_tune import auto_tune
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
-from ..core.translator import translator
 from ..core.midi_file_player import PlaybackState, create_player_controller
 from ..core.midi_listener import MidiListener
 from ..core.midi_recorder import MidiRecorder
 from ..core.midi_writer import MidiWriter
 from ..core.priority import set_thread_priority_realtime
+from ..core.translator import translator
 from .views.editor_view import EditorView
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
@@ -117,7 +117,7 @@ class AppShell(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self._setup_shortcuts()
-        
+
         translator.language_changed.connect(self._update_text)
 
     def _update_text(self) -> None:

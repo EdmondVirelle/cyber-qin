@@ -11,11 +11,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ...core.translator import translator
 from ..icons import draw_music_note
 from ..theme import ACCENT_GOLD, BG_SCROLL, DIVIDER, TEXT_SECONDARY
 from .animated_widgets import AnimatedNavButton
 from .language_selector import LanguageSelector
-from ...core.translator import translator
 
 
 class Sidebar(QWidget):
@@ -69,13 +69,13 @@ class Sidebar(QWidget):
         self._buttons.append(self._editor_btn)
 
         self._buttons.append(self._editor_btn)
-        
+
         layout.addSpacing(16)
-        
+
         # Language Selector
         self._lang_selector = LanguageSelector()
         layout.addWidget(self._lang_selector)
-        
+
         layout.addStretch()
 
         # Bottom divider
@@ -121,11 +121,11 @@ class Sidebar(QWidget):
 
         # Set initial active
         self._set_active(0)
-        
+
         # Connect translation signal
         translator.language_changed.connect(self._update_text)
         self._update_text()
-        
+
     def _update_text(self) -> None:
         """Update UI text based on current language."""
         self._live_btn.set_text(translator.tr("nav.live"))

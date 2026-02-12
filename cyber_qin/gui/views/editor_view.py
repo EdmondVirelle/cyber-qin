@@ -43,10 +43,10 @@ from ...core.beat_sequence import (
 )
 from ...core.midi_file_player import MidiFileParser
 from ...core.midi_writer import MidiWriter
+from ...core.translator import translator
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
 from ..widgets.clickable_piano import ClickablePiano
-from ...core.translator import translator
 from ..widgets.editor_track_panel import EditorTrackPanel
 from ..widgets.note_roll import NoteRoll
 from ..widgets.pitch_ruler import PitchRuler
@@ -370,15 +370,15 @@ class EditorView(QWidget):
         content.addLayout(piano_row)
 
         root.addLayout(content, 1)
-        
+
         translator.language_changed.connect(self._update_text)
         self._update_text()
-        
+
     def _update_text(self) -> None:
         """Update UI text based on current language."""
         self._header_lbl.setText(translator.tr("editor.title"))
         self._desc_lbl.setText(translator.tr("editor.desc"))
-        
+
         self._play_btn.setText(translator.tr("editor.play"))
         self._undo_btn.setToolTip(translator.tr("editor.undo"))
         self._redo_btn.setToolTip(translator.tr("editor.redo"))
@@ -388,7 +388,7 @@ class EditorView(QWidget):
         self._load_btn.setText(translator.tr("editor.import"))
         self._export_btn.setText(translator.tr("editor.export"))
         self._help_btn.setToolTip(translator.tr("editor.help"))
-        
+
         self._dur_lbl.setText(translator.tr("editor.duration"))
         self._ts_lbl.setText(translator.tr("editor.time_sig"))
         self._bpm_lbl.setText(translator.tr("editor.bpm"))
@@ -396,12 +396,12 @@ class EditorView(QWidget):
         self._auto_tune_cb.setText(translator.tr("live.auto_tune"))
         self._vel_lbl.setText(translator.tr("editor.velocity"))
         self._shortcuts_cb.setText(translator.tr("editor.shortcuts"))
-        
+
         # Stateful record button
         if self._is_recording:
-             self._record_btn.setText(translator.tr("live.stop_record")) # Use generic stop or editor specific? 
+             self._record_btn.setText(translator.tr("live.stop_record")) # Use generic stop or editor specific?
              # Editor doesn't have specific stop_record key, reuse live? Or create generic `stop`?
-             # live.stop_record is "Stop Rec". 
+             # live.stop_record is "Stop Rec".
              self._record_btn.setText("■ " + translator.tr("live.stop_record"))
         else:
              self._record_btn.setText(translator.tr("editor.record"))
