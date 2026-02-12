@@ -108,6 +108,14 @@ class Sidebar(QWidget):
         self._ff14.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self._ff14)
 
+        self._wwm = QLabel(translator.tr("sidebar.wwm"))
+        self._wwm.setFont(QFont("Microsoft JhengHei", 8))
+        self._wwm.setWordWrap(True)
+        self._wwm.setContentsMargins(12, 0, 12, 0)
+        self._wwm.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        self._wwm.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._wwm)
+
         self._vtuber = QLabel(translator.tr("sidebar.vtuber"))
         self._vtuber.setFont(QFont("Microsoft JhengHei", 8))
         self._vtuber.setWordWrap(True)
@@ -156,6 +164,7 @@ class Sidebar(QWidget):
         self._credit.setText(credit_text)
         self._credit.setToolTip(credit_text)
         self._ff14.setText(translator.tr("sidebar.ff14"))
+        self._wwm.setText(translator.tr("sidebar.wwm"))
         self._vtuber.setText(translator.tr("sidebar.vtuber"))
         self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
         from cyber_qin import __version__

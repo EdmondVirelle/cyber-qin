@@ -1,3 +1,11 @@
+Release 說明 (v0.9.0)
+
+v0.9.0 — 擴充側邊欄 Credit 資訊
+    • 側邊欄 (Sidebar)：
+        - 新增 「燕雲十六聲：葉微雨」 標註。
+        - 更新 「FF14：艾曼維勒」 標註。
+        - 所有標註均支援多語系切換（主 ID 保持原樣）。
+
 Release 說明 (v0.8.9)
 
 v0.8.9 — 修復側邊欄 Credit 與 README 重寫
@@ -100,6 +108,14 @@ v0.7.0 — 編輯器 UX 大改版 + 模型重構
     下載或執行本程式即表示您理解並接受上述事項。
 
 --------------------------------------------------------------------------------
+
+Release Notes (v0.9.0)
+
+v0.9.0 — Expanded Sidebar Credits
+    • Sidebar:
+        - Added 「WWM: Ye Weiyu」 label.
+        - Updated 「FF14: Aimant Virelle」 label.
+        - All labels support full multi-language switching (Main IDs remain literal).
 
 Release Notes (v0.8.9)
 
