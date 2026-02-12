@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ...core.midi_file_player import MidiFileInfo
+from ...core.translator import translator
 from ..icons import draw_music_note
 from ..theme import ACCENT, BG_PAPER, BG_WASH, DIVIDER, TEXT_PRIMARY, TEXT_SECONDARY
 from .animated_widgets import IconButton
@@ -29,13 +30,13 @@ _ICON_COLORS = [
     QColor("#2DB87A"),  # 翠
 ]
 
-# Sort options: (display_name, key_func, reverse)
-_SORT_OPTIONS: list[tuple[str, str]] = [
-    ("預設順序", "default"),
-    ("名稱", "name"),
-    ("BPM", "bpm"),
-    ("音符數", "notes"),
-    ("時長", "duration"),
+# Sort option keys (display names resolved from translator)
+_SORT_KEYS: list[tuple[str, str]] = [
+    ("lib.sort.default", "default"),
+    ("lib.sort.name", "name"),
+    ("lib.sort.bpm", "bpm"),
+    ("lib.sort.notes", "notes"),
+    ("lib.sort.duration", "duration"),
 ]
 
 
@@ -199,7 +200,7 @@ class TrackList(QWidget):
         toolbar.setSpacing(8)
 
         self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("搜尋曲名…")
+        self._search_input.setPlaceholderText(translator.tr("lib.search"))
         self._search_input.setClearButtonEnabled(True)
         self._search_input.setFixedHeight(32)
         self._search_input.setStyleSheet(
@@ -215,8 +216,8 @@ class TrackList(QWidget):
         self._sort_combo = QComboBox()
         self._sort_combo.setFixedHeight(32)
         self._sort_combo.setFixedWidth(120)
-        for display_name, _key in _SORT_OPTIONS:
-            self._sort_combo.addItem(display_name)
+        for tr_key, _sort_key in _SORT_KEYS:
+            self._sort_combo.addItem(translator.tr(tr_key))
         self._sort_combo.setStyleSheet(
             f"QComboBox {{"
             f"  background: {BG_PAPER}; color: {TEXT_PRIMARY}; border: 1px solid {DIVIDER};"
@@ -249,6 +250,23 @@ class TrackList(QWidget):
 
         self._scroll.setWidget(self._container)
         outer.addWidget(self._scroll, 1)
+
+        translator.language_changed.connect(self._update_text)
+
+    def _update_text(self) -> None:
+        """Update UI text based on current language."""
+        self._search_input.setPlaceholderText(translator.tr("lib.search"))
+        current_sort = self._current_sort
+        self._sort_combo.blockSignals(True)
+        self._sort_combo.clear()
+        for tr_key, sort_key in _SORT_KEYS:
+            self._sort_combo.addItem(translator.tr(tr_key))
+        # Restore current sort selection
+        for i, (_, sort_key) in enumerate(_SORT_KEYS):
+            if sort_key == current_sort:
+                self._sort_combo.setCurrentIndex(i)
+                break
+        self._sort_combo.blockSignals(False)
 
     def add_track(self, info: MidiFileInfo) -> None:
         index = len(self._all_cards)
@@ -290,8 +308,8 @@ class TrackList(QWidget):
     # ── Search & Sort ──
 
     def _on_sort_changed(self, combo_index: int) -> None:
-        if 0 <= combo_index < len(_SORT_OPTIONS):
-            self._current_sort = _SORT_OPTIONS[combo_index][1]
+        if 0 <= combo_index < len(_SORT_KEYS):
+            self._current_sort = _SORT_KEYS[combo_index][1]
             self._apply_filter()
 
     def _apply_filter(self) -> None:

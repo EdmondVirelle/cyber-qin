@@ -171,7 +171,7 @@ class LiveModeView(QWidget):
             TRANSPOSE_MAX // TRANSPOSE_STEP,
         )
         self._transpose_spin.setValue(0)
-        self._transpose_spin.setSuffix(" 八度")
+        self._transpose_spin.setSuffix(translator.tr("live.transpose.suffix"))
         self._transpose_spin.valueChanged.connect(self._on_transpose_changed)
         row1.addWidget(self._transpose_spin)
 
@@ -188,7 +188,7 @@ class LiveModeView(QWidget):
         self._scheme_combo = QComboBox()
         self._scheme_combo.setMinimumWidth(250)
         for scheme in list_schemes():
-            self._scheme_combo.addItem(scheme.name, scheme.id)
+            self._scheme_combo.addItem(scheme.translated_name(), scheme.id)
         self._scheme_combo.currentIndexChanged.connect(self._on_scheme_combo_changed)
         row2.addWidget(self._scheme_combo)
 
@@ -294,6 +294,21 @@ class LiveModeView(QWidget):
         # update dynamic labels
         self._auto_tune_check.setText(translator.tr("live.auto_tune"))
         self._log_title_lbl.setText(translator.tr("live.log"))
+        self._transpose_spin.setSuffix(translator.tr("live.transpose.suffix"))
+
+        # Re-populate scheme combo with translated names
+        current_data = self._scheme_combo.currentData()
+        self._scheme_combo.blockSignals(True)
+        self._scheme_combo.clear()
+        for scheme in list_schemes():
+            self._scheme_combo.addItem(scheme.translated_name(), scheme.id)
+        if current_data:
+            for i in range(self._scheme_combo.count()):
+                if self._scheme_combo.itemData(i) == current_data:
+                    self._scheme_combo.setCurrentIndex(i)
+                    break
+        self._scheme_combo.blockSignals(False)
+        self._update_scheme_description()
 
         # Trigger explicit update for stateful buttons
         self._update_stateful_text()
@@ -382,7 +397,7 @@ class LiveModeView(QWidget):
         if scheme_id:
             try:
                 scheme = get_scheme(scheme_id)
-                self._scheme_desc.setText(scheme.description)
+                self._scheme_desc.setText(scheme.translated_desc())
             except KeyError:
                 self._scheme_desc.setText("")
         else:

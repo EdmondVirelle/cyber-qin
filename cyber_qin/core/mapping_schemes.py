@@ -21,6 +21,22 @@ class MappingScheme:
     description: str
     rows: int                       # display rows
     keys_per_row: int               # keys per row
+    name_key: str = ""              # translator key for i18n name
+    desc_key: str = ""              # translator key for i18n description
+
+    def translated_name(self) -> str:
+        """Return translated scheme name, falling back to self.name."""
+        if self.name_key:
+            from .translator import translator
+            return translator.tr(self.name_key)
+        return self.name
+
+    def translated_desc(self) -> str:
+        """Return translated description, falling back to self.description."""
+        if self.desc_key:
+            from .translator import translator
+            return translator.tr(self.desc_key)
+        return self.description
 
 
 # ── Scheme builders ──────────────────────────────────────────
@@ -40,6 +56,8 @@ def _build_wwm_36() -> MappingScheme:
         description="3×12 佈局：ZXC / ASD / QWE 行，Shift/Ctrl 修飾升降號",
         rows=3,
         keys_per_row=12,
+        name_key="scheme.wwm_36.name",
+        desc_key="scheme.wwm_36.desc",
     )
 
 
@@ -95,7 +113,9 @@ def _build_ff14_37() -> MappingScheme:
         mapping=m,
         description="3×12 Diatonic: 數字(低) / QWER(中) / ASDF(高)，Ctrl=升降",
         rows=3,
-        keys_per_row=12,  # Approx width for display (7 diatonic + accidentals visually compressed)
+        keys_per_row=12,
+        name_key="scheme.ff14_37.name",
+        desc_key="scheme.ff14_37.desc",
     )
 
 
@@ -149,6 +169,8 @@ def _build_generic_24() -> MappingScheme:
         description="2×12 佈局：ZXC 行 + QWE 行，Shift/Ctrl 修飾升降號",
         rows=2,
         keys_per_row=12,
+        name_key="scheme.generic_24.name",
+        desc_key="scheme.generic_24.desc",
     )
 
 
@@ -203,6 +225,8 @@ def _build_generic_48() -> MappingScheme:
         description="4×12 佈局：數字行 / ZXC / ASD / QWE，4 個八度",
         rows=4,
         keys_per_row=12,
+        name_key="scheme.generic_48.name",
+        desc_key="scheme.generic_48.desc",
     )
 
 
@@ -260,6 +284,8 @@ def _build_generic_88() -> MappingScheme:
         description="8×11 佈局：多層 Shift/Ctrl 組合，完整鋼琴範圍",
         rows=8,
         keys_per_row=11,
+        name_key="scheme.generic_88.name",
+        desc_key="scheme.generic_88.desc",
     )
 
 

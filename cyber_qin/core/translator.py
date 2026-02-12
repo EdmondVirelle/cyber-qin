@@ -88,6 +88,28 @@ class Translator(QObject):
                 "player.repeat.off": "Repeat Off",
                 "player.repeat.one": "Repeat One",
                 "player.repeat.all": "Repeat All",
+
+                # Scheme names & descriptions
+                "scheme.wwm_36.name": "Where Winds Meet 36-Key",
+                "scheme.wwm_36.desc": "3×12 layout: ZXC / ASD / QWE rows, Shift/Ctrl for accidentals",
+                "scheme.ff14_37.name": "FF14 37-Key",
+                "scheme.ff14_37.desc": "3×12 Diatonic: Number(low) / QWER(mid) / ASDF(high), Ctrl=accidentals",
+                "scheme.generic_24.name": "Generic 24-Key",
+                "scheme.generic_24.desc": "2×12 layout: ZXC row + QWE row, Shift/Ctrl for accidentals",
+                "scheme.generic_48.name": "Generic 48-Key",
+                "scheme.generic_48.desc": "4×12 layout: Number / ZXC / ASD / QWE, 4 octaves",
+                "scheme.generic_88.name": "Generic 88-Key",
+                "scheme.generic_88.desc": "8×11 layout: layered Shift/Ctrl combos, full piano range",
+
+                # Sort labels
+                "lib.sort.default": "Default",
+                "lib.sort.name": "Name",
+                "lib.sort.bpm": "BPM",
+                "lib.sort.notes": "Notes",
+                "lib.sort.duration": "Duration",
+
+                # Transpose suffix
+                "live.transpose.suffix": " Octave",
             },
             "zh_tw": {
                 "app.title": "賽博琴仙",
@@ -149,6 +171,25 @@ class Translator(QObject):
                 "player.repeat.off": "關閉",
                 "player.repeat.one": "單曲重複",
                 "player.repeat.all": "全部循環",
+
+                "scheme.wwm_36.name": "燕雲十六聲 36鍵",
+                "scheme.wwm_36.desc": "3×12 佈局：ZXC / ASD / QWE 行，Shift/Ctrl 修飾升降號",
+                "scheme.ff14_37.name": "FF14 37鍵",
+                "scheme.ff14_37.desc": "3×12 全音階：數字(低) / QWER(中) / ASDF(高)，Ctrl=升降",
+                "scheme.generic_24.name": "通用 24鍵",
+                "scheme.generic_24.desc": "2×12 佈局：ZXC 行 + QWE 行，Shift/Ctrl 修飾升降號",
+                "scheme.generic_48.name": "通用 48鍵",
+                "scheme.generic_48.desc": "4×12 佈局：數字行 / ZXC / ASD / QWE，4 個八度",
+                "scheme.generic_88.name": "通用 88鍵",
+                "scheme.generic_88.desc": "8×11 佈局：多層 Shift/Ctrl 組合，完整鋼琴範圍",
+
+                "lib.sort.default": "預設順序",
+                "lib.sort.name": "名稱",
+                "lib.sort.bpm": "BPM",
+                "lib.sort.notes": "音符數",
+                "lib.sort.duration": "時長",
+
+                "live.transpose.suffix": " 八度",
             },
             "zh_cn": {
                 "app.title": "赛博琴仙",
@@ -210,6 +251,25 @@ class Translator(QObject):
                 "player.repeat.off": "关闭",
                 "player.repeat.one": "单曲重复",
                 "player.repeat.all": "全部循环",
+
+                "scheme.wwm_36.name": "燕云十六声 36键",
+                "scheme.wwm_36.desc": "3×12 布局：ZXC / ASD / QWE 行，Shift/Ctrl 修饰升降号",
+                "scheme.ff14_37.name": "FF14 37键",
+                "scheme.ff14_37.desc": "3×12 全音阶：数字(低) / QWER(中) / ASDF(高)，Ctrl=升降",
+                "scheme.generic_24.name": "通用 24键",
+                "scheme.generic_24.desc": "2×12 布局：ZXC 行 + QWE 行，Shift/Ctrl 修饰升降号",
+                "scheme.generic_48.name": "通用 48键",
+                "scheme.generic_48.desc": "4×12 布局：数字行 / ZXC / ASD / QWE，4 个八度",
+                "scheme.generic_88.name": "通用 88键",
+                "scheme.generic_88.desc": "8×11 布局：多层 Shift/Ctrl 组合，完整钢琴范围",
+
+                "lib.sort.default": "默认顺序",
+                "lib.sort.name": "名称",
+                "lib.sort.bpm": "BPM",
+                "lib.sort.notes": "音符数",
+                "lib.sort.duration": "时长",
+
+                "live.transpose.suffix": " 八度",
             },
              "ja": {
                 "app.title": "サイバー琴仙",
@@ -271,6 +331,25 @@ class Translator(QObject):
                 "player.repeat.off": "リピートオフ",
                 "player.repeat.one": "1曲リピート",
                 "player.repeat.all": "全曲リピート",
+
+                "scheme.wwm_36.name": "燕雲十六声 36鍵",
+                "scheme.wwm_36.desc": "3×12 配列：ZXC / ASD / QWE 行、Shift/Ctrl で変化記号",
+                "scheme.ff14_37.name": "FF14 37鍵",
+                "scheme.ff14_37.desc": "3×12 ダイアトニック：数字(低) / QWER(中) / ASDF(高)、Ctrl=変化記号",
+                "scheme.generic_24.name": "汎用 24鍵",
+                "scheme.generic_24.desc": "2×12 配列：ZXC 行 + QWE 行、Shift/Ctrl で変化記号",
+                "scheme.generic_48.name": "汎用 48鍵",
+                "scheme.generic_48.desc": "4×12 配列：数字行 / ZXC / ASD / QWE、4 オクターブ",
+                "scheme.generic_88.name": "汎用 88鍵",
+                "scheme.generic_88.desc": "8×11 配列：Shift/Ctrl 多層組合、フルピアノ範囲",
+
+                "lib.sort.default": "デフォルト",
+                "lib.sort.name": "名前",
+                "lib.sort.bpm": "BPM",
+                "lib.sort.notes": "音符数",
+                "lib.sort.duration": "時間",
+
+                "live.transpose.suffix": " オクターブ",
             },
             "ko": {
                 "app.title": "사이버 琴仙",
@@ -332,6 +411,25 @@ class Translator(QObject):
                 "player.repeat.off": "반복 끔",
                 "player.repeat.one": "한 곡 반복",
                 "player.repeat.all": "전체 반복",
+
+                "scheme.wwm_36.name": "연운십육성 36키",
+                "scheme.wwm_36.desc": "3×12 배열: ZXC / ASD / QWE 행, Shift/Ctrl 로 변화표",
+                "scheme.ff14_37.name": "FF14 37키",
+                "scheme.ff14_37.desc": "3×12 다이어토닉: 숫자(저) / QWER(중) / ASDF(고), Ctrl=변화표",
+                "scheme.generic_24.name": "범용 24키",
+                "scheme.generic_24.desc": "2×12 배열: ZXC 행 + QWE 행, Shift/Ctrl 로 변화표",
+                "scheme.generic_48.name": "범용 48키",
+                "scheme.generic_48.desc": "4×12 배열: 숫자행 / ZXC / ASD / QWE, 4 옥타브",
+                "scheme.generic_88.name": "범용 88키",
+                "scheme.generic_88.desc": "8×11 배열: Shift/Ctrl 다층 조합, 풀 피아노 범위",
+
+                "lib.sort.default": "기본 순서",
+                "lib.sort.name": "이름",
+                "lib.sort.bpm": "BPM",
+                "lib.sort.notes": "음표 수",
+                "lib.sort.duration": "시간",
+
+                "live.transpose.suffix": " 옥타브",
             }
         }
 
