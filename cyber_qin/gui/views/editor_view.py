@@ -1236,7 +1236,9 @@ class EditorView(QWidget):
 
     # ── Keyboard shortcuts ──────────────────────────────────
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802
+        if event is None:
+            return
         key = event.key()
         text = event.text()
         ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)

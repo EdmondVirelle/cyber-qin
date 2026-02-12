@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtProperty, pyqtSignal  # type: ignore[attr-defined]
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtProperty, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath
 from PyQt6.QtWidgets import QToolTip, QWidget
 
@@ -46,8 +46,8 @@ class ProgressBar(QWidget):
     def bar_height(self) -> float:
         return self._bar_height
 
-    @bar_height.setter
-    def bar_height(self, val: float) -> None:  # type: ignore[no-redef]
+    @bar_height.setter  # type: ignore[no-redef]
+    def bar_height(self, val: float) -> None:
         self._bar_height = val
         self.update()
 
@@ -55,8 +55,8 @@ class ProgressBar(QWidget):
     def handle_opacity(self) -> float:
         return self._handle_opacity
 
-    @handle_opacity.setter
-    def handle_opacity(self, val: float) -> None:  # type: ignore[no-redef]
+    @handle_opacity.setter  # type: ignore[no-redef]
+    def handle_opacity(self, val: float) -> None:
         self._handle_opacity = val
         self.update()
 
@@ -64,8 +64,8 @@ class ProgressBar(QWidget):
     def anim_value(self) -> float:
         return self._anim_value
 
-    @anim_value.setter
-    def anim_value(self, val: float) -> None:  # type: ignore[no-redef]
+    @anim_value.setter  # type: ignore[no-redef]
+    def anim_value(self, val: float) -> None:
         self._anim_value = val
         self.update()
 

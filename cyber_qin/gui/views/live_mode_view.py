@@ -429,7 +429,7 @@ class LiveModeView(QWidget):
         if not port_name or port_name.startswith("("):
             return
         try:
-            callback = getattr(self, "_midi_callback", None)
+            callback = getattr(self, "_midi_callback", lambda n, s, v: None)
             self._listener.open(
                 port_name,
                 callback=callback,

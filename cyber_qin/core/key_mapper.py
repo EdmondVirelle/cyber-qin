@@ -87,6 +87,7 @@ class KeyMapper:
 
     def __init__(self, transpose: int = 0, scheme: MappingScheme | None = None) -> None:
         self._transpose = transpose
+        self._scheme: MappingScheme | None
         if scheme is not None:
             self._scheme = scheme
             self._mapping = scheme.mapping
