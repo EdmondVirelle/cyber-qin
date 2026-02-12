@@ -1,144 +1,144 @@
-# Cyber Qin 賽博琴仙
-
-**用真實鋼琴彈奏，遊戲角色同步演奏。**
+# Cyber Qin
 
 **Play a real piano, and your game character plays in sync.**
 
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.8.8-green)
+![Version](https://img.shields.io/badge/Version-0.9.0-green)
 ![Tests](https://img.shields.io/badge/Tests-180%20passed-brightgreen)
 
----
-
-## 簡介 / Introduction
-
-**Cyber Qin** 是一款即時 MIDI 轉鍵盤的遊戲彈琴工具。它將 USB MIDI 鍵盤的訊號轉換成 DirectInput 掃描碼（延遲 < 2ms），讓你在各種遊戲中用真實鋼琴演奏。
-
-支援的遊戲包括：
-- **燕雲十六聲** (Where Winds Meet) — 36 鍵
-- **FF14** (Final Fantasy XIV) — 37 鍵
-- **其他遊戲** — 通用 24 / 48 / 88 鍵方案
-
-除了即時演奏，還支援 **MIDI 檔案自動彈奏** 以及內建的 **MIDI 編輯器（編曲器）**。
+[中文版 (Traditional Chinese)](README_TW.md)
 
 ---
 
-## 功能特色 / Features
+## Introduction
 
-### 即時演奏 (Live Mode)
-| 功能 | 說明 |
-|------|------|
-| **即時 MIDI 映射** | MIDI 訊號直接在 rtmidi C++ 執行緒上觸發 SendInput，延遲 < 2ms |
-| **5 組鍵位方案** | 燕雲 36 鍵 / FF14 37 鍵 / 通用 24 / 48 / 88 鍵，可隨時切換 |
-| **智慧前處理** | 自動移調 → 八度摺疊 → 碰撞去重 |
-| **自動重連** | MIDI 裝置斷線後每 3 秒自動偵測重連 |
-| **防卡鍵看門狗** | 偵測超過 10 秒未釋放的按鍵並自動釋放 |
+**Cyber Qin** is a real-time MIDI-to-Keyboard mapping tool designed for games. It converts signals from a USB MIDI keyboard into DirectInput scan codes with **< 2ms latency**, allowing your in-game character to perform in perfect sync with your real-world playing.
 
-### MIDI 播放 (Library)
-| 功能 | 說明 |
-|------|------|
-| **匯入 .mid 檔案** | 拖曳或匯入 MIDI 檔案到曲庫 |
-| **速度控制** | 0.25x ~ 2.0x 播放速度 |
-| **進度條拖曳** | 可拖曳進度條跳轉播放位置 |
-| **4 拍倒數** | 播放前自動倒數，方便切換到遊戲視窗 |
-| **排序與搜尋** | 依名稱/BPM/音符數/時長排序，支援搜尋 |
+Supported games include:
+- **Where Winds Meet** (燕雲十六聲) — 36 keys
+- **Final Fantasy XIV** (FF14) — 37 keys
+- **Other Games** — Generic 24 / 48 / 88 keys schemes
 
-### MIDI 編輯器 (Sequencer)
-| 功能 | 說明 |
-|------|------|
-| **鋼琴卷軸編輯** | 直覺式鋼琴卷軸，可繪製/選取/刪除音符 |
-| **播放游標** | 平滑播放游標 (30ms 更新) + 動態發光回饋 |
-| **多軌匯出** | 支援 Type 1 多軌 MIDI 檔案匯出 |
-| **快捷鍵操作** | 完整快捷鍵支援（內建操作指南對話框） |
-
-### 介面 / UI
-| 功能 | 說明 |
-|------|------|
-| **賽博墨韻主題** | 暗色主題：霓虹青 (#00F0FF) + 宣紙白暖色調 |
-| **向量圖示** | 所有圖示以 QPainter 繪製，任何解析度完美縮放 |
-| **動態鋼琴** | 即時按鍵狀態視覺化 + 霓虹發光動畫 |
-| **多語言** | 繁中 / 簡中 / 英文 / 日文 / 韓文 介面切換 |
-| **Spotify 風格播放列** | 底部播放控制列 + 迷你鋼琴 + 進度條 + 速度控制 |
+Beyond live performance, it also supports **Automatic MIDI Playback** and an integrated **MIDI Editor (Sequencer)**.
 
 ---
 
-## 使用方法 / Usage
+## Features
 
-### 系統需求
-- **作業系統**: Windows 10 / 11
-- **Python**: 3.11 以上
-- **MIDI 裝置**: 任何 USB MIDI 鍵盤（已測試 Roland FP-30X）
-- **權限**: 需以 **系統管理員** 身分執行（SendInput 需要提升權限）
+### Live Mode
+| Feature | Description |
+|------|------|
+| **Real-time MIDI Mapping** | Direct MIDI-to-SendInput injection on rtmidi C++ thread for < 2ms latency |
+| **5 Mapping Schemes** | WWM 36 / FF14 37 / Generic 24 / 48 / 88 schemes, switchable on the fly |
+| **Smart Preprocessing** | Auto Transpose → Octave Folding → Collision Deduplication |
+| **Auto Reconnect** | Detects and reconnects MIDI devices every 3 seconds if disconnected |
+| **Watchdog** | Automatically releases keys stuck for more than 10 seconds |
 
-### 安裝
+### Library (MIDI Playback)
+| Feature | Description |
+|------|------|
+| **Import MIDI** | Drag and drop or import .mid files into the library |
+| **Speed Control** | Adjustable playback speed from 0.25x to 2.0x |
+| **Seek Bar** | Jump to any position in the track |
+| **4-Beat Countdown** | Countdown before playback to allow switching to the game window |
+| **Sort & Search** | Sort by Name/BPM/Notes/Duration with search functionality |
+
+### Sequencer (MIDI Editor)
+| Feature | Description |
+|------|------|
+| **Piano Roll Editing** | Intuitive piano roll for drawing, selecting, and deleting notes |
+| **Playback Cursor** | Smooth cursor (30ms refresh) with dynamic glow feedback |
+| **Multi-track Export** | Supports Type 1 multi-track MIDI file export |
+| **Shortcuts** | Full hotkey support (with built-in help dialog) |
+
+### UI
+| Feature | Description |
+|------|------|
+| **Cyber-Ink Theme** | Dark theme: Neon Cyan (#00F0FF) mixed with warm paper-white tones |
+| **Vector Icons** | All icons drawn via QPainter for perfect scaling at any resolution |
+| **Dynamic Piano** | Real-time key state visualization with neon glow animations |
+| **Multi-Language** | Switch between Traditional Chinese / Simplified Chinese / English / Japanese / Korean |
+| **Spotify-style Bar** | Bottom transport bar with mini-piano, progress seek, and speed control |
+
+---
+
+## Usage
+
+### System Requirements
+- **OS**: Windows 10 / 11
+- **Python**: 3.11+
+- **MIDI Device**: Any USB MIDI keyboard (Tested with Roland FP-30X)
+- **Privileges**: Must run as **Administrator** (SendInput requires elevated permissions)
+
+### Installation
 
 ```bash
-# 1. 複製專案
+# 1. Clone repository
 git clone https://github.com/EdmondVirelle/cyber-qin.git
 cd cyber-qin
 
-# 2. 安裝（含開發依賴）
+# 2. Install dependencies
 pip install -e .[dev]
 ```
 
-### 啟動
+### Starting
 
 ```bash
-# 以系統管理員身分執行
+# Run as Administrator
 cyber-qin
 ```
 
-> **提示**: 若未以系統管理員執行，遊戲內的按鍵注入會靜默失敗。
+> **Tip**: If not running as Administrator, key injection in games will silently fail.
 
-### 使用流程
+### Workflow
 
-1. **連接 MIDI 鍵盤** — 啟動後在「演奏模式」選擇 MIDI 裝置
-2. **選擇鍵位方案** — 根據遊戲選擇對應方案（燕雲/FF14/通用）
-3. **即時演奏** — 切換到遊戲視窗，開始彈奏
-4. **匯入 MIDI** — 點選「曲庫」匯入 .mid 檔案，設定速度後播放
-5. **編輯 MIDI** — 點選「編曲器」編輯音符，匯出修改後的 MIDI
+1. **Connect Keyboard** — Select your MIDI device in "Live Mode" after startup
+2. **Select Scheme** — Choose the scheme corresponding to your game (WWM/FF14/Generic)
+3. **Perform** — Switch to your game window and start playing
+4. **Library** — Go to "Library" to import .mid files and play with speed control
+5. **Sequencer** — Go to "Sequencer" to edit notes and export modified MIDI
 
-### 打包獨立執行檔
+### Building Executable
 
 ```bash
 python scripts/build.py
-# 輸出: dist/CyberQin/ (~95 MB)
+# Output: dist/CyberQin/ (~95 MB)
 ```
 
 ---
 
-## 鍵位方案 / Mapping Schemes
+## Mapping Schemes
 
-| 方案 | 鍵數 | MIDI 範圍 | 佈局 | 目標遊戲 |
-|------|------|-----------|------|----------|
-| **燕雲十六聲 36鍵** | 36 | C3 - B5 | 3×12 (ZXC / ASD / QWE + Shift/Ctrl) | 燕雲十六聲 |
-| **FF14 37鍵** | 37 | C3 - C6 | 3×12 Diatonic (數字/QWER/ASDF) | Final Fantasy XIV |
-| **通用 24鍵** | 24 | C3 - B4 | 2×12 (ZXC / QWE + Shift/Ctrl) | 通用 |
-| **通用 48鍵** | 48 | C2 - B5 | 4×12 (數字行 / ZXC / ASD / QWE) | 通用 |
-| **通用 88鍵** | 88 | A0 - C8 | 8×11 (多層 Shift/Ctrl 組合) | 通用 (全鋼琴) |
+| Scheme | Keys | MIDI Range | Layout | Target Game |
+|--------|------|------------|--------|-------------|
+| **WWM 36-Key** | 36 | C3 - B5 | 3×12 (ZXC / ASD / QWE + Shift/Ctrl) | Where Winds Meet |
+| **FF14 37-Key** | 37 | C3 - C6 | 3×12 Diatonic (Nums/QWER/ASDF) | Final Fantasy XIV |
+| **Generic 24-Key** | 24 | C3 - B4 | 2×12 (ZXC row + QWE row, Shift/Ctrl for accidentals) | Generic |
+| **Generic 48-Key** | 48 | C2 - B5 | 4×12 (Numbers / ZXC / ASD / QWE) | Generic |
+| **Generic 88-Key** | 88 | A0 - C8 | 8×11 (Layered Shift/Ctrl combos, full range) | Generic (Full Piano) |
 
 ---
 
-## 系統架構 / Architecture
+## Architecture
 
-### 資料流
+### Data Flow
 
 ```
-                          即時演奏模式
+                          Live Mode
 ┌─────────────┐    USB    ┌──────────────┐  callback  ┌───────────┐  lookup  ┌──────────────┐  SendInput  ┌──────┐
 │ MIDI Keyboard│─────────→│ python-rtmidi │──────────→│ KeyMapper │────────→│ KeySimulator │───────────→│ Game │
 └─────────────┘           └──────────────┘            └───────────┘         └──────────────┘            └──────┘
                             (rtmidi thread)                                  (scan codes)
 
 
-                          自動播放模式
+                          Playback Mode
 ┌───────────┐  parse  ┌─────────────────┐  preprocess  ┌──────────────────┐  timed events  ┌──────────────┐
 │ .mid File │────────→│ MidiFileParser  │────────────→│ MidiPreprocessor │──────────────→│ PlaybackWorker│
 └───────────┘         └─────────────────┘              └──────────────────┘               └──────┬───────┘
                                                                                                  │
-                                                              lookup + SendInput                 │
+                                                               lookup + SendInput                 │
                                                        ┌───────────┬──────────────┐←────────────┘
                                                        │ KeyMapper │ KeySimulator │→ Game
                                                        └───────────┴──────────────┘
@@ -146,15 +146,15 @@ python scripts/build.py
 
 ---
 
-## 開發 / Development
+## Development
 
-### 測試
+### Testing
 
 ```bash
-# 執行所有 180 個測試
+# Run all 180 tests
 pytest
 
-# 詳細輸出
+# Verbose output
 pytest -v
 ```
 
@@ -165,31 +165,31 @@ ruff check .
 ruff check --fix .
 ```
 
-### 專案統計
+### Statistics
 
-| 指標 | 數值 |
+| Metric | Value |
 |------|------|
-| 原始碼行數 | ~5,000 LOC |
-| 模組 | 26 |
-| 測試 | 180 |
-| 支援 Python | 3.11 / 3.12 / 3.13 |
+| Lines of Code | ~5,000 LOC |
+| Modules | 26 |
+| Tests | 180 |
+| Python Support | 3.11 / 3.12 / 3.13 |
 
 ---
 
-## 技術棧 / Tech Stack
+## Tech Stack
 
-| 層級 | 技術 | 用途 |
+| Layer | Technology | Purpose |
 |------|------|------|
-| **MIDI I/O** | `mido` + `python-rtmidi` | MIDI 裝置通訊、.mid 檔案解析 |
-| **輸入模擬** | `ctypes` + Win32 `SendInput` | DirectInput 掃描碼注入 |
-| **GUI** | PyQt6 | 桌面介面、事件迴圈、跨執行緒信號 |
-| **打包** | PyInstaller | 單資料夾執行檔打包 |
-| **CI/CD** | GitHub Actions | 多版本測試 + 自動化 tag 發佈 |
-| **品質** | Ruff + pytest | Linting + 180 測試 |
+| **MIDI I/O** | `mido` + `python-rtmidi` | Device communication & MIDI parsing |
+| **Simulation** | `ctypes` + Win32 `SendInput` | DirectInput scan code injection |
+| **GUI** | PyQt6 | Desktop interface, event loop, cross-thread signals |
+| **Bundling** | PyInstaller | Single-folder executable packaging |
+| **CI/CD** | GitHub Actions | Automated tagging & multi-platform testing |
+| **Quality** | Ruff + pytest | Linting & 180 unit/integration tests |
 
 ---
 
-## 致謝 / Acknowledgments
+## Acknowledgments
 
 - [mido](https://github.com/mido/mido) — Python MIDI library
 - [python-rtmidi](https://github.com/SpotlightKid/python-rtmidi) — Low-latency cross-platform MIDI I/O
@@ -201,15 +201,12 @@ ruff check --fix .
 
 ---
 
-## 免責聲明 / Disclaimer
-
-本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
-在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
-開發者不對因使用本工具導致的帳號處分或任何損失承擔責任。
+## Disclaimer
 
 This tool is an open-source personal project for MIDI music performance enthusiasts.
 Using third-party tools in games may violate the game's Terms of Service. Please use at your own risk.
+The developer is not responsible for any account penalties or losses resulting from the use of this tool.
 
 ---
 
-**贊助 / Sponsor**: [Ko-fi](https://ko-fi.com/virelleedmond)
+**Sponsor**: [Ko-fi](https://ko-fi.com/virelleedmond)
