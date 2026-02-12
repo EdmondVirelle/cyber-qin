@@ -70,7 +70,6 @@ class _EmptyStateWidget(QWidget):
         text_y = h * 0.2 + icon_size + 20
         painter.drawText(
             0, int(text_y), w, 30,
-            0, int(text_y), w, 30,
             int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),
             translator.tr("lib.empty.title"),
         )

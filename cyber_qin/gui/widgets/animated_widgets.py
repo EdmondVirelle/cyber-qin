@@ -10,8 +10,8 @@ from PyQt6.QtCore import (
     QRectF,
     QSize,
     Qt,
-    pyqtProperty,  # type: ignore[attr-defined]
-)
+    pyqtProperty,
+)  # type: ignore[attr-defined]
 from PyQt6.QtGui import QColor, QPainter, QPainterPath
 from PyQt6.QtWidgets import QAbstractButton, QWidget
 
