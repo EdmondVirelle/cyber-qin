@@ -144,7 +144,28 @@ class EditorSequence:
         self._redo_stack: list[_Snapshot] = []
 
         # Clipboard for copy/paste
+        # Clipboard for copy/paste
         self._clipboard: list[BeatItem] = []
+
+        self._cache_notes_by_track: dict[int, list[BeatNote]] | None = None
+        self._cache_rests_by_track: dict[int, list[BeatRest]] | None = None
+
+    def _invalidate_cache(self) -> None:
+        self._cache_notes_by_track = None
+        self._cache_rests_by_track = None
+
+    def _ensure_cache(self) -> None:
+        if self._cache_notes_by_track is not None:
+            return
+        
+        from collections import defaultdict
+        self._cache_notes_by_track = defaultdict(list)
+        for n in self._notes:
+            self._cache_notes_by_track[n.track].append(n)
+            
+        self._cache_rests_by_track = defaultdict(list)
+        for r in self._rests:
+            self._cache_rests_by_track[r.track].append(r)
 
     # ── Properties ──────────────────────────────────────────
 
@@ -357,6 +378,8 @@ class EditorSequence:
         for r in self._rests:
             r.track = old_to_new.get(r.track, r.track)
         self._active_track = old_to_new.get(self._active_track, 0)
+        self._invalidate_cache()
+        self._invalidate_cache()
 
     def remove_track(self, index: int) -> None:
         if not (0 <= index < len(self._tracks)):
@@ -378,6 +401,7 @@ class EditorSequence:
         ]
         if self._active_track >= len(self._tracks):
             self._active_track = len(self._tracks) - 1
+        self._invalidate_cache()
 
     # ── Note / Rest editing ─────────────────────────────────
 
@@ -392,6 +416,7 @@ class EditorSequence:
         )
         self._notes.append(note)
         self._notes.sort(key=lambda n: n.time_beats)
+        self._invalidate_cache()
         self.advance_cursor()
 
     def add_rest(self) -> None:
@@ -403,17 +428,20 @@ class EditorSequence:
         )
         self._rests.append(rest)
         self._rests.sort(key=lambda r: r.time_beats)
+        self._invalidate_cache()
         self.advance_cursor()
 
     def delete_note(self, index: int) -> None:
         if 0 <= index < len(self._notes):
             self._push_undo()
             self._notes.pop(index)
+            self._invalidate_cache()
 
     def delete_rest(self, index: int) -> None:
         if 0 <= index < len(self._rests):
             self._push_undo()
             self._rests.pop(index)
+            self._invalidate_cache()
 
     def delete_notes(self, indices: list[int]) -> None:
         if not indices:
@@ -421,6 +449,7 @@ class EditorSequence:
         self._push_undo()
         to_remove = set(indices)
         self._notes = [n for i, n in enumerate(self._notes) if i not in to_remove]
+        self._invalidate_cache()
 
     def delete_rests(self, indices: list[int]) -> None:
         if not indices:
@@ -428,6 +457,7 @@ class EditorSequence:
         self._push_undo()
         to_remove = set(indices)
         self._rests = [r for i, r in enumerate(self._rests) if i not in to_remove]
+        self._invalidate_cache()
 
     def move_note(
         self, index: int, time_delta: float = 0.0, pitch_delta: int = 0,
@@ -439,6 +469,7 @@ class EditorSequence:
         n.time_beats = max(0.0, n.time_beats + time_delta)
         n.note = max(0, min(127, n.note + pitch_delta))
         self._notes.sort(key=lambda n: n.time_beats)
+        self._invalidate_cache()
 
     def move_notes(
         self, indices: list[int], time_delta: float = 0.0, pitch_delta: int = 0,
@@ -452,6 +483,7 @@ class EditorSequence:
                 n.time_beats = max(0.0, n.time_beats + time_delta)
                 n.note = max(0, min(127, n.note + pitch_delta))
         self._notes.sort(key=lambda n: n.time_beats)
+        self._invalidate_cache()
 
     def resize_note(self, index: int, new_duration: float) -> None:
         if not (0 <= index < len(self._notes)):
@@ -483,6 +515,7 @@ class EditorSequence:
         )
         self._notes.append(note)
         self._notes.sort(key=lambda n: n.time_beats)
+        self._invalidate_cache()
 
     def quantize_notes(self, indices: list[int], grid: float) -> None:
         """Snap selected notes' time_beats to nearest grid multiple."""
@@ -494,6 +527,7 @@ class EditorSequence:
                 n = self._notes[i]
                 n.time_beats = round(n.time_beats / grid) * grid
         self._notes.sort(key=lambda n: n.time_beats)
+        self._invalidate_cache()
 
     def set_notes_velocity(self, indices: list[int], velocity: int) -> None:
         """Set velocity of notes at given indices."""
@@ -518,6 +552,7 @@ class EditorSequence:
         if rest_indices:
             to_remove = set(rest_indices)
             self._rests = [r for i, r in enumerate(self._rests) if i not in to_remove]
+        self._invalidate_cache()
 
     def clear(self) -> None:
         if self._notes or self._rests:
@@ -525,14 +560,17 @@ class EditorSequence:
             self._notes.clear()
             self._rests.clear()
             self._cursor_beats = 0.0
+            self._invalidate_cache()
 
     # ── Selection / Clipboard ───────────────────────────────
 
     def notes_in_track(self, track: int) -> list[BeatNote]:
-        return [n for n in self._notes if n.track == track]
+        self._ensure_cache()
+        return self._cache_notes_by_track.get(track, [])
 
     def rests_in_track(self, track: int) -> list[BeatRest]:
-        return [r for r in self._rests if r.track == track]
+        self._ensure_cache()
+        return self._cache_rests_by_track.get(track, [])
 
     def note_indices_in_rect(
         self, t0: float, t1: float, n0: int, n1: int,
@@ -596,6 +634,7 @@ class EditorSequence:
                 self._rests.append(new)
         self._notes.sort(key=lambda n: n.time_beats)
         self._rests.sort(key=lambda r: r.time_beats)
+        self._invalidate_cache()
 
     # ── Conversion ──────────────────────────────────────────
 
@@ -609,10 +648,19 @@ class EditorSequence:
         """Convert all notes to MidiFileEvent list for playback."""
         from .midi_file_player import MidiFileEvent
 
+        # Determine which tracks are audible (solo logic)
+        any_solo = any(t.solo for t in self._tracks)
+        audible = set()
+        for i, t in enumerate(self._tracks):
+            if t.muted:
+                continue
+            if any_solo and not t.solo:
+                continue
+            audible.add(i)
+
         result = []
         for n in self._notes:
-            # Skip muted tracks
-            if self._tracks[n.track].muted:
+            if n.track not in audible:
                 continue
             t = self._beats_to_seconds(n.time_beats)
             dur = self._beats_to_seconds(n.duration_beats)
@@ -640,9 +688,19 @@ class EditorSequence:
         """Convert to RecordedEvent list for MidiWriter."""
         from .midi_recorder import RecordedEvent
 
+        # Determine which tracks are audible (solo logic)
+        any_solo = any(t.solo for t in self._tracks)
+        audible = set()
+        for i, t in enumerate(self._tracks):
+            if t.muted:
+                continue
+            if any_solo and not t.solo:
+                continue
+            audible.add(i)
+
         result = []
         for n in self._notes:
-            if self._tracks[n.track].muted:
+            if n.track not in audible:
                 continue
             t = self._beats_to_seconds(n.time_beats)
             dur = self._beats_to_seconds(n.duration_beats)
@@ -703,6 +761,7 @@ class EditorSequence:
             ))
 
         seq._notes.sort(key=lambda n: n.time_beats)
+        seq._invalidate_cache()
         return seq
 
     # ── Project file serialization ──────────────────────────
@@ -787,4 +846,5 @@ class EditorSequence:
 
         seq._notes.sort(key=lambda n: n.time_beats)
         seq._rests.sort(key=lambda r: r.time_beats)
+        seq._invalidate_cache()
         return seq

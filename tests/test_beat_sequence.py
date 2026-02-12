@@ -844,3 +844,49 @@ class TestTrackExtras:
         seq = EditorSequence()
         seq.set_track_solo(1, True)
         assert seq.tracks[1].solo is True
+
+
+# ── Rest + note playback conversion ──────────────────────
+
+
+class TestRestNotePlayback:
+    """Verify MIDI event generation when rests are mixed with notes."""
+
+    def test_rest_before_notes_timing(self):
+        """Events after rests should have correct time_seconds."""
+        seq = EditorSequence(tempo_bpm=120.0)
+        seq.set_step_duration("1/4")  # 1 beat = 0.5s at 120 BPM
+        seq.add_rest()   # beat 0–1 (rest)
+        seq.add_rest()   # beat 1–2 (rest)
+        seq.add_note(60) # beat 2–3 (note)
+        events = seq.to_midi_file_events()
+        # Should have 2 events: note_on, note_off
+        assert len(events) == 2
+        # note starts at beat 2 = 1.0s at 120 BPM
+        assert abs(events[0].time_seconds - 1.0) < 0.001
+        # note ends at beat 3 = 1.5s
+        assert abs(events[1].time_seconds - 1.5) < 0.001
+
+    def test_duration_includes_trailing_rest(self):
+        """duration_seconds should include rests at the end."""
+        seq = EditorSequence(tempo_bpm=120.0)
+        seq.set_step_duration("1/4")
+        seq.add_note(60)  # beat 0–1
+        seq.add_rest()    # beat 1–2
+        # duration should be 2 beats = 1.0s
+        assert abs(seq.duration_seconds - 1.0) < 0.001
+        # but MIDI events only go to beat 1 = 0.5s
+        events = seq.to_midi_file_events()
+        max_event_time = max(e.time_seconds for e in events)
+        assert abs(max_event_time - 0.5) < 0.001
+
+    def test_rest_only_sequence_has_no_events(self):
+        """A sequence with only rests should produce no MIDI events."""
+        seq = EditorSequence()
+        seq.add_rest()
+        seq.add_rest()
+        events = seq.to_midi_file_events()
+        assert len(events) == 0
+        # But duration should still reflect the rests
+        assert seq.duration_beats > 0
+

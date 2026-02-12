@@ -14,6 +14,7 @@ Layout:
 
 from __future__ import annotations
 
+import copy
 import logging
 
 from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
@@ -48,6 +49,7 @@ from ..widgets.clickable_piano import ClickablePiano
 from ..widgets.editor_track_panel import EditorTrackPanel
 from ..widgets.note_roll import NoteRoll
 from ..widgets.pitch_ruler import PitchRuler
+from ..widgets.speed_control import SpeedControl
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +108,7 @@ class EditorView(QWidget):
         self._player = None  # set by set_player()
         self._preview_player = None  # lazy MidiOutputPlayer
         self._selection_anchor: float | None = None
+        self._playback_speed: float = 1.0
 
         self._build_ui()
         self._connect_signals()
@@ -115,6 +118,9 @@ class EditorView(QWidget):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.timeout.connect(self._on_autosave)
         self._autosave_timer.start(60_000)
+
+        # Deferred autosave recovery check (after widget is shown)
+        QTimer.singleShot(500, self._check_autosave_recovery)
 
     def set_player(self, player) -> None:
         """Set the player controller for playback cursor tracking."""
@@ -305,6 +311,19 @@ class EditorView(QWidget):
         self._velocity_spin.setEnabled(False)
         row2.addWidget(self._velocity_spin)
 
+        row2.addSpacing(8)
+
+        self._speed_ctrl = SpeedControl()
+        row2.addWidget(self._speed_ctrl)
+
+        row2.addSpacing(8)
+
+        self._shortcuts_cb = QCheckBox("⌨ 快捷鍵")
+        self._shortcuts_cb.setChecked(True)
+        self._shortcuts_cb.setToolTip("啟用／停用單鍵快捷鍵 (1-5, 0, P, 方向鍵)")
+        self._shortcuts_cb.setStyleSheet("background: transparent;")
+        row2.addWidget(self._shortcuts_cb)
+
         row2.addStretch()
 
         self._note_count_lbl = QLabel("0 音符")
@@ -368,6 +387,7 @@ class EditorView(QWidget):
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
         self._snap_cb.toggled.connect(self._note_roll.set_snap_enabled)
         self._velocity_spin.valueChanged.connect(self._on_velocity_changed)
+        self._speed_ctrl.speed_changed.connect(self._on_speed_changed)
 
         # NoteRoll signals
         self._note_roll.note_deleted.connect(self._on_note_deleted)
@@ -397,6 +417,7 @@ class EditorView(QWidget):
 
     def _update_ui_state(self) -> None:
         """Sync UI with sequence state."""
+        self._invalidate_index_cache()
         active = self._sequence.active_track
         track_notes = self._sequence.notes_in_track(active)
         track_rests = self._sequence.rests_in_track(active)
@@ -406,8 +427,9 @@ class EditorView(QWidget):
         for i, t in enumerate(self._sequence.tracks):
             if i != active and not t.muted:
                 for n in self._sequence.notes_in_track(i):
-                    n._ghost_color = t.color
-                    ghost_notes.append(n)
+                    gn = copy.copy(n)
+                    gn._ghost_color = t.color
+                    ghost_notes.append(gn)
 
         self._note_roll.set_notes(track_notes)
         self._note_roll.set_rests(track_rests)
@@ -497,25 +519,47 @@ class EditorView(QWidget):
 
     # ── Index mapping helpers ────────────────────────────────
 
+    def _invalidate_index_cache(self) -> None:
+        """Clear cached index maps — called on every UI refresh."""
+        self._note_index_map: dict[int, int] | None = None
+        self._rest_index_map: dict[int, int] | None = None
+
+    def _ensure_note_index_map(self) -> dict[int, int]:
+        """Build (or return cached) track-local → global note index mapping."""
+        if self._note_index_map is not None:
+            return self._note_index_map
+        active = self._sequence.active_track
+        local_idx = 0
+        mapping: dict[int, int] = {}
+        for gi, n in enumerate(self._sequence._notes):
+            if n.track == active:
+                mapping[local_idx] = gi
+                local_idx += 1
+        self._note_index_map = mapping
+        return mapping
+
+    def _ensure_rest_index_map(self) -> dict[int, int]:
+        """Build (or return cached) track-local → global rest index mapping."""
+        if self._rest_index_map is not None:
+            return self._rest_index_map
+        active = self._sequence.active_track
+        local_idx = 0
+        mapping: dict[int, int] = {}
+        for gi, r in enumerate(self._sequence._rests):
+            if r.track == active:
+                mapping[local_idx] = gi
+                local_idx += 1
+        self._rest_index_map = mapping
+        return mapping
+
     def _map_to_global_note_index(self, track_local_idx: int) -> int:
         """Map a track-local note index to a global index in sequence._notes."""
-        active_notes = self._sequence.notes_in_track(self._sequence.active_track)
-        if 0 <= track_local_idx < len(active_notes):
-            target = active_notes[track_local_idx]
-            for gi, n in enumerate(self._sequence._notes):
-                if n is target:
-                    return gi
-        return -1
+        return self._ensure_note_index_map().get(track_local_idx, -1)
 
     def _map_to_global_rest_index(self, track_local_idx: int) -> int:
         """Map a track-local rest index to a global index in sequence._rests."""
-        active_rests = self._sequence.rests_in_track(self._sequence.active_track)
-        if 0 <= track_local_idx < len(active_rests):
-            target = active_rests[track_local_idx]
-            for gi, r in enumerate(self._sequence._rests):
-                if r is target:
-                    return gi
-        return -1
+        return self._ensure_rest_index_map().get(track_local_idx, -1)
+
 
     # ── Note events ──────────────────────────────────────────
 
@@ -679,8 +723,16 @@ class EditorView(QWidget):
             path += ".mid"
 
         try:
-            recorded = self._sequence.to_recorded_events()
-            MidiWriter.save(recorded, path, tempo_bpm=self._sequence.tempo_bpm)
+            midi_events = self._sequence.to_midi_file_events()
+            tracks = self._sequence.tracks
+            track_names = [t.name for t in tracks]
+            track_channels = [t.channel for t in tracks]
+            MidiWriter.save_multitrack(
+                midi_events, path,
+                tempo_bpm=self._sequence.tempo_bpm,
+                track_names=track_names,
+                track_channels=track_channels,
+            )
         except Exception:
             log.exception("Failed to export %s", path)
 
@@ -717,6 +769,27 @@ class EditorView(QWidget):
                 project_file.autosave(self._sequence)
             except Exception:
                 log.debug("Autosave failed", exc_info=True)
+
+    def _check_autosave_recovery(self) -> None:
+        """Check for autosave file and offer recovery."""
+        if self._sequence.note_count > 0 or self._sequence.rest_count > 0:
+            return  # Already has content, don't overwrite
+        recovered = project_file.load_autosave()
+        if recovered is None or (recovered.note_count == 0 and recovered.rest_count == 0):
+            return
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self,
+            "恢復自動存檔",
+            f"偵測到自動存檔 ({recovered.note_count} 音符)。\n要恢復嗎？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._sequence = recovered
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._update_ui_state()
+            log.info("Recovered %d notes from autosave", recovered.note_count)
 
     def _on_record_toggle(self) -> None:
         if self._is_recording:
@@ -768,7 +841,10 @@ class EditorView(QWidget):
             if player is not None:
                 player.progress_updated.connect(self._on_preview_progress)
                 player.state_changed.connect(self._on_preview_state_changed)
+                player.note_fired.connect(self._on_preview_note_fired)
                 self._preview_player = player
+                # Apply persisted speed
+                player.set_speed(self._playback_speed)
         except Exception:
             log.debug("Failed to create preview player", exc_info=True)
         return self._preview_player
@@ -782,6 +858,30 @@ class EditorView(QWidget):
         from ...core.midi_file_player import PlaybackState
         if state == PlaybackState.STOPPED:
             self._note_roll.set_playback_beats(-1)
+            self._play_btn.setText("▶ 播放")
+            self._play_btn.setStyleSheet("")
+            self._piano.set_active_notes(set())
+            self._note_roll.set_active_notes(set())
+        elif state == PlaybackState.PLAYING:
+            self._play_btn.setText("■ 停止")
+            self._play_btn.setStyleSheet(
+                "QPushButton { background-color: #FF4444; color: #0A0E14; font-weight: 700; }"
+                "QPushButton:hover { background-color: #FF6666; }"
+            )
+
+    def _on_preview_note_fired(self, event_type: str, note: int, velocity: int) -> None:
+        """Handle real-time playback feedback."""
+        # Update ClickablePiano
+        if event_type == "note_on":
+            self._piano.note_on(note)
+            # Update NoteRoll active notes
+            current_active = self._piano._active_notes
+            self._note_roll.set_active_notes(current_active)
+        elif event_type == "note_off":
+            self._piano.note_off(note)
+            # Update NoteRoll active notes
+            current_active = self._piano._active_notes
+            self._note_roll.set_active_notes(current_active)
 
     def _on_play(self) -> None:
         if self._sequence.note_count == 0:
@@ -961,6 +1061,10 @@ class EditorView(QWidget):
             "<td>錄音時自動校正音高</td></tr>"
             "<tr><td style='color:#E8E0D0;'>自動存檔</td>"
             "<td>每 60 秒自動存檔</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>速度選擇器</td>"
+            "<td>播放速度 0.25x ~ 2.0x</td></tr>"
+            "<tr><td style='color:#E8E0D0;'>⌨ 快捷鍵 勾選框</td>"
+            "<td>啟用／停用單鍵快捷鍵（Ctrl+S/Z/Y 不受影響）</td></tr>"
             "</table>"
         )
         content.setText(html)
@@ -985,6 +1089,12 @@ class EditorView(QWidget):
     def _on_tempo_changed(self, value: int) -> None:
         self._sequence.tempo_bpm = float(value)
         self._note_roll.set_tempo(self._sequence.tempo_bpm)
+
+    def _on_speed_changed(self, speed: float) -> None:
+        """Update playback speed on the preview player."""
+        self._playback_speed = speed
+        if self._preview_player is not None:
+            self._preview_player.set_speed(speed)
 
     def _on_note_deleted(self, index: int) -> None:
         if index == -1:
@@ -1018,8 +1128,6 @@ class EditorView(QWidget):
         global_rests = [gi for gi in global_rests if gi >= 0]
         if global_notes or global_rests:
             self._sequence.copy_items(global_notes, global_rests)
-        elif global_notes:
-            self._sequence.copy_notes(global_notes)
 
     def _cut_selection(self) -> None:
         self._copy_selection()
@@ -1083,15 +1191,18 @@ class EditorView(QWidget):
         ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
+        # Keyboard shortcuts toggle — Ctrl combos always active for safety
+        shortcuts_on = self._shortcuts_cb.isChecked()
+
         # Duration keys: 1-5
-        if not ctrl and text in DURATION_KEYS:
+        if shortcuts_on and not ctrl and text in DURATION_KEYS:
             label = DURATION_KEYS[text]
             self._sequence.set_step_duration(label)
             self._duration_combo.setCurrentText(label)
             return
 
         # Rest key: 0
-        if not ctrl and text == "0":
+        if shortcuts_on and not ctrl and text == "0":
             flash_beat = self._sequence.cursor_beats
             self._sequence.add_rest()
             self._update_ui_state()
@@ -1099,7 +1210,7 @@ class EditorView(QWidget):
             return
 
         # Pencil mode toggle: P
-        if not ctrl and text.lower() == "p":
+        if shortcuts_on and not ctrl and text.lower() == "p":
             self._pencil_btn.toggle()
             return
 
@@ -1142,6 +1253,11 @@ class EditorView(QWidget):
         # Arrow keys — cursor navigation / note editing
         alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
         step = self._sequence.step_duration
+
+        if not shortcuts_on:
+            # Only Ctrl combos were handled above; skip all other shortcuts
+            super().keyPressEvent(event)
+            return
 
         if alt and shift:
             # Alt+Shift+arrows: resize selected notes

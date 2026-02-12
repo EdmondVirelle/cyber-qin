@@ -81,6 +81,10 @@ class NoteRoll(QWidget):
         self._selected_note_indices: set[int] = set()
         self._selected_rest_indices: set[int] = set()
 
+        # Active notes (for playback feedback)
+        self._active_notes: set[int] = set()  # set of MIDI pitch values
+
+
         # Snap
         self._snap_enabled: bool = True
 
@@ -140,6 +144,11 @@ class NoteRoll(QWidget):
 
     def set_ghost_notes(self, notes: list) -> None:
         self._ghost_notes = notes
+        self.update()
+
+    def set_active_notes(self, notes: set[int]) -> None:
+        """Set currently playing notes (MIDI pitches) for visualization."""
+        self._active_notes = notes
         self.update()
 
     def set_cursor_beats(self, t: float) -> None:
@@ -291,10 +300,17 @@ class NoteRoll(QWidget):
         """Snap beat to grid if snap is enabled."""
         if not self._snap_enabled:
             return beat
-        # Snap to nearest sub-beat based on zoom level
-        if self._zoom >= 150:
+        # Snap to nearest sub-beat based on zoom level.
+        # Grid resolution increases as the user zooms in:
+        #   zoom >= 200  → 1/32 (0.125 beats)
+        #   zoom >= 80   → 1/16 (0.25 beats)  — default zoom
+        #   zoom >= 40   → 1/8  (0.5 beats)
+        #   zoom <  40   → 1/4  (1.0 beat)
+        if self._zoom >= 200:
+            grid = 0.125
+        elif self._zoom >= 80:
             grid = 0.25
-        elif self._zoom >= 60:
+        elif self._zoom >= 40:
             grid = 0.5
         else:
             grid = 1.0
@@ -630,8 +646,13 @@ class NoteRoll(QWidget):
                 )
 
         # Sub-beat lines
-        if self._zoom >= 60:
-            sub_div = 0.5 if self._zoom < 150 else 0.25
+        if self._zoom >= 40:
+            if self._zoom >= 200:
+                sub_div = 0.125
+            elif self._zoom >= 80:
+                sub_div = 0.25
+            else:
+                sub_div = 0.5
             sub_pen = QPen(QColor(_SUB_LINE_COLOR), 0.3)
             first_sub = max(0, int(self._scroll_x / self._zoom / sub_div) - 1)
             last_sub = int((self._scroll_x + w) / self._zoom / sub_div) + 2
@@ -712,6 +733,14 @@ class NoteRoll(QWidget):
                 and self._flash_beat >= 0
                 and abs(note.time_beats - self._flash_beat) < 0.001
             )
+            is_active = (
+                not is_dragged
+                and note.note in self._active_notes
+                and self._playback_beats >= 0
+                and note.time_beats <= self._playback_beats
+                # Add a small buffer for release tolerance or overlapping notes
+                and self._playback_beats < (note.time_beats + note.duration_beats + 0.1)
+            )
 
             if is_dragged:
                 drag_c = QColor(track_color)
@@ -719,6 +748,14 @@ class NoteRoll(QWidget):
                 painter.fillPath(path, drag_c)
                 painter.setPen(QPen(QColor(ACCENT), 1.5))
                 painter.drawPath(path)
+            elif is_active:
+                # Active note glow
+                painter.fillPath(path, QColor(0xFF, 0xFF, 0xFF))  # Bright white center
+                
+                # Outer glow
+                glow_path = QPainterPath()
+                glow_path.addRoundedRect(note_rect.adjusted(-2, -2, 2, 2), _NOTE_RADIUS+2, _NOTE_RADIUS+2)
+                painter.fillPath(glow_path, QColor(ACCENT_GLOW))
             elif is_flash:
                 painter.fillPath(path, QColor(ACCENT_GLOW))
                 painter.setPen(QPen(QColor(0xFF, 0xFF, 0xFF, 180), 2.0))

@@ -16,7 +16,7 @@ a = Analysis(
     ["launcher.py"],
     pathex=[],
     binaries=_vcrt,
-    datas=[],
+    datas=[('RELEASE.txt', '.')],
     hiddenimports=[
         # ── mido backend (dynamically loaded) ──
         "mido.backends.rtmidi",

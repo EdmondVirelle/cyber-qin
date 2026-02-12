@@ -6,7 +6,8 @@ Emits signals for note input in the editor.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRectF, Qt, pyqtSignal
+import time
+from PyQt6.QtCore import QRectF, Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import (
     QBrush,
     QColor,
@@ -57,6 +58,49 @@ class ClickablePiano(QWidget):
         self.setMinimumWidth(400)
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Visual feedback state (from PianoDisplay)
+        self._active_notes: set[int] = set()
+        self._flash_notes: dict[int, float] = {}
+        self._fade_notes: dict[int, float] = {}
+
+        self._anim_timer = QTimer(self)
+        self._anim_timer.timeout.connect(self._tick)
+        self._anim_timer.setInterval(16)
+
+    def set_active_notes(self, notes: set[int]) -> None:
+        self._active_notes = notes
+        self._flash_notes.clear()
+        self._fade_notes.clear()
+        self.update()
+
+    def note_on(self, midi_note: int) -> None:
+        self._active_notes.add(midi_note)
+        self._flash_notes[midi_note] = time.monotonic()
+        self._fade_notes.pop(midi_note, None)
+        if not self._anim_timer.isActive():
+            self._anim_timer.start()
+        self.update()
+
+    def note_off(self, midi_note: int) -> None:
+        self._active_notes.discard(midi_note)
+        self._flash_notes.pop(midi_note, None)
+        self._fade_notes[midi_note] = time.monotonic()
+        if not self._anim_timer.isActive():
+            self._anim_timer.start()
+        self.update()
+
+    def _tick(self) -> None:
+        now = time.monotonic()
+        expired_flash = [n for n, t in self._flash_notes.items() if now - t > 0.15]
+        for n in expired_flash:
+            del self._flash_notes[n]
+        expired_fade = [n for n, t in self._fade_notes.items() if now - t > 0.25]
+        for n in expired_fade:
+            del self._fade_notes[n]
+        if not self._flash_notes and not self._fade_notes:
+            self._anim_timer.stop()
+        self.update()
 
     @property
     def num_keys(self) -> int:
@@ -137,10 +181,34 @@ class ClickablePiano(QWidget):
             is_hover = midi_note == self._hover_note
 
             # Background color
+            # Background color
+            is_active_playback = midi_note in self._active_notes
+            flash_t = self._flash_notes.get(midi_note)
+            fade_t = self._fade_notes.get(midi_note)
+            
+            # Compute brightness for flash
+            brightness = 1.0
+            if is_active_playback and flash_t is not None:
+                elapsed = time.monotonic() - flash_t
+                ratio = max(0.0, 1.0 - elapsed / 0.15)
+                brightness = 1.0 + 0.3 * ratio
+
             if is_pressed:
                 bg = _COLOR_ACTIVE
+            elif is_active_playback:
+                bg = _COLOR_ACTIVE
+                # apply brightness? simplified for now
             elif is_hover:
                 bg = QColor(0x00, 0xF0, 0xFF, 60)
+            elif fade_t is not None:
+                elapsed = time.monotonic() - fade_t
+                ratio = max(0.0, 1.0 - elapsed / 0.25)
+                base = _COLOR_SHARP if is_black else _COLOR_NATURAL
+                # lerp
+                r = base.red() + (_COLOR_ACTIVE.red() - base.red()) * ratio
+                g = base.green() + (_COLOR_ACTIVE.green() - base.green()) * ratio
+                b = base.blue() + (_COLOR_ACTIVE.blue() - base.blue()) * ratio
+                bg = QColor(int(r), int(g), int(b))
             elif is_black:
                 bg = _COLOR_SHARP
             else:
@@ -150,7 +218,7 @@ class ClickablePiano(QWidget):
             path = QPainterPath()
             path.addRoundedRect(key_rect, 3, 3)
 
-            if is_pressed or is_hover:
+            if is_pressed or is_hover or is_active_playback or fade_t is not None:
                 painter.fillPath(path, QBrush(bg))
             elif not is_black:
                 grad = QLinearGradient(x, 0, x, kh)
@@ -161,7 +229,12 @@ class ClickablePiano(QWidget):
                 painter.fillPath(path, QBrush(bg))
 
             # Border
-            if is_pressed:
+            # Border / Glow
+            if is_pressed or is_active_playback:
+                glow_rect = QRectF(x - 1, -2, kw + 2, kh + 4)
+                glow_path = QPainterPath()
+                glow_path.addRoundedRect(glow_rect, 4, 4)
+                painter.fillPath(glow_path, QColor(0, 240, 255, 60))
                 painter.setPen(QPen(QColor(0, 240, 255, 150), 1.5))
             else:
                 painter.setPen(QPen(_COLOR_BORDER, 0.5))
