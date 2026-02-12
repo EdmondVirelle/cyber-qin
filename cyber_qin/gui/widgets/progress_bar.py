@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtProperty, pyqtSignal  # type: ignore[attr-defined]
+from PyQt6.QtCore import (
+    QEasingCurve,
+    QPropertyAnimation,
+    QRectF,
+    Qt,
+    pyqtProperty,  # type: ignore[attr-defined]
+    pyqtSignal,
+)
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath
 from PyQt6.QtWidgets import QToolTip, QWidget
 
