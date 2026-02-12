@@ -8,6 +8,13 @@ build/
 
 # Testing
 .pytest_cache/
+.coverage
+coverage.xml
+coverage.json
+coverage.txt
+htmlcov/
+results.txt
+test_output.txt
 
 # Linting
 .ruff_cache/
