@@ -326,18 +326,36 @@ class LibraryView(QWidget):
             log.exception("Failed to save library")
 
     def _load_library(self) -> None:
+        log.info("Loading library...")
         path = self._library_path()
         if not path.exists():
+            log.info("Library file not found: %s", path)
             return
+
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            for item in data:
-                # Verify file still exists
-                if not Path(item["file_path"]).exists():
+            content = path.read_text(encoding="utf-8")
+            data = json.loads(content)
+            log.info("Loaded %d tracks from library file", len(data))
+
+            loaded_count = 0
+            for i, item in enumerate(data):
+                try:
+                    # Verify file still exists
+                    fpath = Path(item["file_path"])
+                    if not fpath.exists():
+                        log.warning("Skipping missing file: %s", fpath)
+                        continue
+
+                    info = MidiFileInfo(**item)
+                    self._tracks.append(info)
+                    self._track_list.add_track(info)
+                    loaded_count += 1
+                except Exception:
+                    log.warning("Failed to load track item %d: %s", i, item, exc_info=True)
                     continue
-                info = MidiFileInfo(**item)
-                self._tracks.append(info)
-                self._track_list.add_track(info)
+
+            log.info("Successfully loaded %d tracks", loaded_count)
+
         except Exception:
-            log.exception("Failed to load library")
+            log.exception("Failed to load library from %s", path)
         self._update_empty_state()

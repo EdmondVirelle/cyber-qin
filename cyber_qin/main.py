@@ -62,6 +62,27 @@ def main() -> None:
         enable_dark_title_bar(hwnd)
 
     window.show()
+
+    # Global exception handler
+    def exception_hook(exctype, value, tb):
+        import traceback
+        traceback_str = "".join(traceback.format_exception(exctype, value, tb))
+        logging.error("Unhandled exception:\n%s", traceback_str)
+
+        # Show error dialog
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setWindowTitle("應用程式錯誤")
+        msg.setText("發生未預期的錯誤，應用程式即將關閉。")
+        msg.setInformativeText(str(value))
+        msg.setDetailedText(traceback_str)
+        msg.exec()
+
+        sys.__excepthook__(exctype, value, tb)
+        sys.exit(1)
+
+    sys.excepthook = exception_hook
+
     exit_code = app.exec()
     end_timer_period(1)
     sys.exit(exit_code)
