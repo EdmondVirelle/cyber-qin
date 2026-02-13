@@ -53,6 +53,7 @@ class Translator(QObject):
                 "live.log": "Event Log",
                 "live.status.connected": "Connected: {port}",
                 "live.status.disconnected": "Disconnected",
+                "live.view_mapping": "View Mapping",
                 # Library
                 "lib.title": "Library",
                 "lib.desc": "Import MIDI files, double-click or press play to listen.",
@@ -161,6 +162,14 @@ class Translator(QObject):
                 "settings.ui.theme.light": "Light",
                 # Advanced Tab
                 "settings.advanced.config_location": "Configuration file location:",
+                # Key Mapping Viewer
+                "mapping_viewer.title": "Key Mapping Viewer",
+                "mapping_viewer.keys": "keys",
+                "mapping_viewer.midi_note": "MIDI Note",
+                "mapping_viewer.note_name": "Note Name",
+                "mapping_viewer.keyboard_key": "Keyboard Key",
+                "mapping_viewer.modifier": "Modifier",
+                "mapping_viewer.none": "None",
             },
             "zh_tw": {
                 "app.title": "賽博琴仙",
@@ -189,6 +198,7 @@ class Translator(QObject):
                 "live.log": "事件紀錄",
                 "live.status.connected": "已連線: {port}",
                 "live.status.disconnected": "未連線",
+                "live.view_mapping": "查看映射",
                 "lib.title": "曲庫",
                 "lib.desc": "匯入 MIDI 檔案，雙擊或按播放鍵自動演奏。",
                 "lib.search": "搜尋曲目...",
@@ -290,6 +300,14 @@ class Translator(QObject):
                 "settings.ui.theme.light": "淺色",
                 # Advanced Tab
                 "settings.advanced.config_location": "設定檔位置：",
+                # Key Mapping Viewer
+                "mapping_viewer.title": "按鍵映射查看器",
+                "mapping_viewer.keys": "個鍵",
+                "mapping_viewer.midi_note": "MIDI 音符",
+                "mapping_viewer.note_name": "音符名稱",
+                "mapping_viewer.keyboard_key": "鍵盤按鍵",
+                "mapping_viewer.modifier": "修飾鍵",
+                "mapping_viewer.none": "無",
             },
             "zh_cn": {
                 "app.title": "赛博琴仙",
@@ -318,6 +336,7 @@ class Translator(QObject):
                 "live.log": "事件记录",
                 "live.status.connected": "已连接: {port}",
                 "live.status.disconnected": "未连接",
+                "live.view_mapping": "查看映射",
                 "lib.title": "曲库",
                 "lib.desc": "导入 MIDI 文件，双击或按播放键自动演奏。",
                 "lib.search": "搜索曲目...",
@@ -419,6 +438,14 @@ class Translator(QObject):
                 "settings.ui.theme.light": "浅色",
                 # Advanced Tab
                 "settings.advanced.config_location": "配置文件位置：",
+                # Key Mapping Viewer
+                "mapping_viewer.title": "按键映射查看器",
+                "mapping_viewer.keys": "个键",
+                "mapping_viewer.midi_note": "MIDI 音符",
+                "mapping_viewer.note_name": "音符名称",
+                "mapping_viewer.keyboard_key": "键盘按键",
+                "mapping_viewer.modifier": "修饰键",
+                "mapping_viewer.none": "无",
             },
             "ja": {
                 "app.title": "サイバー琴仙",

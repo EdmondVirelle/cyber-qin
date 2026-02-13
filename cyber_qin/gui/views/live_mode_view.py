@@ -31,6 +31,7 @@ from ...core.mapping_schemes import get_scheme, list_schemes
 from ...core.midi_listener import MidiListener
 from ...core.translator import translator
 from ...utils.admin import is_admin
+from ..dialogs import KeyMappingViewer
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.log_viewer import LogViewer
 from ..widgets.piano_display import PianoDisplay
@@ -193,6 +194,12 @@ class LiveModeView(QWidget):
         self._scheme_combo.currentIndexChanged.connect(self._on_scheme_combo_changed)
         row2.addWidget(self._scheme_combo)
 
+        self._view_mapping_btn = QPushButton()
+        self._view_mapping_btn.setFixedHeight(28)
+        self._view_mapping_btn.setMinimumWidth(100)
+        self._view_mapping_btn.clicked.connect(self._on_view_mapping)
+        row2.addWidget(self._view_mapping_btn)
+
         row2.addStretch()
 
         self._scheme_desc = QLabel("")
@@ -281,6 +288,7 @@ class LiveModeView(QWidget):
 
         self._transpose_lbl.setText(translator.tr("live.transpose") + ":")
         self._scheme_lbl.setText(translator.tr("live.mapping") + ":")
+        self._view_mapping_btn.setText(translator.tr("live.view_mapping"))
 
         # Record button stateful
         if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr(
@@ -410,6 +418,17 @@ class LiveModeView(QWidget):
                 self._scheme_desc.setText("")
         else:
             self._scheme_desc.setText("")
+
+    def _on_view_mapping(self) -> None:
+        """Open the key mapping viewer dialog."""
+        scheme_id = self._scheme_combo.currentData()
+        if scheme_id:
+            try:
+                scheme = get_scheme(scheme_id)
+                dialog = KeyMappingViewer(scheme, self)
+                dialog.exec()
+            except KeyError:
+                log.warning("Failed to load scheme %s for mapping viewer", scheme_id)
 
     # --- MIDI connection management ---
 
