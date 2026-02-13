@@ -49,7 +49,7 @@ def begin_timer_period(period_ms: int = 1) -> bool:
         return False
     try:
         result = ctypes.windll.winmm.timeBeginPeriod(period_ms)
-        success = result == 0  # TIMERR_NOERROR
+        success: bool = result == 0  # TIMERR_NOERROR
         if success:
             log.debug("timeBeginPeriod(%d) succeeded", period_ms)
         else:
@@ -70,7 +70,7 @@ def end_timer_period(period_ms: int = 1) -> bool:
         return False
     try:
         result = ctypes.windll.winmm.timeEndPeriod(period_ms)
-        success = result == 0
+        success: bool = result == 0
         if success:
             log.debug("timeEndPeriod(%d) succeeded", period_ms)
         return success

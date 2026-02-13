@@ -1,12 +1,10 @@
 """Tests for configuration persistence system."""
 
 import json
-import tempfile
-from pathlib import Path
 
 import pytest
 
-from cyber_qin.core.config import DEFAULT_CONFIG, ConfigManager
+from cyber_qin.core.config import ConfigManager
 
 
 @pytest.fixture

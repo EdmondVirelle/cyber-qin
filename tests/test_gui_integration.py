@@ -6,7 +6,6 @@ Tests the Settings dialog and other GUI components with full Qt application cont
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from cyber_qin.core.config import ConfigManager, get_config
@@ -222,12 +221,7 @@ class TestSettingsDialog:
         # Make a change
         dialog._auto_connect.setChecked(False)
 
-        # Click OK button
-        ok_button = dialog.findChild(
-            QApplication.instance().__class__,
-            None,
-        )
-        # Instead, directly call the slot
+        # Click OK button (directly call the slot)
         dialog._on_ok()
 
         # Verify setting was saved

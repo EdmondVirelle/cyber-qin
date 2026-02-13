@@ -6,7 +6,12 @@ from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import QWidget
 
-from ...core.constants import EDITOR_MIDI_MAX, EDITOR_MIDI_MIN, PLAYABLE_MIDI_MAX, PLAYABLE_MIDI_MIN
+from ...core.constants import (
+    EDITOR_MIDI_MAX,
+    EDITOR_MIDI_MIN,
+    PLAYABLE_MIDI_MAX,
+    PLAYABLE_MIDI_MIN,
+)
 from ..theme import ACCENT_GOLD, BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
 
 _RULER_WIDTH = 48

@@ -12,7 +12,7 @@ class BeatNote:
     duration_beats: float
 
 
-def simulate_paintEvent_current(notes: list[BeatNote], viewport_start: float, viewport_end: float, zoom: float) -> int:
+def simulate_paint_event_current(notes: list[BeatNote], viewport_start: float, viewport_end: float, zoom: float) -> int:
     """Simulate current O(n) rendering logic."""
     rendered_count = 0
     viewport_width = 1920  # pixels
@@ -30,7 +30,7 @@ def simulate_paintEvent_current(notes: list[BeatNote], viewport_start: float, vi
     return rendered_count
 
 
-def simulate_paintEvent_optimized(notes: list[BeatNote], viewport_start: float, viewport_end: float, zoom: float) -> int:
+def simulate_paint_event_optimized(notes: list[BeatNote], viewport_start: float, viewport_end: float, zoom: float) -> int:
     """Simulate O(log n + k) rendering with binary search."""
     import bisect
 
@@ -86,13 +86,13 @@ def benchmark():
         # Current implementation (O(n))
         start = time.perf_counter()
         for _ in range(100):  # Run 100 times to get stable measurement
-            simulate_paintEvent_current(notes, viewport_start, viewport_end, zoom)
+            simulate_paint_event_current(notes, viewport_start, viewport_end, zoom)
         current_time = (time.perf_counter() - start) / 100 * 1000  # ms per call
 
         # Optimized implementation (O(log n + k))
         start = time.perf_counter()
         for _ in range(100):
-            simulate_paintEvent_optimized(notes, viewport_start, viewport_end, zoom)
+            simulate_paint_event_optimized(notes, viewport_start, viewport_end, zoom)
         optimized_time = (time.perf_counter() - start) / 100 * 1000  # ms per call
 
         speedup = current_time / optimized_time if optimized_time > 0 else float('inf')
@@ -144,12 +144,12 @@ def benchmark():
         print(f"    -> Optimization RECOMMENDED for MIDI files with >{critical_size // 2} notes")
     else:
         print(f"\n[OK] Current implementation maintains 60 FPS up to {test_sizes[-1]} notes")
-        print(f"     -> Optimization optional (future-proofing)")
+        print("     -> Optimization optional (future-proofing)")
 
     print("\nExpected improvement with binary search optimization:")
     avg_speedup = sum(r['speedup'] for r in results[-3:]) / 3  # Average of largest 3 sizes
     print(f"  -> {avg_speedup:.1f}x faster for large MIDI files (>5000 notes)")
-    print(f"  -> Enables smooth playback of complex orchestral scores\n")
+    print("  -> Enables smooth playback of complex orchestral scores\n")
 
 
 if __name__ == "__main__":

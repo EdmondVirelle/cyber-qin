@@ -16,8 +16,21 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QWheelEvent
 from PyQt6.QtWidgets import QWidget
 
-from ...core.constants import EDITOR_MIDI_MAX, EDITOR_MIDI_MIN, PLAYABLE_MIDI_MAX, PLAYABLE_MIDI_MIN
-from ..theme import ACCENT, ACCENT_GLOW, ACCENT_GOLD, BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
+from ...core.constants import (
+    EDITOR_MIDI_MAX,
+    EDITOR_MIDI_MIN,
+    PLAYABLE_MIDI_MAX,
+    PLAYABLE_MIDI_MIN,
+)
+from ..theme import (
+    ACCENT,
+    ACCENT_GLOW,
+    ACCENT_GOLD,
+    BG_INK,
+    BG_SCROLL,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+)
 
 # Visual constants
 _PIXELS_PER_BEAT = 80.0    # default zoom (pixels per beat)

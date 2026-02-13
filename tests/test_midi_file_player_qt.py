@@ -92,8 +92,8 @@ class TestPlaybackWorker:
     @pytest.fixture
     def worker(self, qapp, mapper, simulator):
         """Create PlaybackWorker instance."""
-        WorkerClass = get_playback_worker_class()
-        return WorkerClass(mapper, simulator)
+        worker_class = get_playback_worker_class()
+        return worker_class(mapper, simulator)
 
     def test_initial_state(self, worker):
         """Worker should start in STOPPED state."""
@@ -474,8 +474,8 @@ class TestPlaybackIntegration:
     def test_playback_finished_signal(self, controller, qapp):
         """Should emit playback_finished when playback completes."""
         # Create very short MIDI file to test completion
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
 
         with tempfile.TemporaryDirectory() as tmpdir:
             mid = mido.MidiFile()

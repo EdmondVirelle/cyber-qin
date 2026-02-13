@@ -13,7 +13,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 # Default configuration schema
 DEFAULT_CONFIG = {
     "version": "1.0",
@@ -109,7 +108,7 @@ class ConfigManager:
             config.get("editor.snap_enabled", True)
         """
         keys = key_path.split(".")
-        value = self._config
+        value: Any = self._config
         for key in keys:
             if isinstance(value, dict):
                 value = value.get(key)

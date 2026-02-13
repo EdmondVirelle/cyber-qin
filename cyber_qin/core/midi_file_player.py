@@ -337,7 +337,7 @@ def _ensure_qt_classes():
             """Play a short metronome tick via winsound.Beep (Windows only)."""
             try:
                 import winsound
-                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)  # type: ignore[attr-defined]
+                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)
             except Exception:
                 pass  # Graceful fallback on non-Windows or error
 

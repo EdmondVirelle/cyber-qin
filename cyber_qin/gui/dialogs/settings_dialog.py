@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QSpinBox,
     QTabWidget,
@@ -60,7 +59,10 @@ class SettingsDialog(QDialog):
         )
         button_box.accepted.connect(self._on_ok)
         button_box.rejected.connect(self.reject)
-        button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._on_apply)
+
+        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
+        if apply_button:
+            apply_button.clicked.connect(self._on_apply)
 
         layout.addWidget(button_box)
 
