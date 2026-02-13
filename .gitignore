@@ -16,6 +16,10 @@ htmlcov/
 results.txt
 test_output.txt
 
+# Reports (generated artifacts, not source)
+reports/coverage/
+reports/performance/
+
 # Linting
 .ruff_cache/
 
@@ -40,6 +44,11 @@ Desktop.ini
 *.tmp
 *.mid
 *.midi
+
+# Release builds
+releases/dist/
+releases/*.exe
+releases/*.zip
 
 # Claude Code local config
 .claude/settings.local.json
