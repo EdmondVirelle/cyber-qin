@@ -26,14 +26,14 @@ def is_ime_active() -> bool:
     if sys.platform != "win32":
         return False
     try:
-        hwnd = _user32.GetForegroundWindow()  # type: ignore[union-attr]
-        himc = _imm32.ImmGetContext(hwnd)  # type: ignore[union-attr]
+        hwnd = _user32.GetForegroundWindow()
+        himc = _imm32.ImmGetContext(hwnd)
         if not himc:
             return False
         try:
             conversion = ctypes.wintypes.DWORD()
             sentence = ctypes.wintypes.DWORD()
-            result = _imm32.ImmGetConversionStatus(  # type: ignore[union-attr]
+            result = _imm32.ImmGetConversionStatus(
                 himc,
                 ctypes.byref(conversion),
                 ctypes.byref(sentence),
@@ -43,7 +43,7 @@ def is_ime_active() -> bool:
             # IME_CMODE_NATIVE (0x1) means the IME is in native (non-English) mode
             return bool(conversion.value & 0x1)
         finally:
-            _imm32.ImmReleaseContext(hwnd, himc)  # type: ignore[union-attr]
+            _imm32.ImmReleaseContext(hwnd, himc)
     except Exception:
         log.exception("Failed to check IME status")
         return False
