@@ -29,6 +29,7 @@ from ..theme import (
     ACCENT_GOLD,
     BG_INK,
     BG_SCROLL,
+    DIVIDER,
     TEXT_PRIMARY,
     TEXT_SECONDARY,
 )
@@ -1167,7 +1168,7 @@ class NoteRoll(QWidget):
         painter.fillRect(0, lane_top, w, _VELOCITY_LANE_HEIGHT, QColor(BG_SCROLL))
 
         # Top separator line
-        painter.setPen(QPen(QColor(BORDER_SUBTLE), 1))
+        painter.setPen(QPen(QColor(DIVIDER), 1))
         painter.drawLine(0, lane_top, w, lane_top)
 
         # Grid lines (match main grid)
@@ -1281,8 +1282,7 @@ class NoteRoll(QWidget):
         painter.fillRect(0, 0, w, _MINIMAP_HEIGHT, QColor(BG_SCROLL))
 
         # Bottom border
-        from ..theme import BORDER_SUBTLE
-        painter.setPen(QPen(QColor(BORDER_SUBTLE), 1))
+        painter.setPen(QPen(QColor(DIVIDER), 1))
         painter.drawLine(0, _MINIMAP_HEIGHT - 1, w, _MINIMAP_HEIGHT - 1)
 
         if not self._notes:

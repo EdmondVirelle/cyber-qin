@@ -513,7 +513,7 @@ class LiveModeView(QWidget):
             # Specific OS errors (permission denied, device not found, etc.)
             error_msg = str(e).lower()
             if "permission" in error_msg or "access" in error_msg:
-                self._log.log(f"連線失敗: 權限不足（請檢查裝置是否被其他程式佔用）")
+                self._log.log("連線失敗: 權限不足（請檢查裝置是否被其他程式佔用）")
             elif "not found" in error_msg or "no such" in error_msg:
                 self._log.log(f"連線失敗: 裝置 '{port_name}' 不存在（請重新整理裝置列表）")
                 self._refresh_ports()
