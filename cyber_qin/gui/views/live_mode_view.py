@@ -352,6 +352,11 @@ class LiveModeView(QWidget):
         self._reconnect_timer = QTimer(self)
         self._reconnect_timer.timeout.connect(self._try_reconnect)
 
+        # Periodic device list refresh (every 5 seconds when disconnected)
+        self._device_refresh_timer = QTimer(self)
+        self._device_refresh_timer.timeout.connect(self._auto_refresh_devices)
+        self._device_refresh_timer.start(5000)
+
     def _restore_settings(self) -> None:
         transpose = self._config.get("playback.transpose", 0)
         self._transpose_spin.setValue(transpose)
@@ -445,6 +450,42 @@ class LiveModeView(QWidget):
             self._port_combo.addItem("(未偵測到裝置)")
         self._log.log(f"偵測到 {len(ports)} 個 MIDI 裝置")
 
+    def _auto_refresh_devices(self) -> None:
+        """Automatically refresh device list when disconnected (hot-plug support)."""
+        if not self._listener.connected and not self._reconnect_timer.isActive():
+            # Only refresh if disconnected and not currently trying to reconnect
+            current_text = self._port_combo.currentText()
+            ports = MidiListener.list_ports()
+
+            # Only update if the device list changed
+            current_ports = [
+                self._port_combo.itemText(i) for i in range(self._port_combo.count())
+                if not self._port_combo.itemText(i).startswith("(")
+            ]
+
+            if set(ports) != set(current_ports):
+                # Detect newly added devices
+                new_devices = set(ports) - set(current_ports)
+                removed_devices = set(current_ports) - set(ports)
+
+                self._port_combo.clear()
+                if ports:
+                    self._port_combo.addItems(ports)
+                    # Try to restore previous selection
+                    idx = self._port_combo.findText(current_text)
+                    if idx >= 0:
+                        self._port_combo.setCurrentIndex(idx)
+                else:
+                    self._port_combo.addItem("(未偵測到裝置)")
+
+                # Log device changes
+                if new_devices:
+                    for device in new_devices:
+                        self._log.log(f"偵測到新裝置: {device}")
+                if removed_devices:
+                    for device in removed_devices:
+                        self._log.log(f"裝置已移除: {device}")
+
     def _toggle_connection(self) -> None:
         if self._listener.connected:
             self._disconnect()
@@ -468,7 +509,19 @@ class LiveModeView(QWidget):
             self._reconnect_port = port_name
             self._reconnect_timer.stop()
             self._log.log(f"已連線: {port_name}")
+        except OSError as e:
+            # Specific OS errors (permission denied, device not found, etc.)
+            error_msg = str(e).lower()
+            if "permission" in error_msg or "access" in error_msg:
+                self._log.log(f"連線失敗: 權限不足（請檢查裝置是否被其他程式佔用）")
+            elif "not found" in error_msg or "no such" in error_msg:
+                self._log.log(f"連線失敗: 裝置 '{port_name}' 不存在（請重新整理裝置列表）")
+                self._refresh_ports()
+            else:
+                self._log.log(f"連線失敗: {e}")
+            log.exception("Failed to connect to %s", port_name)
         except Exception as e:
+            # Generic error handling
             self._log.log(f"連線失敗: {e}")
             log.exception("Failed to connect to %s", port_name)
 
