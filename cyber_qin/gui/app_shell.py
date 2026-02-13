@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..core.auto_tune import auto_tune
+from ..core.config import get_config
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
@@ -113,16 +114,34 @@ class AppShell(QMainWindow):
         self._processor = MidiProcessor(self._mapper, self._simulator)
         self._player = create_player_controller(self._mapper, self._simulator)
         self._recorder = MidiRecorder()
+        self._config = get_config()
 
         self._build_ui()
         self._connect_signals()
         self._setup_shortcuts()
+        self._restore_window_state()
 
         translator.language_changed.connect(self._update_text)
 
     def _update_text(self) -> None:
         """Update window title and other shell elements."""
         self.setWindowTitle(translator.tr("app.title") + " — " + translator.tr("app.subtitle"))
+
+    def _restore_window_state(self) -> None:
+        """Restore window geometry and last view from config."""
+        from PyQt6.QtCore import QByteArray
+
+        # Restore window geometry (stored as base64 string)
+        geometry_b64 = self._config.get("window.geometry")
+        if geometry_b64 is not None:
+            geometry = QByteArray.fromBase64(geometry_b64.encode("ascii"))
+            self.restoreGeometry(geometry)
+
+        # Restore last active view
+        last_view = self._config.get("window.last_view", "live")
+        view_index = {"live": 0, "library": 1, "editor": 2}.get(last_view, 0)
+        self._stack.setCurrentIndex(view_index)
+        self._sidebar._set_active(view_index)  # noqa: SLF001
 
     def _build_ui(self) -> None:
         central = QWidget()
@@ -493,6 +512,14 @@ class AppShell(QMainWindow):
             self._on_play_file(file_path)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        # Save window state to config (geometry as base64 string for JSON compatibility)
+        geometry_b64 = self.saveGeometry().toBase64().data().decode("ascii")
+        self._config.set("window.geometry", geometry_b64)
+        current_view = {0: "live", 1: "library", 2: "editor"}.get(
+            self._stack.currentIndex(), "live"
+        )
+        self._config.set("window.last_view", current_view)
+
         # Stop any in-progress recording (live or editor)
         if self._recorder.is_recording:
             self._processor.set_recorder(None)

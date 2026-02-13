@@ -32,7 +32,7 @@ DEFAULT_CONFIG = {
         "auto_save_interval": 60,  # seconds
     },
     "window": {
-        "geometry": None,  # QByteArray base64 (saved separately)
+        "geometry": None,  # Qt window geometry as base64 string (from saveGeometry().toBase64())
         "last_view": "live",  # "live", "library", or "editor"
     },
     "ui": {
