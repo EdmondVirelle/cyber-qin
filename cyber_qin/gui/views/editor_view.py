@@ -131,6 +131,7 @@ class EditorView(QWidget):
         if player is not None:
             player.progress_updated.connect(self._on_playback_progress)
             player.state_changed.connect(self._on_playback_state_changed)
+            player.countdown_tick.connect(self._on_countdown_tick)
 
     def _on_playback_progress(self, current: float, total: float) -> None:
         """Convert seconds to beats for playback cursor."""
@@ -143,6 +144,13 @@ class EditorView(QWidget):
 
         if state == PlaybackState.STOPPED:
             self._note_roll.set_playback_beats(-1)
+
+    def _on_countdown_tick(self, remaining: int) -> None:
+        """Update countdown indicator during metronome count-in."""
+        if remaining > 0:
+            self._countdown_label.setText(str(remaining))
+        else:
+            self._countdown_label.setText("")
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -224,6 +232,15 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._play_btn)
 
+        # Countdown indicator (shows metronome count-in)
+        self._countdown_label = QLabel("")
+        self._countdown_label.setMinimumWidth(30)
+        self._countdown_label.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: #D4AF37; background: transparent;"
+        )
+        self._countdown_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        row1.addWidget(self._countdown_label)
+
         # Loop toggle button
         self._loop_btn = QPushButton("↻")
         self._loop_btn.setCheckable(True)
@@ -240,6 +257,24 @@ class EditorView(QWidget):
             "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
         )
         row1.addWidget(self._loop_btn)
+
+        # Metronome toggle button
+        self._metronome_btn = QPushButton("♩")
+        self._metronome_btn.setCheckable(True)
+        self._metronome_btn.setChecked(True)  # Enabled by default
+        self._metronome_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._metronome_btn.setMinimumWidth(40)
+        self._metronome_btn.setMinimumHeight(36)
+        self._metronome_btn.setToolTip(
+            translator.tr("editor.metronome.tooltip")
+            + "\n"
+            + "Shortcut: M"
+        )
+        self._metronome_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"
+            "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
+        )
+        row1.addWidget(self._metronome_btn)
 
         row1.addWidget(_VSeparator())
 
@@ -595,6 +630,7 @@ class EditorView(QWidget):
         self._record_btn.clicked.connect(self._on_record_toggle)
         self._play_btn.clicked.connect(self._on_play)
         self._loop_btn.toggled.connect(self._on_loop_toggled)
+        self._metronome_btn.toggled.connect(self._on_metronome_toggled)
         self._undo_btn.clicked.connect(self._on_undo)
         self._redo_btn.clicked.connect(self._on_redo)
         self._clear_btn.clicked.connect(self._on_clear)
@@ -1228,6 +1264,12 @@ class EditorView(QWidget):
         if player is not None:
             player.set_loop(checked)
 
+    def _on_metronome_toggled(self, checked: bool) -> None:
+        """Handle metronome button toggle."""
+        player = self._ensure_preview_player()
+        if player is not None:
+            player.set_metronome(checked)
+
     def _on_undo(self) -> None:
         self._sequence.undo()
         self._update_ui_state()
@@ -1632,6 +1674,11 @@ class EditorView(QWidget):
         # L → toggle loop
         if key == Qt.Key.Key_L:
             self._loop_btn.setChecked(not self._loop_btn.isChecked())
+            return
+
+        # M → toggle metronome
+        if key == Qt.Key.Key_M:
+            self._metronome_btn.setChecked(not self._metronome_btn.isChecked())
             return
 
         super().keyPressEvent(event)

@@ -258,6 +258,7 @@ def _ensure_qt_classes():
             self._state = PlaybackState.STOPPED
             self._speed = 1.0
             self._loop_enabled = False  # Loop playback flag
+            self._metronome_enabled = True  # Metronome count-in enabled by default
             self._lock = threading.Lock()
             self._stop_flag = threading.Event()
             self._pause_flag = threading.Event()
@@ -292,6 +293,11 @@ def _ensure_qt_classes():
             """Enable or disable loop playback."""
             with self._lock:
                 self._loop_enabled = enabled
+
+        def set_metronome(self, enabled: bool) -> None:
+            """Enable or disable metronome count-in."""
+            with self._lock:
+                self._metronome_enabled = enabled
 
         def play(self) -> None:
             if self._state == PlaybackState.PAUSED:
@@ -408,9 +414,16 @@ def _ensure_qt_classes():
 
             set_thread_priority_realtime()
 
-            # Count-in: 4 beats of metronome before actual playback
-            if not self._count_in():
-                return
+            # Count-in: 4 beats of metronome before actual playback (if enabled)
+            with self._lock:
+                metronome_enabled = self._metronome_enabled
+
+            if metronome_enabled:
+                if not self._count_in():
+                    return
+            else:
+                # Skip count-in but still emit 0 to signal immediate start
+                self.countdown_tick.emit(0)
 
             duration = self._info.duration_seconds if self._info else 0.0
             # Anchor interpolation timer right after count-in ends
@@ -538,6 +551,10 @@ def _ensure_qt_classes():
         def set_loop(self, enabled: bool) -> None:
             """Enable or disable loop playback."""
             self._worker.set_loop(enabled)
+
+        def set_metronome(self, enabled: bool) -> None:
+            """Enable or disable metronome count-in."""
+            self._worker.set_metronome(enabled)
 
         def cleanup(self) -> None:
             self._worker.stop()
