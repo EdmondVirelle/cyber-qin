@@ -1,19 +1,100 @@
-賽博琴仙 (Cyber Qin Xian) v0.9.2
+賽博琴仙 v0.9.2 — MIDI-to-Keyboard Mapper for 燕雲十六聲 & FF14
 
-MIDI-to-Keyboard mapper for 燕雲十六聲 (Where Winds Meet) 36-key mode.
+================================================================================
+版本歷程 (繁體中文)
+================================================================================
 
-## What's New in v0.9.2
-- Fixed: Global exception handling and robust logging for library crash
-- Fixed: Platform-specific code compatibility for Windows/Linux/macOS
-- Improved: CI/CD pipeline with multi-platform testing
+v0.9.2 — 穩定性強化 + 跨平台支援
+    • 新增全局異常處理與健全的日誌記錄系統。
+    • 完整支援 Windows/Linux/macOS 跨平台測試 (CI/CD)。
+    • 修復多項 MyPy strict mode 類型錯誤。
 
-## System Requirements
-- Windows 10/11 (64-bit)
-- MIDI input device (keyboard, controller, etc.)
-- 燕雲十六聲 (Where Winds Meet) game
+v0.9.0 — 文檔國際化 + 社群擴展
+    • 側邊欄 Credits 擴展至 WWM/FF14/VTuber 社群。
+    • README 分割為中英雙語版本。
+    • 新增 CONTRIBUTING.md 與日韓文 Release 說明模板。
 
-## Installation
+v0.8.8 — I18N 完整覆蓋
+    • 播放列、映射方案、曲庫排序全面支援五語切換。
+    • 修復側邊欄文字裁切問題。
+
+v0.8.0 — 多語言支援 (繁中/簡中/日/韓/英)
+    • 新增完整的多語言介面切換系統。
+    • 新增 FF14 37-Key Diatonic (C3-C6) 鍵位方案。
+    • 編輯器 UX 大改版：平滑播放游標 + 動態鋼琴鍵發光。
+    • 支援多軌 MIDI (Type 1) 檔案匯出。
+    • 效能優化：多音符索引演算法 O(N²) → O(N)。
+
+v0.7.0 — 編輯器核心重構
+    • Beat-based 資料模型 + .cqp 專案檔案系統。
+    • 新增編輯器操作說明對話框（快捷鍵 + 功能指南）。
+    • 捆綁 VC++ Runtime DLL，解決啟動失敗問題。
+    • 新增應用程式自訂圖示。
+
+================================================================================
+Version History (English)
+================================================================================
+
+v0.9.2 — Stability & Cross-Platform Support
+    • Added global exception handling with robust logging system.
+    • Full Windows/Linux/macOS cross-platform CI/CD support.
+    • Fixed multiple MyPy strict mode type errors.
+
+v0.9.0 — Documentation I18N & Community Expansion
+    • Expanded sidebar credits to WWM/FF14/VTuber communities.
+    • Split README into bilingual (zh-TW/EN) versions.
+    • Added CONTRIBUTING.md and JA/KO release note templates.
+
+v0.8.8 — Full I18N Coverage
+    • Player bar, mapping schemes, and library sort now support 5 languages.
+    • Fixed sidebar text clipping issues.
+
+v0.8.0 — Multi-Language Support (zh-TW/zh-CN/JA/KO/EN)
+    • Complete multi-language UI switching system.
+    • Added FF14 37-Key Diatonic (C3-C6) mapping scheme.
+    • Editor UX overhaul: smooth playback cursor + animated piano key glow.
+    • Multi-track MIDI (Type 1) export support.
+    • Performance optimization: multi-note indexing O(N²) → O(N).
+
+v0.7.0 — Editor Core Refactor
+    • Beat-based data model + .cqp project file system.
+    • Added editor help dialog (shortcuts + feature guide).
+    • Bundled VC++ Runtime DLLs to fix startup failures.
+    • Added custom application icon.
+
+================================================================================
+系統需求 | System Requirements
+================================================================================
+
+• Windows 10/11 (64-bit)
+• MIDI 輸入裝置 (電子琴、MIDI 控制器等)
+• 支援遊戲：燕雲十六聲 (Where Winds Meet) / Final Fantasy XIV
+
+================================================================================
+安裝說明 | Installation
+================================================================================
+
+解壓縮後執行 賽博琴仙.exe
 Extract the archive and run 賽博琴仙.exe
 
-## Support
+⚠️ 請使用 7-Zip 解壓縮，Windows 內建工具可能無法處理 Unicode 路徑。
+⚠️ Use 7-Zip for extraction. Windows built-in extractor may fail with Unicode paths.
+
+================================================================================
+支援 | Support
+================================================================================
+
 GitHub: https://github.com/EdmondVirelle/cyber-qin
+贊助 | Donate: https://ko-fi.com/virelleedmond
+
+================================================================================
+免責聲明 | Disclaimer
+================================================================================
+
+本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
+在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
+開發者不對因使用本工具導致的帳號處分或任何損失承擔責任。
+
+This is an open-source personal project for MIDI music enthusiasts.
+Using third-party tools in games may violate their Terms of Service.
+The developer is not responsible for any account penalties or damages.
