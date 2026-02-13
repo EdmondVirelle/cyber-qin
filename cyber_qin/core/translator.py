@@ -129,6 +129,10 @@ class Translator(QObject):
                 "settings.tab.advanced": "Advanced",
                 "settings.coming_soon": "(Coming Soon)",
                 # MIDI Tab
+                "settings.midi.device": "MIDI Device",
+                "settings.midi.device.label": "Preferred Device",
+                "settings.midi.device.none": "(None - Auto-detect)",
+                "settings.midi.device.tooltip": "Select a preferred MIDI device to connect to on startup",
                 "settings.midi.connection": "Connection",
                 "settings.midi.auto_connect.label": "Auto-connect to last device on startup",
                 "settings.midi.auto_connect.tooltip": "Automatically connect to the last used MIDI device when the app starts",
@@ -254,6 +258,10 @@ class Translator(QObject):
                 "settings.tab.advanced": "進階",
                 "settings.coming_soon": "(即將推出)",
                 # MIDI Tab
+                "settings.midi.device": "MIDI 裝置",
+                "settings.midi.device.label": "偏好裝置",
+                "settings.midi.device.none": "(無 - 自動偵測)",
+                "settings.midi.device.tooltip": "選擇啟動時要連線的偏好 MIDI 裝置",
                 "settings.midi.connection": "連線",
                 "settings.midi.auto_connect.label": "啟動時自動連線到最後使用的裝置",
                 "settings.midi.auto_connect.tooltip": "應用程式啟動時自動連線到上次使用的 MIDI 裝置",
@@ -379,6 +387,10 @@ class Translator(QObject):
                 "settings.tab.advanced": "高级",
                 "settings.coming_soon": "(即将推出)",
                 # MIDI Tab
+                "settings.midi.device": "MIDI 设备",
+                "settings.midi.device.label": "首选设备",
+                "settings.midi.device.none": "(无 - 自动检测)",
+                "settings.midi.device.tooltip": "选择启动时要连接的首选 MIDI 设备",
                 "settings.midi.connection": "连接",
                 "settings.midi.auto_connect.label": "启动时自动连接到最后使用的设备",
                 "settings.midi.auto_connect.tooltip": "应用程序启动时自动连接到上次使用的 MIDI 设备",

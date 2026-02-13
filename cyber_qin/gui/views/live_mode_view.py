@@ -360,10 +360,15 @@ class LiveModeView(QWidget):
         # Update description for initial selection
         self._update_scheme_description()
 
+        # Try preferred device first, then fall back to last port
+        preferred_device = self._config.get("midi.preferred_device", "")
         last_port = self._config.get("midi.last_port", "")
         self._refresh_ports()
-        if last_port:
-            idx = self._port_combo.findText(last_port)
+
+        # Priority: preferred_device > last_port
+        port_to_select = preferred_device or last_port
+        if port_to_select:
+            idx = self._port_combo.findText(port_to_select)
             if idx >= 0:
                 self._port_combo.setCurrentIndex(idx)
 

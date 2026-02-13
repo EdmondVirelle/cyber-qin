@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ...core.config import get_config
+from ...core.midi_listener import MidiListener
 from ...core.translator import translator
 from ..theme import BG_INK, BG_PAPER, TEXT_PRIMARY, TEXT_SECONDARY
 
@@ -72,16 +73,30 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(16, 16, 16, 16)
 
+        # Device selection group
+        device_group = QGroupBox(translator.tr("settings.midi.device"))
+        device_layout = QFormLayout()
+
+        self._midi_device = QComboBox()
+        self._midi_device.setToolTip(translator.tr("settings.midi.device.tooltip"))
+        self._refresh_midi_devices()
+        device_layout.addRow(
+            translator.tr("settings.midi.device.label"), self._midi_device
+        )
+
+        device_group.setLayout(device_layout)
+        layout.addWidget(device_group)
+
         # Auto-connect group
-        group = QGroupBox(translator.tr("settings.midi.connection"))
-        group_layout = QFormLayout()
+        connection_group = QGroupBox(translator.tr("settings.midi.connection"))
+        connection_layout = QFormLayout()
 
         self._auto_connect = QCheckBox(translator.tr("settings.midi.auto_connect.label"))
         self._auto_connect.setToolTip(translator.tr("settings.midi.auto_connect.tooltip"))
-        group_layout.addRow(self._auto_connect)
+        connection_layout.addRow(self._auto_connect)
 
-        group.setLayout(group_layout)
-        layout.addWidget(group)
+        connection_group.setLayout(connection_layout)
+        layout.addWidget(connection_group)
 
         layout.addStretch()
         return widget
@@ -193,6 +208,18 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         return widget
 
+    def _refresh_midi_devices(self) -> None:
+        """Refresh the list of available MIDI devices."""
+        self._midi_device.clear()
+        self._midi_device.addItem(translator.tr("settings.midi.device.none"), "")
+
+        try:
+            devices = MidiListener.list_ports()
+            for device in devices:
+                self._midi_device.addItem(device, device)
+        except Exception:
+            pass  # If MIDI enumeration fails, just show "None" option
+
     def _create_advanced_tab(self) -> QWidget:
         """Create Advanced settings tab."""
         widget = QWidget()
@@ -219,6 +246,11 @@ class SettingsDialog(QDialog):
     def _load_settings(self) -> None:
         """Load settings from config into UI controls."""
         # MIDI
+        preferred_device = self._config.get("midi.preferred_device", "")
+        device_index = self._midi_device.findData(preferred_device)
+        if device_index >= 0:
+            self._midi_device.setCurrentIndex(device_index)
+
         self._auto_connect.setChecked(self._config.get("midi.auto_connect", True))
 
         # Playback
@@ -249,6 +281,7 @@ class SettingsDialog(QDialog):
     def _save_settings(self) -> None:
         """Save settings from UI controls to config."""
         # MIDI
+        self._config.set("midi.preferred_device", self._midi_device.currentData() or "")
         self._config.set("midi.auto_connect", self._auto_connect.isChecked())
 
         # Playback

@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
     "version": "1.0",
     "midi": {
         "last_port": "",
+        "preferred_device": "",  # User-selected preferred MIDI device
         "auto_connect": True,
     },
     "playback": {
