@@ -143,21 +143,30 @@ class TestEditorViewIntegration:
     def test_preview_state_changed_updates_ui(self):
         """Verify play button and state reset on stop."""
         from cyber_qin.core.midi_file_player import PlaybackState
+        from cyber_qin.core.translator import translator
         from cyber_qin.gui.views.editor_view import EditorView
 
         view = EditorView()
         view._piano = MagicMock()
         view._note_roll = MagicMock()
         view._play_btn = MagicMock()
+        view._stop_btn = MagicMock()
 
         # Simulate Stop
         view._on_preview_state_changed(PlaybackState.STOPPED)
 
         view._note_roll.set_playback_beats.assert_called_with(-1)
-        view._play_btn.setText.assert_called_with("▶ 播放")
+        view._play_btn.setText.assert_called_with(translator.tr("editor.play"))
+        view._stop_btn.setEnabled.assert_called_with(False)
         view._piano.set_active_notes.assert_called_with(set())
         view._note_roll.set_active_notes.assert_called_with(set())
 
         # Simulate Play
         view._on_preview_state_changed(PlaybackState.PLAYING)
-        view._play_btn.setText.assert_called_with("■ 停止")
+        view._play_btn.setText.assert_called_with(translator.tr("editor.pause"))
+        view._stop_btn.setEnabled.assert_called_with(True)
+
+        # Simulate Pause
+        view._on_preview_state_changed(PlaybackState.PAUSED)
+        view._play_btn.setText.assert_called_with(translator.tr("editor.resume"))
+        view._stop_btn.setEnabled.assert_called_with(True)

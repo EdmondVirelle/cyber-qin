@@ -192,9 +192,14 @@ class AppShell(QMainWindow):
         self._now_playing = NowPlayingBar()
         root.addWidget(self._now_playing)
 
+    def _on_view_changed(self, index: int) -> None:
+        """Hide NowPlayingBar when in editor view (index 2)."""
+        self._now_playing.setVisible(index != 2)
+
     def _connect_signals(self) -> None:
         # Sidebar navigation
         self._sidebar.navigation_changed.connect(self._stack.setCurrentIndex)
+        self._stack.currentChanged.connect(self._on_view_changed)
 
         # Live MIDI callback → processor
         self._live_view.set_midi_callback(self._processor.on_midi_event)

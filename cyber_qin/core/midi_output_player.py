@@ -58,6 +58,8 @@ def _ensure_qt_class():
             self._loop_enabled: bool = False
             self._state = PlaybackState.STOPPED
             self._stop_flag = threading.Event()
+            self._pause_flag = threading.Event()
+            self._pause_flag.set()  # Not paused initially
             self._thread: threading.Thread | None = None
             self._open_port()
 
@@ -133,8 +135,14 @@ def _ensure_qt_class():
             self._duration = duration
 
         def play(self) -> None:
-            """Start playback on a background thread."""
+            """Start or resume playback on a background thread."""
             if self._midi_out is None:
+                return
+            if self._state == PlaybackState.PAUSED:
+                # Resume from pause
+                self._pause_flag.set()
+                self._state = PlaybackState.PLAYING
+                self.state_changed.emit(self._state)
                 return
             if self._state == PlaybackState.PLAYING:
                 return
@@ -142,6 +150,7 @@ def _ensure_qt_class():
                 return
             self._join_thread()
             self._stop_flag.clear()
+            self._pause_flag.set()
             self._state = PlaybackState.PLAYING
             self.state_changed.emit(self._state)
             self._thread = threading.Thread(
@@ -151,11 +160,19 @@ def _ensure_qt_class():
             )
             self._thread.start()
 
+        def pause(self) -> None:
+            """Pause playback (can be resumed with play())."""
+            if self._state == PlaybackState.PLAYING:
+                self._pause_flag.clear()
+                self._state = PlaybackState.PAUSED
+                self.state_changed.emit(self._state)
+
         def stop(self) -> None:
             """Stop playback, send all-notes-off."""
             if self._state == PlaybackState.STOPPED:
                 return
             self._stop_flag.set()
+            self._pause_flag.set()  # Unblock if paused so thread can exit
             self._join_thread()
             self._all_notes_off()
             self._state = PlaybackState.STOPPED
@@ -214,6 +231,15 @@ def _ensure_qt_class():
                         while wait > 0.03:
                             if self._stop_flag.wait(timeout=0.03):
                                 return
+                            # Pause gate within wait loop
+                            if not self._pause_flag.is_set():
+                                pause_start = time.perf_counter()
+                                self._pause_flag.wait()
+                                if self._stop_flag.is_set():
+                                    return
+                                paused_dur = time.perf_counter() - pause_start
+                                start_wall += paused_dur
+                                target_wall += paused_dur
                             # Update progress while waiting
                             current_time = time.perf_counter()
                             elapsed_so_far = (current_time - start_wall) * speed
@@ -230,6 +256,15 @@ def _ensure_qt_class():
                     while time.perf_counter() < target_wall:
                         if self._stop_flag.is_set():
                             return
+
+                    # Pause gate — blocks here while paused
+                    if not self._pause_flag.is_set():
+                        pause_start = time.perf_counter()
+                        self._pause_flag.wait()
+                        if self._stop_flag.is_set():
+                            return
+                        # Adjust start_wall for time spent paused
+                        start_wall += time.perf_counter() - pause_start
 
                     if self._midi_out is None:
                         return

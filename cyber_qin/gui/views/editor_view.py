@@ -235,6 +235,17 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._play_btn)
 
+        self._stop_btn = QPushButton()
+        self._stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._stop_btn.setMinimumWidth(70)
+        self._stop_btn.setMinimumHeight(36)
+        self._stop_btn.setEnabled(False)
+        self._stop_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:disabled { color: #555; }"
+        )
+        row1.addWidget(self._stop_btn)
+
         # Countdown indicator (shows metronome count-in)
         self._countdown_label = QLabel("")
         self._countdown_label.setMinimumWidth(30)
@@ -324,26 +335,18 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._arrange_btn)
 
-        self._fx_btn = QPushButton("✨ FX")
+        self._fx_btn = QPushButton()
         self._fx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._fx_btn.setMinimumHeight(36)
-        self._fx_btn.setToolTip(
-            "MIDI 效果：琶音器、人性化、量化、和弦生成\n"
-            "MIDI FX: Arpeggiator, Humanize, Quantize, Chords"
-        )
         self._fx_btn.setStyleSheet(
             "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._fx_btn)
 
-        self._generate_btn = QPushButton("🎲 Generate")
+        self._generate_btn = QPushButton()
         self._generate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._generate_btn.setMinimumHeight(36)
-        self._generate_btn.setToolTip(
-            "AI 作曲：自動生成旋律與低音線\n"
-            "AI Compose: Generate melody and bass lines"
-        )
         self._generate_btn.setStyleSheet(
             "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
@@ -354,10 +357,6 @@ class EditorView(QWidget):
 
         # Sidebar toggle
         self._sidebar_toggle_btn = IconButton("menu", size=32)
-        self._sidebar_toggle_btn.setToolTip(
-            "切換側邊欄：隱藏/顯示音軌面板和音高尺規\n"
-            "Toggle Sidebar: Hide/show track panel and pitch ruler"
-        )
         self._sidebar_toggle_btn.setCheckable(True)
         self._sidebar_toggle_btn.setChecked(True)  # Default: visible
         row1.addWidget(self._sidebar_toggle_btn)
@@ -699,7 +698,16 @@ class EditorView(QWidget):
         self._header_lbl.setText(translator.tr("editor.title"))
         self._desc_lbl.setText(translator.tr("editor.desc"))
 
-        self._play_btn.setText(translator.tr("editor.play"))
+        # Play button text is stateful — only reset when STOPPED
+        from ...core.midi_file_player import PlaybackState
+
+        if self._preview_player is None or self._preview_player.state == PlaybackState.STOPPED:
+            self._play_btn.setText(translator.tr("editor.play"))
+        elif self._preview_player.state == PlaybackState.PLAYING:
+            self._play_btn.setText(translator.tr("editor.pause"))
+        elif self._preview_player.state == PlaybackState.PAUSED:
+            self._play_btn.setText(translator.tr("editor.resume"))
+        self._stop_btn.setText(translator.tr("editor.stop"))
         self._undo_btn.setToolTip(translator.tr("editor.undo"))
         self._redo_btn.setToolTip(translator.tr("editor.redo"))
         self._clear_btn.setToolTip(translator.tr("editor.clear"))
@@ -710,8 +718,11 @@ class EditorView(QWidget):
         self._help_btn.setToolTip(translator.tr("editor.help"))
 
         self._arrange_btn.setText(translator.tr("editor.arrange"))
-        self._fx_btn.setText(translator.tr("editor.fx"))
-        self._generate_btn.setText(translator.tr("editor.generate"))
+        self._fx_btn.setText(translator.tr("editor.fx.label"))
+        self._fx_btn.setToolTip(translator.tr("editor.fx.tooltip"))
+        self._generate_btn.setText(translator.tr("editor.generate.label"))
+        self._generate_btn.setToolTip(translator.tr("editor.generate.tooltip"))
+        self._sidebar_toggle_btn.setToolTip(translator.tr("editor.sidebar.tooltip"))
         self._ghost_btn.setText(translator.tr("editor.ghost"))
         self._automation_btn.setText(translator.tr("editor.automation"))
         self._score_btn.setText(translator.tr("editor.score"))
@@ -748,6 +759,7 @@ class EditorView(QWidget):
         self._save_btn.clicked.connect(self._on_save)
         self._record_btn.clicked.connect(self._on_record_toggle)
         self._play_btn.clicked.connect(self._on_play)
+        self._stop_btn.clicked.connect(self._on_stop)
         self._loop_btn.toggled.connect(self._on_loop_toggled)
         self._metronome_btn.toggled.connect(self._on_metronome_toggled)
         self._undo_btn.clicked.connect(self._on_undo)
@@ -1444,16 +1456,29 @@ class EditorView(QWidget):
 
         if state == PlaybackState.STOPPED:
             self._note_roll.set_playback_beats(-1)
-            self._play_btn.setText("▶ 播放")
-            self._play_btn.setStyleSheet("")
+            self._play_btn.setText(translator.tr("editor.play"))
+            self._play_btn.setStyleSheet(
+                "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            )
+            self._stop_btn.setEnabled(False)
             self._piano.set_active_notes(set())
             self._note_roll.set_active_notes(set())
         elif state == PlaybackState.PLAYING:
-            self._play_btn.setText("■ 停止")
+            self._play_btn.setText(translator.tr("editor.pause"))
             self._play_btn.setStyleSheet(
-                "QPushButton { background-color: #FF4444; color: #0A0E14; font-weight: 700; }"
-                "QPushButton:hover { background-color: #FF6666; }"
+                "QPushButton { background-color: #00F0FF; color: #0A0E14; font-weight: 700; "
+                "padding: 6px 12px; border-radius: 4px; }"
+                "QPushButton:hover { background-color: #33F3FF; }"
             )
+            self._stop_btn.setEnabled(True)
+        elif state == PlaybackState.PAUSED:
+            self._play_btn.setText(translator.tr("editor.resume"))
+            self._play_btn.setStyleSheet(
+                "QPushButton { background-color: #D4AF37; color: #0A0E14; font-weight: 700; "
+                "padding: 6px 12px; border-radius: 4px; }"
+                "QPushButton:hover { background-color: #E0C060; }"
+            )
+            self._stop_btn.setEnabled(True)
 
     def _on_preview_note_fired(self, event_type: str, note: int, velocity: int) -> None:
         """Handle real-time playback feedback."""
@@ -1478,8 +1503,12 @@ class EditorView(QWidget):
             from ...core.midi_file_player import PlaybackState
 
             if player.state == PlaybackState.PLAYING:
-                player.stop()
+                player.pause()
                 return
+            if player.state == PlaybackState.PAUSED:
+                player.play()  # Resume
+                return
+            # STOPPED → load and start fresh
             events = self._sequence.to_midi_file_events()
             duration = self._sequence.duration_seconds
             player.load(events, duration)
@@ -1489,6 +1518,10 @@ class EditorView(QWidget):
         # Fallback: SendInput player via app_shell
         events = self._sequence.to_midi_file_events()
         self.play_requested.emit(events)
+
+    def _on_stop(self) -> None:
+        if self._preview_player is not None:
+            self._preview_player.stop()
 
     def _on_loop_toggled(self, checked: bool) -> None:
         """Handle loop button toggle."""
