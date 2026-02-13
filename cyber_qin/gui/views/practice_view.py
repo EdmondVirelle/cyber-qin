@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (
 )
 
 from ...core.beat_sequence import BeatNote
+from ...core.key_mapper import KeyMapper
+from ...core.mapping_schemes import get_scheme, list_schemes
 from ...core.practice_engine import PracticeScorer, notes_to_practice
 from ...core.translator import translator
 from ..theme import (
@@ -28,6 +30,23 @@ from ..widgets.practice_display import PracticeDisplay
 # Green gradient for practice header
 _PRACTICE_GRADIENT_START = "#0D4F2B"
 _PRACTICE_GRADIENT_END = "#0A3F22"
+
+
+class _PracticeGradientHeader(QWidget):
+    """Green gradient background only — text is in overlay widgets."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedHeight(100)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        w, h = self.width(), self.height()
+        grad = QLinearGradient(0, 0, w, 0)
+        grad.setColorAt(0.0, QColor(_PRACTICE_GRADIENT_START))
+        grad.setColorAt(1.0, QColor(_PRACTICE_GRADIENT_END))
+        painter.fillRect(0, 0, w, h, grad)
+        painter.end()
 
 
 class PracticeView(QWidget):
@@ -47,11 +66,56 @@ class PracticeView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Header
-        self._header = _GradientHeader()
-        layout.addWidget(self._header)
+        # ── Header (100px gradient + widget overlay) ──
+        header_container = QWidget()
+        header_layout = QVBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
 
-        # Score bar
+        self._gradient_header = _PracticeGradientHeader()
+        header_layout.addWidget(self._gradient_header)
+
+        header_overlay = QWidget(self._gradient_header)
+        overlay_layout = QVBoxLayout(header_overlay)
+        overlay_layout.setContentsMargins(24, 20, 24, 8)
+
+        # Row 1: title + mode combo + scheme combo
+        header_row = QHBoxLayout()
+
+        self._title_lbl = QLabel(translator.tr("practice.title"))
+        self._title_lbl.setFont(QFont("Microsoft JhengHei", 22, QFont.Weight.Bold))
+        self._title_lbl.setStyleSheet("background: transparent;")
+        header_row.addWidget(self._title_lbl)
+
+        header_row.addStretch()
+
+        self._mode_combo = QComboBox()
+        self._mode_combo.addItem(translator.tr("practice.mode.midi"), "midi")
+        self._mode_combo.addItem(translator.tr("practice.mode.keyboard"), "keyboard")
+        self._mode_combo.setFixedWidth(150)
+        self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        header_row.addWidget(self._mode_combo)
+
+        self._scheme_combo = QComboBox()
+        for scheme in list_schemes():
+            self._scheme_combo.addItem(scheme.translated_name(), scheme.id)
+        self._scheme_combo.setFixedWidth(200)
+        self._scheme_combo.setVisible(False)
+        self._scheme_combo.currentIndexChanged.connect(self._on_scheme_changed)
+        header_row.addWidget(self._scheme_combo)
+
+        overlay_layout.addLayout(header_row)
+
+        # Row 2: description
+        self._desc_lbl = QLabel(translator.tr("practice.desc"))
+        self._desc_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        overlay_layout.addWidget(self._desc_lbl)
+        overlay_layout.addStretch()
+
+        header_overlay.setGeometry(0, 0, 800, 100)
+        layout.addWidget(header_container)
+
+        # ── Score bar ──
         score_bar = QWidget()
         score_bar.setFixedHeight(40)
         score_bar.setStyleSheet(f"background-color: {BG_SCROLL};")
@@ -95,12 +159,25 @@ class PracticeView(QWidget):
 
         layout.addWidget(score_bar)
 
-        # Main display
+        # ── Main display ──
         self._display = PracticeDisplay()
+        self._display.note_hit.connect(self._on_display_note_hit)
         layout.addWidget(self._display, 1)
 
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "_gradient_header"):
+            for child in self._gradient_header.children():
+                if isinstance(child, QWidget):
+                    child.setGeometry(0, 0, self.width(), 100)
+
     def _update_text(self) -> None:
-        self._header.update()
+        self._title_lbl.setText(translator.tr("practice.title"))
+        self._desc_lbl.setText(translator.tr("practice.desc"))
+        self._mode_combo.setItemText(0, translator.tr("practice.mode.midi"))
+        self._mode_combo.setItemText(1, translator.tr("practice.mode.keyboard"))
+        for i, scheme in enumerate(list_schemes()):
+            self._scheme_combo.setItemText(i, scheme.translated_name())
         self._start_btn.setText(
             translator.tr("practice.stop") if self._display.is_playing else translator.tr("practice.start")
         )
@@ -142,7 +219,7 @@ class PracticeView(QWidget):
             self.start_practice(self._notes, self._tempo_bpm)
 
     def on_user_note(self, note: int) -> None:
-        """Called when user plays a note (from MIDI input)."""
+        """Called when user plays a note (from MIDI input or keyboard)."""
         if not self._scorer or not self._display.is_playing:
             return
         current_time = self._display.current_time
@@ -150,29 +227,28 @@ class PracticeView(QWidget):
         self._display.show_feedback(grade, note)
         self._update_score_display()
 
+    def _on_display_note_hit(self, note: int, time: float) -> None:
+        """Handle note hit from keyboard input in display."""
+        self.on_user_note(note)
 
-class _GradientHeader(QWidget):
-    """Green gradient header for practice mode."""
+    def _on_mode_changed(self, index: int) -> None:
+        is_keyboard = self._mode_combo.currentData() == "keyboard"
+        self._scheme_combo.setVisible(is_keyboard)
+        if is_keyboard:
+            self._update_keyboard_mapping()
+        else:
+            self._display.set_keyboard_mapping(None)
+            self._display.set_key_labels(None)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setFixedHeight(60)
+    def _on_scheme_changed(self, index: int) -> None:
+        if self._mode_combo.currentData() == "keyboard":
+            self._update_keyboard_mapping()
 
-    def paintEvent(self, event) -> None:  # noqa: N802
-        painter = QPainter(self)
-        w, h = self.width(), self.height()
-        grad = QLinearGradient(0, 0, w, 0)
-        grad.setColorAt(0.0, QColor(_PRACTICE_GRADIENT_START))
-        grad.setColorAt(1.0, QColor(_PRACTICE_GRADIENT_END))
-        painter.fillRect(0, 0, w, h, grad)
-
-        painter.setPen(QColor(TEXT_PRIMARY))
-        painter.setFont(QFont("Microsoft JhengHei", 18, QFont.Weight.Bold))
-        painter.drawText(QRectF(20, 0, w, h), Qt.AlignmentFlag.AlignVCenter, translator.tr("practice.title"))
-
-        painter.setPen(QColor(TEXT_SECONDARY))
-        painter.setFont(QFont("Microsoft JhengHei", 10))
-        desc = translator.tr("practice.desc")
-        painter.drawText(QRectF(20, 28, w, h), Qt.AlignmentFlag.AlignVCenter, desc)
-
-        painter.end()
+    def _update_keyboard_mapping(self) -> None:
+        scheme_id = self._scheme_combo.currentData()
+        if scheme_id:
+            scheme = get_scheme(scheme_id)
+            reverse_map = KeyMapper.build_reverse_map(scheme)
+            key_labels = {note: km.label for note, km in scheme.mapping.items()}
+            self._display.set_keyboard_mapping(reverse_map)
+            self._display.set_key_labels(key_labels)

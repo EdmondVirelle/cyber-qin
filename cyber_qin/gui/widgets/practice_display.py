@@ -6,6 +6,7 @@ from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QWidget
 
+from ...core.constants import Modifier
 from ...core.practice_engine import HitGrade, PracticeNote
 
 # Visual constants
@@ -67,6 +68,10 @@ class PracticeDisplay(QWidget):
         self._note_min: int = 60
         self._note_max: int = 83
 
+        # Keyboard input mode
+        self._reverse_map: dict[tuple[str, Modifier], int] | None = None
+        self._key_labels: dict[int, str] | None = None
+
         self._timer = QTimer(self)
         self._timer.setInterval(16)  # ~60fps
         self._timer.timeout.connect(self._tick)
@@ -110,6 +115,45 @@ class PracticeDisplay(QWidget):
         color = _GRADE_COLORS.get(grade, _MISS_COLOR)
         text = _GRADE_TEXT.get(grade, "")
         self._feedbacks.append(_FeedbackEffect(text, color, x, hit_y - 30))
+
+    def set_keyboard_mapping(self, reverse_map: dict[tuple[str, Modifier], int] | None) -> None:
+        """Enable or disable keyboard input for practice."""
+        self._reverse_map = reverse_map
+        if reverse_map is not None:
+            self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self.setFocus()
+
+    def set_key_labels(self, labels: dict[int, str] | None) -> None:
+        """Set key label overlay (e.g. 'Z', 'Shift+A') for lane display."""
+        self._key_labels = labels
+        self.update()
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        if event.isAutoRepeat() or not self._playing or self._reverse_map is None:
+            super().keyPressEvent(event)
+            return
+
+        # Use event.key() instead of event.text() so Ctrl+key works correctly
+        key_code = event.key()
+        if 65 <= key_code <= 90:  # A-Z
+            key_letter = chr(key_code)
+        elif 48 <= key_code <= 57:  # 0-9
+            key_letter = chr(key_code)
+        else:
+            super().keyPressEvent(event)
+            return
+
+        mods = event.modifiers()
+        if mods & Qt.KeyboardModifier.ShiftModifier:
+            mod = Modifier.SHIFT
+        elif mods & Qt.KeyboardModifier.ControlModifier:
+            mod = Modifier.CTRL
+        else:
+            mod = Modifier.NONE
+
+        midi_note = self._reverse_map.get((key_letter, mod))
+        if midi_note is not None:
+            self.note_hit.emit(midi_note, self._current_time)
 
     def _note_to_x(self, midi_note: int) -> float:
         """Map MIDI note to x position."""
@@ -217,11 +261,17 @@ class PracticeDisplay(QWidget):
         # Lane labels at bottom
         painter.setPen(QColor("#555555"))
         painter.setFont(QFont("Microsoft JhengHei", 7))
-        note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        for midi in range(self._note_min, self._note_max + 1):
-            if midi % 12 == 0 or midi == self._note_min:  # Only show C and first note
-                x = self._note_to_x(midi)
-                name = note_names[midi % 12] + str(midi // 12 - 1)
-                painter.drawText(int(x - 10), int(hit_y + 16), name)
+        if self._key_labels:
+            for midi, label in self._key_labels.items():
+                if self._note_min <= midi <= self._note_max:
+                    x = self._note_to_x(midi)
+                    painter.drawText(int(x - 15), int(hit_y + 16), label)
+        else:
+            note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+            for midi in range(self._note_min, self._note_max + 1):
+                if midi % 12 == 0 or midi == self._note_min:
+                    x = self._note_to_x(midi)
+                    name = note_names[midi % 12] + str(midi // 12 - 1)
+                    painter.drawText(int(x - 10), int(hit_y + 16), name)
 
         painter.end()

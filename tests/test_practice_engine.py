@@ -939,3 +939,63 @@ def test_scorer_target_sorted_by_time():
     assert r2 is not None
     assert r3 is not None
     assert scorer.stats.perfect == 3
+
+
+# ── build_reverse_map Tests ─────────────────────────────────
+
+
+def test_build_reverse_map_wwm36():
+    """All 36 notes of WWM scheme map correctly via reverse map."""
+    from cyber_qin.core.key_mapper import KeyMapper
+    from cyber_qin.core.mapping_schemes import get_scheme
+
+    scheme = get_scheme("wwm_36")
+    reverse = KeyMapper.build_reverse_map(scheme)
+
+    assert len(reverse) == 36
+    # Verify all MIDI notes 48-83 are reachable
+    reachable = set(reverse.values())
+    assert reachable == set(range(48, 84))
+
+
+def test_build_reverse_map_ff14():
+    """All 37 notes of FF14 scheme map correctly via reverse map."""
+    from cyber_qin.core.key_mapper import KeyMapper
+    from cyber_qin.core.mapping_schemes import get_scheme
+
+    scheme = get_scheme("ff14_37")
+    reverse = KeyMapper.build_reverse_map(scheme)
+
+    assert len(reverse) == 37
+    reachable = set(reverse.values())
+    assert reachable == set(range(48, 85))
+
+
+def test_reverse_map_with_modifiers():
+    """Modifier keys produce correct notes (Shift+Z -> C#3, Ctrl+C -> Eb3)."""
+    from cyber_qin.core.constants import Modifier
+    from cyber_qin.core.key_mapper import KeyMapper
+    from cyber_qin.core.mapping_schemes import get_scheme
+
+    scheme = get_scheme("wwm_36")
+    reverse = KeyMapper.build_reverse_map(scheme)
+
+    # Shift+Z -> C#3 (MIDI 49)
+    assert reverse[("Z", Modifier.SHIFT)] == 49
+    # Ctrl+C -> Eb3 (MIDI 51)
+    assert reverse[("C", Modifier.CTRL)] == 51
+    # Z (no modifier) -> C3 (MIDI 48)
+    assert reverse[("Z", Modifier.NONE)] == 48
+
+
+def test_reverse_map_no_duplicates():
+    """Each key combo maps to exactly one note (no collisions)."""
+    from cyber_qin.core.key_mapper import KeyMapper
+    from cyber_qin.core.mapping_schemes import list_schemes
+
+    for scheme in list_schemes():
+        reverse = KeyMapper.build_reverse_map(scheme)
+        # Number of entries should equal number of notes in scheme
+        assert len(reverse) == scheme.key_count, (
+            f"Scheme {scheme.id}: expected {scheme.key_count} entries, got {len(reverse)}"
+        )

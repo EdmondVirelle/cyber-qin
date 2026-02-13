@@ -141,3 +141,25 @@ class KeyMapper:
     def all_mappings() -> dict[int, KeyMapping]:
         """Return a copy of the full base mapping table."""
         return dict(_BASE_MAP)
+
+    @staticmethod
+    def build_reverse_map(scheme: MappingScheme) -> dict[tuple[str, Modifier], int]:
+        """Build reverse mapping from (key_letter, modifier) to MIDI note.
+
+        Used for keyboard input mode in practice view.
+        Parses KeyMapping.label to extract the base key letter and modifier.
+        """
+        reverse: dict[tuple[str, Modifier], int] = {}
+        for midi_note, km in scheme.mapping.items():
+            label = km.label
+            if label.startswith("Shift+"):
+                key_letter = label[6:]
+                mod = Modifier.SHIFT
+            elif label.startswith("Ctrl+"):
+                key_letter = label[5:]
+                mod = Modifier.CTRL
+            else:
+                key_letter = label
+                mod = Modifier.NONE
+            reverse[(key_letter, mod)] = midi_note
+        return reverse
