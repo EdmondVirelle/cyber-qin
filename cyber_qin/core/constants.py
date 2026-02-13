@@ -70,6 +70,16 @@ MIDI_NOTE_MIN = 48  # C3
 MIDI_NOTE_MAX = 83  # B5
 MIDI_RANGE = range(MIDI_NOTE_MIN, MIDI_NOTE_MAX + 1)
 
+# MIDI editor range (full 88-key piano: A0-C8)
+EDITOR_MIDI_MIN = 21  # A0
+EDITOR_MIDI_MAX = 108  # C8
+EDITOR_MIDI_RANGE = range(EDITOR_MIDI_MIN, EDITOR_MIDI_MAX + 1)
+
+# Playable range for 燕雲十六聲 (C4-B5, highlighted in editor)
+PLAYABLE_MIDI_MIN = 60  # C4
+PLAYABLE_MIDI_MAX = 83  # B5
+PLAYABLE_MIDI_RANGE = range(PLAYABLE_MIDI_MIN, PLAYABLE_MIDI_MAX + 1)
+
 # Transpose step size (one octave)
 TRANSPOSE_STEP = 12
 TRANSPOSE_MIN = -24

@@ -6,7 +6,8 @@ from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import QWidget
 
-from ..theme import BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
+from ...core.constants import EDITOR_MIDI_MAX, EDITOR_MIDI_MIN, PLAYABLE_MIDI_MAX, PLAYABLE_MIDI_MIN
+from ..theme import ACCENT_GOLD, BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
 
 _RULER_WIDTH = 48
 _HEADER_HEIGHT = 22  # Must match NoteRoll._HEADER_HEIGHT
@@ -20,8 +21,8 @@ class PitchRuler(QWidget):
 
     def __init__(
         self,
-        midi_min: int = 48,
-        midi_max: int = 83,
+        midi_min: int = EDITOR_MIDI_MIN,  # 21 (A0)
+        midi_max: int = EDITOR_MIDI_MAX,  # 108 (C8)
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -59,16 +60,26 @@ class PitchRuler(QWidget):
             midi_note = self._midi_max - i
             semitone = midi_note % 12
             is_black = semitone in _BLACK_SEMITONES
+            is_playable = PLAYABLE_MIDI_MIN <= midi_note <= PLAYABLE_MIDI_MAX
             octave = midi_note // 12 - 1
             name = _NOTE_NAMES[semitone]
 
             y = _HEADER_HEIGHT + i * note_h
 
+            # Highlight playable zone (C4-B5, MIDI 60-83) with gold tint
+            if is_playable:
+                playable_bg = QColor(ACCENT_GOLD)
+                playable_bg.setAlpha(25)  # Subtle 10% opacity
+                painter.fillRect(
+                    QRectF(0, y, w, note_h),
+                    playable_bg,
+                )
+
             # Dark background stripe for black keys
             if is_black:
                 painter.fillRect(
                     QRectF(0, y, w, note_h),
-                    QColor(0x10, 0x14, 0x1E),
+                    QColor(0x10, 0x14, 0x1E, 180 if is_playable else 255),
                 )
 
             # Note name text

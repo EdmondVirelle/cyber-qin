@@ -14,7 +14,8 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QWheelEvent
 from PyQt6.QtWidgets import QWidget
 
-from ..theme import ACCENT, ACCENT_GLOW, BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
+from ...core.constants import EDITOR_MIDI_MAX, EDITOR_MIDI_MIN, PLAYABLE_MIDI_MAX, PLAYABLE_MIDI_MIN
+from ..theme import ACCENT, ACCENT_GLOW, ACCENT_GOLD, BG_INK, BG_SCROLL, TEXT_PRIMARY, TEXT_SECONDARY
 
 # Visual constants
 _PIXELS_PER_BEAT = 80.0    # default zoom (pixels per beat)
@@ -71,8 +72,8 @@ class NoteRoll(QWidget):
         self._playback_beats: float = -1.0  # playback cursor, -1 = hidden
         self._scroll_x: float = 0.0
         self._zoom: float = _PIXELS_PER_BEAT
-        self._midi_min: int = 48
-        self._midi_max: int = 83
+        self._midi_min: int = EDITOR_MIDI_MIN  # 21 (A0)
+        self._midi_max: int = EDITOR_MIDI_MAX  # 108 (C8)
         self._tempo_bpm: float = 120.0
         self._beats_per_bar: float = 4.0
         self._active_track_color: str = "#00F0FF"
@@ -180,6 +181,10 @@ class NoteRoll(QWidget):
 
     def set_snap_enabled(self, enabled: bool) -> None:
         self._snap_enabled = enabled
+
+    def _is_note_playable(self, midi_note: int) -> bool:
+        """Check if note is in the playable game zone (60-83)."""
+        return PLAYABLE_MIDI_MIN <= midi_note <= PLAYABLE_MIDI_MAX
 
     def flash_at_beat(self, t: float) -> None:
         self._flash_beat = t
@@ -669,6 +674,19 @@ class NoteRoll(QWidget):
 
         nh = self._note_height()
 
+        # ── Playable zone borders ───────────────────────────
+        # Draw horizontal lines at C4 (MIDI 60) and B5 (MIDI 83) boundaries
+        playable_top_y = self._y_for_note(PLAYABLE_MIDI_MAX)
+        playable_bottom_y = self._y_for_note(PLAYABLE_MIDI_MIN - 1) + nh  # Bottom of MIDI 60
+
+        # Top border (above B5)
+        painter.setPen(QPen(QColor(ACCENT_GOLD), 1.5))
+        painter.drawLine(0, int(playable_top_y), w, int(playable_top_y))
+
+        # Bottom border (below C4)
+        painter.setPen(QPen(QColor(ACCENT_GOLD), 1.5))
+        painter.drawLine(0, int(playable_bottom_y), w, int(playable_bottom_y))
+
         # ── Ghost notes ─────────────────────────────────────
         for gn in self._ghost_notes:
             gx = self._beat_to_x(gn.time_beats)
@@ -745,7 +763,11 @@ class NoteRoll(QWidget):
             )
 
             if is_dragged:
-                drag_c = QColor(track_color)
+                # Apply zone-based coloring to dragged notes too
+                if self._is_note_playable(note.note + pitch_offset if i == self._drag_index else note.note):
+                    drag_c = QColor(track_color)
+                else:
+                    drag_c = QColor(TEXT_SECONDARY)
                 drag_c.setAlpha(140)
                 painter.fillPath(path, drag_c)
                 painter.setPen(QPen(QColor(ACCENT), 1.5))
@@ -767,8 +789,16 @@ class NoteRoll(QWidget):
                 painter.setPen(QPen(QColor(ACCENT), 1.5))
                 painter.drawPath(path)
             else:
-                fill = QColor(track_color)
-                fill.setAlpha(200)
+                # Zone-based coloring: playable (60-83) vs out-of-range
+                if self._is_note_playable(note.note):
+                    # Playable zone: use track color at full brightness
+                    fill = QColor(track_color)
+                    fill.setAlpha(200)
+                else:
+                    # Out-of-range: dim with TEXT_SECONDARY at 60% opacity
+                    fill = QColor(TEXT_SECONDARY)
+                    fill.setAlpha(int(255 * 0.6))  # 60% opacity
+
                 painter.fillPath(path, fill)
                 painter.setPen(Qt.PenStyle.NoPen)
 
