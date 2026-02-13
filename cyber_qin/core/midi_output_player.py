@@ -55,6 +55,7 @@ def _ensure_qt_class():
             self._events: list[MidiFileEvent] = []
             self._duration: float = 0.0
             self._speed: float = 1.0
+            self._loop_enabled: bool = False
             self._state = PlaybackState.STOPPED
             self._stop_flag = threading.Event()
             self._thread: threading.Thread | None = None
@@ -117,6 +118,13 @@ def _ensure_qt_class():
         def set_speed(self, speed: float) -> None:
             """Set playback speed multiplier (0.25x – 2.0x)."""
             self._speed = max(0.25, min(2.0, speed))
+
+        def set_loop(self, enabled: bool) -> None:
+            """Enable or disable loop playback."""
+            self._loop_enabled = enabled
+
+        def set_metronome(self, enabled: bool) -> None:
+            """Enable or disable metronome count-in (no-op for output player)."""
 
         def load(self, events: list[MidiFileEvent], duration: float) -> None:
             """Store events for playback."""
@@ -188,64 +196,70 @@ def _ensure_qt_class():
             Event times are divided by _speed so that 2.0x plays twice
             as fast and 0.5x plays at half speed.
             """
-            duration = self._duration
-            speed = self._speed
-            start_wall = time.perf_counter()
+            while True:
+                duration = self._duration
+                speed = self._speed
+                start_wall = time.perf_counter()
 
-            for evt in self._events:
-                if self._stop_flag.is_set():
-                    return
-
-                target_wall = start_wall + evt.time_seconds / speed
-                now = time.perf_counter()
-                wait = target_wall - now
-
-                if wait > 0.002:
-                    # improved loop: wake up every 30ms to emit progress
-                    while wait > 0.03:
-                        if self._stop_flag.wait(timeout=0.03):
-                            return
-                        # Update progress while waiting
-                        current_time = time.perf_counter()
-                        elapsed_so_far = (current_time - start_wall) * speed
-                        self.progress_updated.emit(elapsed_so_far, duration)
-
-                        now = time.perf_counter()
-                        wait = target_wall - now
-
-                    if wait > 0.002:
-                        # wait() returns True if the flag was set (= stop requested)
-                        if self._stop_flag.wait(timeout=wait - 0.001):
-                            return
-
-                # Busy-spin for the final sub-millisecond
-                while time.perf_counter() < target_wall:
+                for evt in self._events:
                     if self._stop_flag.is_set():
                         return
 
-                if self._midi_out is None:
-                    return
+                    target_wall = start_wall + evt.time_seconds / speed
+                    now = time.perf_counter()
+                    wait = target_wall - now
 
-                ch = getattr(evt, "channel", 0) & 0x0F
-                if evt.event_type == "note_on":
-                    self._midi_out.send_message(
-                        [0x90 | ch, evt.note & 0x7F, evt.velocity & 0x7F],
-                    )
-                    self.note_fired.emit("note_on", evt.note, evt.velocity)
-                elif evt.event_type == "note_off":
-                    self._midi_out.send_message(
-                        [0x80 | ch, evt.note & 0x7F, 0],
-                    )
-                    self.note_fired.emit("note_off", evt.note, 0)
+                    if wait > 0.002:
+                        # improved loop: wake up every 30ms to emit progress
+                        while wait > 0.03:
+                            if self._stop_flag.wait(timeout=0.03):
+                                return
+                            # Update progress while waiting
+                            current_time = time.perf_counter()
+                            elapsed_so_far = (current_time - start_wall) * speed
+                            self.progress_updated.emit(elapsed_so_far, duration)
 
-                # Emit original time (not scaled) for progress bar accuracy
-                self.progress_updated.emit(evt.time_seconds, duration)
+                            now = time.perf_counter()
+                            wait = target_wall - now
 
-            # Wait out any remaining duration (e.g. trailing rests)
-            elapsed = time.perf_counter() - start_wall
-            remaining = duration / speed - elapsed
-            if remaining > 0.01:
-                self._stop_flag.wait(timeout=remaining)
+                        if wait > 0.002:
+                            if self._stop_flag.wait(timeout=wait - 0.001):
+                                return
+
+                    # Busy-spin for the final sub-millisecond
+                    while time.perf_counter() < target_wall:
+                        if self._stop_flag.is_set():
+                            return
+
+                    if self._midi_out is None:
+                        return
+
+                    ch = getattr(evt, "channel", 0) & 0x0F
+                    if evt.event_type == "note_on":
+                        self._midi_out.send_message(
+                            [0x90 | ch, evt.note & 0x7F, evt.velocity & 0x7F],
+                        )
+                        self.note_fired.emit("note_on", evt.note, evt.velocity)
+                    elif evt.event_type == "note_off":
+                        self._midi_out.send_message(
+                            [0x80 | ch, evt.note & 0x7F, 0],
+                        )
+                        self.note_fired.emit("note_off", evt.note, 0)
+
+                    # Emit original time (not scaled) for progress bar accuracy
+                    self.progress_updated.emit(evt.time_seconds, duration)
+
+                # Wait out any remaining duration (e.g. trailing rests)
+                elapsed = time.perf_counter() - start_wall
+                remaining = duration / speed - elapsed
+                if remaining > 0.01:
+                    self._stop_flag.wait(timeout=remaining)
+
+                if not self._loop_enabled or self._stop_flag.is_set():
+                    break
+
+                # Loop: send all-notes-off before restarting
+                self._all_notes_off()
 
             # Playback finished naturally (or was stopped during trailing wait)
             self._all_notes_off()
