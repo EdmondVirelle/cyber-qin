@@ -43,6 +43,10 @@ _HEADER_HEIGHT = 22  # bar number header
 _RESIZE_THRESHOLD = 6  # pixels from right edge to trigger resize
 _VELOCITY_LANE_HEIGHT = 80  # velocity lane height in pixels
 
+# Pitch (vertical) zoom constants
+_MIN_PITCH_RANGE = 12  # Minimum visible range (1 octave)
+_MAX_PITCH_RANGE = 88  # Maximum visible range (full piano)
+
 # Grid line colors
 _BAR_LINE_COLOR = "#3A4050"
 _BEAT_LINE_COLOR = "#2A3040"
@@ -89,6 +93,9 @@ class NoteRoll(QWidget):
     # Context menu
     context_menu_requested = pyqtSignal(float, float)  # widget x, y
 
+    # Zoom changed
+    zoom_changed = pyqtSignal(float)  # new zoom level (pixels per beat)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._notes: list = []  # list of BeatNote
@@ -98,6 +105,7 @@ class NoteRoll(QWidget):
         self._playback_beats: float = -1.0  # playback cursor, -1 = hidden
         self._scroll_x: float = 0.0
         self._zoom: float = _PIXELS_PER_BEAT
+        self._pitch_range: int = _MAX_PITCH_RANGE  # Visible MIDI note range (88 = all keys)
         self._midi_min: int = EDITOR_MIDI_MIN  # 21 (A0)
         self._midi_max: int = EDITOR_MIDI_MAX  # 108 (C8)
         self._tempo_bpm: float = 120.0
@@ -228,8 +236,8 @@ class NoteRoll(QWidget):
         self._snap_enabled = enabled
 
     def set_grid_precision(self, precision: int) -> None:
-        """Set grid precision: 4=1/4 note, 8=1/8, 16=1/16, 32=1/32."""
-        if precision in (4, 8, 16, 32):
+        """Set grid precision: 4=1/4 note, 8=1/8, 16=1/16, 32=1/32, 64=1/64, 128=1/128."""
+        if precision in (4, 8, 16, 32, 64, 128):
             self._grid_precision = precision
             self.update()
 
@@ -372,6 +380,22 @@ class NoteRoll(QWidget):
         note_h = body_h / max(1, range_size)
         offset = (y - _HEADER_HEIGHT) / max(1.0, note_h)
         return max(self._midi_min, min(self._midi_max, int(self._midi_max - offset)))
+
+    def _update_pitch_bounds(self, center: int) -> None:
+        """Update visible MIDI range based on pitch zoom centered on given note."""
+        half_range = self._pitch_range // 2
+        new_min = max(EDITOR_MIDI_MIN, center - half_range)
+        new_max = min(EDITOR_MIDI_MAX, center + half_range)
+
+        # Adjust if we hit the boundaries
+        if new_max - new_min + 1 < self._pitch_range:
+            if new_min == EDITOR_MIDI_MIN:
+                new_max = min(EDITOR_MIDI_MAX, new_min + self._pitch_range - 1)
+            elif new_max == EDITOR_MIDI_MAX:
+                new_min = max(EDITOR_MIDI_MIN, new_max - self._pitch_range + 1)
+
+        self._midi_min = new_min
+        self._midi_max = new_max
 
     def _note_height(self) -> float:
         range_size = self._midi_max - self._midi_min + 1
@@ -690,26 +714,129 @@ class NoteRoll(QWidget):
         self._emit_selection_changed()
 
     def keyPressEvent(self, event) -> None:  # noqa: N802
-        if event.key() == Qt.Key.Key_Delete:
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        key = event.key()
+
+        # Zoom shortcuts
+        if ctrl and shift:
+            # Vertical pitch zoom (Ctrl+Shift+=/-, Ctrl+Shift+0)
+            if key in (Qt.Key.Key_Equal, Qt.Key.Key_Plus):
+                # Zoom in vertically (reduce range)
+                new_range = int(self._pitch_range * 0.85)
+                new_range = max(_MIN_PITCH_RANGE, new_range)
+                if new_range != self._pitch_range:
+                    center = (self._midi_min + self._midi_max) // 2
+                    self._pitch_range = new_range
+                    self._update_pitch_bounds(center)
+                    self.update()
+                return
+            if key == Qt.Key.Key_Minus:
+                # Zoom out vertically (increase range)
+                new_range = int(self._pitch_range / 0.85)
+                new_range = min(_MAX_PITCH_RANGE, new_range)
+                if new_range != self._pitch_range:
+                    center = (self._midi_min + self._midi_max) // 2
+                    self._pitch_range = new_range
+                    self._update_pitch_bounds(center)
+                    self.update()
+                return
+            if key == Qt.Key.Key_0:
+                # Reset vertical zoom
+                if self._pitch_range != _MAX_PITCH_RANGE:
+                    self._pitch_range = _MAX_PITCH_RANGE
+                    self._midi_min = EDITOR_MIDI_MIN
+                    self._midi_max = EDITOR_MIDI_MAX
+                    self.update()
+                return
+        elif ctrl:
+            # Horizontal zoom (Ctrl+=/-, Ctrl+0)
+            if key in (Qt.Key.Key_Equal, Qt.Key.Key_Plus):
+                # Zoom in
+                self._zoom = min(_MAX_ZOOM, self._zoom * 1.15)
+                self.zoom_changed.emit(self._zoom)
+                self.update()
+                return
+            if key == Qt.Key.Key_Minus:
+                # Zoom out
+                self._zoom = max(_MIN_ZOOM, self._zoom / 1.15)
+                self.zoom_changed.emit(self._zoom)
+                self.update()
+                return
+            if key == Qt.Key.Key_0:
+                # Reset zoom
+                self._zoom = _PIXELS_PER_BEAT
+                self.zoom_changed.emit(self._zoom)
+                self.update()
+                return
+
+        # Scroll shortcuts (Ctrl+arrows)
+        if ctrl:
+            if key == Qt.Key.Key_Left:
+                # Scroll left
+                self._scroll_x = max(0, self._scroll_x - 40)
+                self.update()
+                return
+            if key == Qt.Key.Key_Right:
+                # Scroll right
+                self._scroll_x += 40
+                self.update()
+                return
+
+        # Home/End navigation
+        if key == Qt.Key.Key_Home:
+            self._scroll_x = 0
+            self.update()
+            return
+        if key == Qt.Key.Key_End:
+            if self._notes:
+                last_beat = max(n.time_beats + n.duration_beats for n in self._notes)
+                self._scroll_x = max(0, last_beat * self._zoom - self.width() * 0.8)
+            self.update()
+            return
+
+        # Delete key
+        if key == Qt.Key.Key_Delete:
             if self._selected_note_indices or self._selected_rest_indices:
                 # Delete all selected — handled by EditorView via selection_changed
                 self.note_deleted.emit(-1)  # signal to EditorView to delete selection
             elif len(self._selected_note_indices) == 0:
                 pass
+
         super().keyPressEvent(event)
 
     def wheelEvent(self, event: QWheelEvent | None) -> None:  # noqa: N802, type: ignore[override]
         if event is None:
             return
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            delta = event.angleDelta().y()
+
+        delta = event.angleDelta().y()
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+        if ctrl and shift:
+            # Vertical pitch zoom (Ctrl+Shift+Wheel)
+            # Zoom in = smaller range, zoom out = larger range
+            zoom_factor = 0.85 if delta > 0 else 1 / 0.85
+            new_range = int(self._pitch_range * zoom_factor)
+            new_range = max(_MIN_PITCH_RANGE, min(_MAX_PITCH_RANGE, new_range))
+
+            if new_range != self._pitch_range:
+                # Calculate center note based on mouse Y position
+                mouse_note = self._y_to_note(event.position().y())
+                self._pitch_range = new_range
+                self._update_pitch_bounds(mouse_note)
+        elif ctrl:
+            # Horizontal zoom (Ctrl+Wheel)
             factor = 1.15 if delta > 0 else 1 / 1.15
             mouse_beat = self._x_to_beat(event.position().x())
+            old_zoom = self._zoom
             self._zoom = max(_MIN_ZOOM, min(_MAX_ZOOM, self._zoom * factor))
             new_x = mouse_beat * self._zoom - event.position().x()
             self._scroll_x = max(0.0, new_x)
+            if abs(self._zoom - old_zoom) > 0.1:
+                self.zoom_changed.emit(self._zoom)
         else:
-            delta = event.angleDelta().y()
+            # Horizontal scroll (plain Wheel)
             self._scroll_x = max(0, self._scroll_x - delta * 0.5)
         self.update()
 
@@ -1017,14 +1144,37 @@ class NoteRoll(QWidget):
                 painter.setPen(QPen(QColor(_BEAT_LINE_COLOR), 0.3))
             painter.drawLine(int(x), lane_top, int(x), h)
 
-        # Draw velocity bars for visible notes
+        # Draw velocity bars for visible notes (with binary search optimization)
         track_color = QColor(self._active_track_color)
 
-        for i, note in enumerate(self._notes):
+        # Calculate visible beat range
+        first_visible_beat = self._x_to_beat(0)
+        last_visible_beat = self._x_to_beat(w)
+
+        # Binary search: find first note that starts before or at last_visible_beat
+        # Notes are sorted by time_beats, so we can use bisect
+        if not self._notes:
+            return
+
+        # Find the insertion point for first_visible_beat
+        # We need to check notes starting a bit earlier to catch long notes
+        search_beat = max(0, first_visible_beat - 16)  # Look back up to 16 beats
+        start_idx = bisect.bisect_left(
+            self._notes, search_beat, key=lambda n: n.time_beats + n.duration_beats
+        )
+
+        # Iterate only through potentially visible notes
+        for i in range(start_idx, len(self._notes)):
+            note = self._notes[i]
+
+            # Early exit: if note starts after visible range, we're done
+            if note.time_beats > last_visible_beat:
+                break
+
             x = self._beat_to_x(note.time_beats)
             nw = max(4.0, note.duration_beats * self._zoom)
 
-            if x + nw < 0 or x > w:  # Viewport culling
+            if x + nw < 0 or x > w:  # Additional pixel-level culling
                 continue
 
             # Bar height = velocity ratio

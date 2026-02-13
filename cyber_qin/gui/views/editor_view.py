@@ -261,6 +261,18 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._pencil_btn)
 
+        row1.addWidget(_VSeparator())
+
+        # Sidebar toggle
+        self._sidebar_toggle_btn = IconButton("menu", size=32)
+        self._sidebar_toggle_btn.setToolTip(
+            "切換側邊欄：隱藏/顯示音軌面板和音高尺規\n"
+            "Toggle Sidebar: Hide/show track panel and pitch ruler"
+        )
+        self._sidebar_toggle_btn.setCheckable(True)
+        self._sidebar_toggle_btn.setChecked(True)  # Default: visible
+        row1.addWidget(self._sidebar_toggle_btn)
+
         row1.addStretch()
 
         # File group
@@ -370,10 +382,12 @@ class EditorView(QWidget):
         self._grid_precision_combo.addItem("1/8", 8)
         self._grid_precision_combo.addItem("1/16", 16)
         self._grid_precision_combo.addItem("1/32", 32)
+        self._grid_precision_combo.addItem("1/64", 64)
+        self._grid_precision_combo.addItem("1/128", 128)
         self._grid_precision_combo.setCurrentIndex(3)  # Default to 1/32
         self._grid_precision_combo.setToolTip(
             "網格精度：對齊到指定的音符時值\n"
-            "1/32 = 最精細，1/4 = 最粗糙\n"
+            "1/128 = 超精細，1/4 = 粗糙\n"
             "Grid Precision: Snap to specified note value"
         )
         self._grid_precision_combo.setFixedWidth(70)
@@ -504,9 +518,9 @@ class EditorView(QWidget):
         piano_row.setContentsMargins(0, 0, 0, 0)
 
         # Spacer to align piano with NoteRoll (TrackPanel + PitchRuler widths)
-        piano_spacer = QWidget()
-        piano_spacer.setFixedWidth(160 + 48)  # _PANEL_WIDTH + _RULER_WIDTH
-        piano_row.addWidget(piano_spacer)
+        self._piano_spacer = QWidget()
+        self._piano_spacer.setFixedWidth(160 + 48)  # _PANEL_WIDTH + _RULER_WIDTH
+        piano_row.addWidget(self._piano_spacer)
 
         self._piano = ClickablePiano()
         piano_row.addWidget(self._piano, 1)
@@ -570,6 +584,7 @@ class EditorView(QWidget):
         self._clear_btn.clicked.connect(self._on_clear)
         self._pencil_btn.toggled.connect(self._on_pencil_toggled)
         self._help_btn.clicked.connect(self._on_help)
+        self._sidebar_toggle_btn.toggled.connect(self._on_sidebar_toggled)
         self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
         self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
@@ -587,6 +602,7 @@ class EditorView(QWidget):
         self._note_roll.notes_moved.connect(self._on_notes_moved)
         self._note_roll.note_draw_requested.connect(self._on_note_draw)
         self._note_roll.context_menu_requested.connect(self._on_context_menu)
+        self._note_roll.zoom_changed.connect(self._on_zoom_changed_from_noteroll)
 
         # Track panel signals
         self._track_panel.track_activated.connect(self._on_track_activated)
@@ -717,6 +733,12 @@ class EditorView(QWidget):
         self._note_roll.set_zoom(float(value))
         self._note_roll.blockSignals(False)
 
+    def _on_zoom_changed_from_noteroll(self, zoom: float) -> None:
+        """Update slider when zoom changes via wheel/keyboard."""
+        self._zoom_slider.blockSignals(True)
+        self._zoom_slider.setValue(int(zoom))
+        self._zoom_slider.blockSignals(False)
+
     def _on_follow_mode_changed(self, index: int) -> None:
         """Handle follow mode selection change."""
         mode_value = self._follow_mode_combo.itemData(index)
@@ -784,6 +806,13 @@ class EditorView(QWidget):
 
     def _on_pencil_toggled(self, checked: bool) -> None:
         self._note_roll.set_pencil_mode(checked)
+
+    def _on_sidebar_toggled(self, checked: bool) -> None:
+        """Toggle visibility of track panel and pitch ruler."""
+        self._track_panel.setVisible(checked)
+        self._pitch_ruler.setVisible(checked)
+        # Adjust piano spacer width to match sidebar visibility
+        self._piano_spacer.setFixedWidth((160 + 48) if checked else 0)
 
     def _on_velocity_changed(self, value: int) -> None:
         """Update velocity of all selected notes."""
