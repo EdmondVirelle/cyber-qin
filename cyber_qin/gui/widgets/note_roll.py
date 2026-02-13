@@ -42,6 +42,7 @@ _CURSOR_WIDTH = 2.0
 _HEADER_HEIGHT = 22  # bar number header
 _RESIZE_THRESHOLD = 6  # pixels from right edge to trigger resize
 _VELOCITY_LANE_HEIGHT = 80  # velocity lane height in pixels
+_MINIMAP_HEIGHT = 30  # timeline minimap height in pixels
 
 # Pitch (vertical) zoom constants
 _MIN_PITCH_RANGE = 12  # Minimum visible range (1 octave)
@@ -95,6 +96,9 @@ class NoteRoll(QWidget):
 
     # Zoom changed
     zoom_changed = pyqtSignal(float)  # new zoom level (pixels per beat)
+
+    # Notes changed (for velocity batch editing, etc.)
+    notes_changed = pyqtSignal()  # notes have been modified
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -162,6 +166,13 @@ class NoteRoll(QWidget):
         self._velocity_dragging: bool = False
         self._velocity_drag_index: int = -1
         self._velocity_drag_start_y: float = 0.0
+
+        # Velocity batch editing state (Shift+drag to draw curves)
+        self._velocity_batch_editing: bool = False
+        self._velocity_batch_start_x: float = 0.0
+        self._velocity_batch_start_y: float = 0.0
+        self._velocity_batch_end_x: float = 0.0
+        self._velocity_batch_end_y: float = 0.0
 
         # Auto-scroll during drag
         self._auto_scroll_timer = QTimer(self)
@@ -368,17 +379,17 @@ class NoteRoll(QWidget):
 
     def _y_for_note(self, midi_note: int) -> float:
         range_size = self._midi_max - self._midi_min + 1
-        body_h = self.height() - _HEADER_HEIGHT
+        body_h = self.height() - _MINIMAP_HEIGHT - _HEADER_HEIGHT - _VELOCITY_LANE_HEIGHT
         note_h = body_h / max(1, range_size)
         offset = self._midi_max - midi_note
-        return _HEADER_HEIGHT + offset * note_h
+        return _MINIMAP_HEIGHT + _HEADER_HEIGHT + offset * note_h
 
     def _y_to_note(self, y: float) -> int:
         """Convert Y pixel position to MIDI note number."""
         range_size = self._midi_max - self._midi_min + 1
-        body_h = self.height() - _HEADER_HEIGHT
+        body_h = self.height() - _MINIMAP_HEIGHT - _HEADER_HEIGHT - _VELOCITY_LANE_HEIGHT
         note_h = body_h / max(1, range_size)
-        offset = (y - _HEADER_HEIGHT) / max(1.0, note_h)
+        offset = (y - _MINIMAP_HEIGHT - _HEADER_HEIGHT) / max(1.0, note_h)
         return max(self._midi_min, min(self._midi_max, int(self._midi_max - offset)))
 
     def _update_pitch_bounds(self, center: int) -> None:
@@ -399,7 +410,7 @@ class NoteRoll(QWidget):
 
     def _note_height(self) -> float:
         range_size = self._midi_max - self._midi_min + 1
-        body_h = self.height() - _HEADER_HEIGHT
+        body_h = self.height() - _MINIMAP_HEIGHT - _HEADER_HEIGHT - _VELOCITY_LANE_HEIGHT
         return max(4.0, body_h / max(1, range_size) * 0.85)
 
     def _snap_beat(self, beat: float) -> float:
@@ -445,11 +456,25 @@ class NoteRoll(QWidget):
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicking in minimap
+            if pos.y() < _MINIMAP_HEIGHT:
+                self._handle_minimap_click(pos)
+                return
+
             # Check if clicking in velocity lane
             h = self.height()
             lane_top = h - _VELOCITY_LANE_HEIGHT
             if pos.y() >= lane_top:
-                self._handle_velocity_lane_press(pos)
+                if shift:
+                    # Shift+drag: batch velocity editing (draw curves)
+                    self._velocity_batch_editing = True
+                    self._velocity_batch_start_x = pos.x()
+                    self._velocity_batch_start_y = pos.y()
+                    self._velocity_batch_end_x = pos.x()
+                    self._velocity_batch_end_y = pos.y()
+                else:
+                    # Normal click: single note velocity editing
+                    self._handle_velocity_lane_press(pos)
                 return
 
             # Check resize first
@@ -523,6 +548,13 @@ class NoteRoll(QWidget):
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
         pos = event.position()
         self._last_mouse_x = pos.x()
+
+        # Velocity batch editing (Shift+drag to draw curves)
+        if self._velocity_batch_editing:
+            self._velocity_batch_end_x = pos.x()
+            self._velocity_batch_end_y = pos.y()
+            self.update()
+            return
 
         # Velocity drag
         if self._velocity_dragging:
@@ -629,6 +661,13 @@ class NoteRoll(QWidget):
         self._auto_scroll_timer.stop()
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Velocity batch editing release
+            if self._velocity_batch_editing:
+                self._apply_velocity_gradient()
+                self._velocity_batch_editing = False
+                self.update()
+                return
+
             # Velocity drag release
             if self._velocity_dragging:
                 self._velocity_dragging = False
@@ -703,11 +742,11 @@ class NoteRoll(QWidget):
             if note_rect.intersects(sel_rect):
                 self._selected_note_indices.add(i)
 
-        body_h = self.height() - _HEADER_HEIGHT
+        body_h = self.height() - _MINIMAP_HEIGHT - _HEADER_HEIGHT - _VELOCITY_LANE_HEIGHT
         for i, rest in enumerate(self._rests):
             rx = self._beat_to_x(rest.time_beats)
             rw = max(4.0, rest.duration_beats * self._zoom)
-            rest_rect = QRectF(rx, _HEADER_HEIGHT, rw, body_h)
+            rest_rect = QRectF(rx, _MINIMAP_HEIGHT + _HEADER_HEIGHT, rw, body_h)
             if rest_rect.intersects(sel_rect):
                 self._selected_rest_indices.add(i)
 
@@ -852,8 +891,11 @@ class NoteRoll(QWidget):
         # Background
         painter.fillRect(0, 0, w, h, QColor(BG_INK))
 
+        # ── Minimap ─────────────────────────────────────────
+        self._draw_minimap(painter, w, h)
+
         # Header background
-        painter.fillRect(0, 0, w, _HEADER_HEIGHT, QColor(BG_SCROLL))
+        painter.fillRect(0, _MINIMAP_HEIGHT, w, _HEADER_HEIGHT, QColor(BG_SCROLL))
 
         # ── Grid lines ──────────────────────────────────────
         bpb = self._beats_per_bar if self._beats_per_bar > 0 else 4.0
@@ -873,14 +915,14 @@ class NoteRoll(QWidget):
                 painter.setPen(QPen(QColor(_BAR_LINE_COLOR), 1.5))
             else:
                 painter.setPen(QPen(QColor(_BEAT_LINE_COLOR), 0.5))
-            painter.drawLine(int(x), _HEADER_HEIGHT, int(x), h)
+            painter.drawLine(int(x), _MINIMAP_HEIGHT + _HEADER_HEIGHT, int(x), h)
 
             if is_bar and bpb > 0:
                 painter.setPen(QColor(TEXT_SECONDARY))
                 bar_num = int(beat_num / bpb) + 1
                 painter.drawText(
                     int(x + 3),
-                    2,
+                    _MINIMAP_HEIGHT + 2,
                     40,
                     _HEADER_HEIGHT - 2,
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -905,7 +947,7 @@ class NoteRoll(QWidget):
                 sx = self._beat_to_x(sb)
                 if 0 <= sx <= w:
                     painter.setPen(sub_pen)
-                    painter.drawLine(int(sx), _HEADER_HEIGHT, int(sx), h)
+                    painter.drawLine(int(sx), _MINIMAP_HEIGHT + _HEADER_HEIGHT, int(sx), h)
 
         nh = self._note_height()
 
@@ -1082,20 +1124,21 @@ class NoteRoll(QWidget):
         cx = self._beat_to_x(self._cursor_beats)
         if 0 <= cx <= w:
             painter.setPen(QPen(QColor(ACCENT), _CURSOR_WIDTH))
-            painter.drawLine(int(cx), _HEADER_HEIGHT, int(cx), h)
+            painter.drawLine(int(cx), _MINIMAP_HEIGHT + _HEADER_HEIGHT, int(cx), h)
 
         # ── Playback cursor ─────────────────────────────────
         if self._playback_beats >= 0:
             px = self._beat_to_x(self._playback_beats)
             if 0 <= px <= w:
                 painter.setPen(QPen(QColor(0xFF, 0xFF, 0xFF, 200), 1.5))
-                painter.drawLine(int(px), _HEADER_HEIGHT, int(px), h)
+                painter.drawLine(int(px), _MINIMAP_HEIGHT + _HEADER_HEIGHT, int(px), h)
 
         # ── Range-select highlight ─────────────────────────
         if self._range_select_active:
             rs0 = self._beat_to_x(min(self._range_select_origin, self._range_select_end))
             rs1 = self._beat_to_x(max(self._range_select_origin, self._range_select_end))
-            rs_rect = QRectF(rs0, _HEADER_HEIGHT, rs1 - rs0, h - _HEADER_HEIGHT)
+            body_top = _MINIMAP_HEIGHT + _HEADER_HEIGHT
+            rs_rect = QRectF(rs0, body_top, rs1 - rs0, h - body_top)
             painter.fillRect(rs_rect, _MARQUEE_COLOR)
             painter.setPen(QPen(_MARQUEE_BORDER, 1.0, Qt.PenStyle.DashLine))
             painter.drawRect(rs_rect)
@@ -1203,6 +1246,148 @@ class NoteRoll(QWidget):
                     Qt.AlignmentFlag.AlignCenter,
                     str(note.velocity),
                 )
+
+        # Draw batch editing gradient line preview
+        if self._velocity_batch_editing:
+            painter.setPen(QPen(QColor(ACCENT_GOLD), 3))
+            painter.drawLine(
+                int(self._velocity_batch_start_x),
+                int(self._velocity_batch_start_y),
+                int(self._velocity_batch_end_x),
+                int(self._velocity_batch_end_y),
+            )
+            # Draw circles at start/end points
+            painter.setBrush(QColor(ACCENT_GOLD))
+            painter.drawEllipse(
+                QRectF(
+                    self._velocity_batch_start_x - 4,
+                    self._velocity_batch_start_y - 4,
+                    8,
+                    8,
+                )
+            )
+            painter.drawEllipse(
+                QRectF(
+                    self._velocity_batch_end_x - 4,
+                    self._velocity_batch_end_y - 4,
+                    8,
+                    8,
+                )
+            )
+
+    def _draw_minimap(self, painter: QPainter, w: int, h: int) -> None:
+        """Draw timeline minimap showing overview of all notes."""
+        # Background
+        painter.fillRect(0, 0, w, _MINIMAP_HEIGHT, QColor(BG_SCROLL))
+
+        # Bottom border
+        from ..theme import BORDER_SUBTLE
+        painter.setPen(QPen(QColor(BORDER_SUBTLE), 1))
+        painter.drawLine(0, _MINIMAP_HEIGHT - 1, w, _MINIMAP_HEIGHT - 1)
+
+        if not self._notes:
+            return
+
+        # Calculate total duration to fit all notes
+        max_beat = max(n.time_beats + n.duration_beats for n in self._notes)
+        if max_beat <= 0:
+            return
+
+        # Minimap zoom: fit all content into width
+        minimap_zoom = (w - 4) / max_beat  # 2px margin on each side
+
+        # Draw all notes in compressed form
+        track_color = QColor(self._active_track_color)
+        track_color.setAlpha(180)
+
+        for note in self._notes:
+            mx = 2 + note.time_beats * minimap_zoom
+            mw = max(1, note.duration_beats * minimap_zoom)
+
+            # Simplified pitch: map MIDI range to minimap height
+            pitch_ratio = (note.note - EDITOR_MIDI_MIN) / max(1, EDITOR_MIDI_MAX - EDITOR_MIDI_MIN)
+            my = 2 + (_MINIMAP_HEIGHT - 6) * (1 - pitch_ratio)
+            mh = 2  # Fixed height for minimap notes
+
+            painter.fillRect(QRectF(mx, my, mw, mh), track_color)
+
+        # Draw viewport indicator (current visible range)
+        viewport_start = self._scroll_x / self._zoom
+        viewport_end = (self._scroll_x + w) / self._zoom
+        vx_start = 2 + viewport_start * minimap_zoom
+        vx_end = 2 + viewport_end * minimap_zoom
+        vx_width = vx_end - vx_start
+
+        # Viewport rectangle (semi-transparent white overlay)
+        viewport_rect = QRectF(vx_start, 1, vx_width, _MINIMAP_HEIGHT - 2)
+        painter.fillRect(viewport_rect, QColor(255, 255, 255, 30))
+        painter.setPen(QPen(QColor(ACCENT_GOLD), 1.5))
+        painter.drawRect(viewport_rect)
+
+    def _apply_velocity_gradient(self) -> None:
+        """Apply velocity gradient to notes in the batch edit range."""
+        if not self._notes:
+            return
+
+        h = self.height()
+        lane_top = h - _VELOCITY_LANE_HEIGHT
+
+        # Calculate start and end velocities from Y positions
+        start_vel = int(127 * (1 - (self._velocity_batch_start_y - lane_top) / _VELOCITY_LANE_HEIGHT))
+        end_vel = int(127 * (1 - (self._velocity_batch_end_y - lane_top) / _VELOCITY_LANE_HEIGHT))
+        start_vel = max(1, min(127, start_vel))
+        end_vel = max(1, min(127, end_vel))
+
+        # Calculate time range
+        start_beat = self._x_to_beat(min(self._velocity_batch_start_x, self._velocity_batch_end_x))
+        end_beat = self._x_to_beat(max(self._velocity_batch_start_x, self._velocity_batch_end_x))
+
+        # Find notes in range and apply gradient
+        notes_in_range = []
+        for i, note in enumerate(self._notes):
+            note_center = note.time_beats + note.duration_beats * 0.5
+            if start_beat <= note_center <= end_beat:
+                notes_in_range.append((i, note_center))
+
+        if not notes_in_range:
+            return
+
+        # Apply linear gradient
+        for i, note_center in notes_in_range:
+            # Calculate interpolation factor (0 to 1)
+            if abs(end_beat - start_beat) > 0.001:
+                t = (note_center - start_beat) / (end_beat - start_beat)
+            else:
+                t = 0.5
+
+            # Linear interpolation
+            new_velocity = int(start_vel + (end_vel - start_vel) * t)
+            new_velocity = max(1, min(127, new_velocity))
+            self._notes[i].velocity = new_velocity
+
+        # Emit signal to notify sequence of changes
+        self.notes_changed.emit()
+
+    def _handle_minimap_click(self, pos: QPointF) -> None:
+        """Handle mouse click in minimap to jump to position."""
+        if not self._notes:
+            return
+
+        # Calculate total duration
+        max_beat = max(n.time_beats + n.duration_beats for n in self._notes)
+        if max_beat <= 0:
+            return
+
+        # Convert click X to beat position (account for 2px margin)
+        w = self.width()
+        minimap_zoom = (w - 4) / max_beat
+        click_beat = (pos.x() - 2) / minimap_zoom
+
+        # Center viewport on clicked beat
+        viewport_width_beats = w / self._zoom
+        target_scroll_x = (click_beat - viewport_width_beats * 0.5) * self._zoom
+        self._scroll_x = max(0, target_scroll_x)
+        self.update()
 
     def _handle_velocity_lane_press(self, pos: QPointF) -> None:
         """Handle mouse press in velocity lane."""
