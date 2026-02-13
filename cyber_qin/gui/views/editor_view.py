@@ -224,6 +224,23 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._play_btn)
 
+        # Loop toggle button
+        self._loop_btn = QPushButton("↻")
+        self._loop_btn.setCheckable(True)
+        self._loop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._loop_btn.setMinimumWidth(40)
+        self._loop_btn.setMinimumHeight(36)
+        self._loop_btn.setToolTip(
+            translator.tr("editor.loop.tooltip")
+            + "\n"
+            + "Shortcut: L"
+        )
+        self._loop_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"
+            "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
+        )
+        row1.addWidget(self._loop_btn)
+
         row1.addWidget(_VSeparator())
 
         # Edit group
@@ -577,6 +594,7 @@ class EditorView(QWidget):
         self._save_btn.clicked.connect(self._on_save)
         self._record_btn.clicked.connect(self._on_record_toggle)
         self._play_btn.clicked.connect(self._on_play)
+        self._loop_btn.toggled.connect(self._on_loop_toggled)
         self._undo_btn.clicked.connect(self._on_undo)
         self._redo_btn.clicked.connect(self._on_redo)
         self._clear_btn.clicked.connect(self._on_clear)
@@ -1204,6 +1222,12 @@ class EditorView(QWidget):
         events = self._sequence.to_midi_file_events()
         self.play_requested.emit(events)
 
+    def _on_loop_toggled(self, checked: bool) -> None:
+        """Handle loop button toggle."""
+        player = self._ensure_preview_player()
+        if player is not None:
+            player.set_loop(checked)
+
     def _on_undo(self) -> None:
         self._sequence.undo()
         self._update_ui_state()
@@ -1603,6 +1627,11 @@ class EditorView(QWidget):
         # Space → play
         if key == Qt.Key.Key_Space:
             self._on_play()
+            return
+
+        # L → toggle loop
+        if key == Qt.Key.Key_L:
+            self._loop_btn.setChecked(not self._loop_btn.isChecked())
             return
 
         super().keyPressEvent(event)

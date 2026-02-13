@@ -257,6 +257,7 @@ def _ensure_qt_classes():
             self._info: MidiFileInfo | None = None
             self._state = PlaybackState.STOPPED
             self._speed = 1.0
+            self._loop_enabled = False  # Loop playback flag
             self._lock = threading.Lock()
             self._stop_flag = threading.Event()
             self._pause_flag = threading.Event()
@@ -286,6 +287,11 @@ def _ensure_qt_classes():
         def set_speed(self, speed: float) -> None:
             with self._lock:
                 self._speed = max(0.25, min(2.0, speed))
+
+        def set_loop(self, enabled: bool) -> None:
+            """Enable or disable loop playback."""
+            with self._lock:
+                self._loop_enabled = enabled
 
         def play(self) -> None:
             if self._state == PlaybackState.PAUSED:
@@ -410,48 +416,65 @@ def _ensure_qt_classes():
             # Anchor interpolation timer right after count-in ends
             self.progress_updated.emit(0.0, duration)
 
-            start_wall = time.perf_counter()
-            start_position = self._position
+            # Outer loop for repeat playback
+            while True:
+                start_wall = time.perf_counter()
+                start_position = self._position
 
-            while self._index < len(self._events):
-                if self._stop_flag.is_set():
-                    return
-
-                if not self._pause_flag.is_set():
-                    self._pause_flag.wait()
+                while self._index < len(self._events):
                     if self._stop_flag.is_set():
                         return
-                    start_wall = time.perf_counter()
-                    start_position = self._position
 
-                evt = self._events[self._index]
+                    if not self._pause_flag.is_set():
+                        self._pause_flag.wait()
+                        if self._stop_flag.is_set():
+                            return
+                        start_wall = time.perf_counter()
+                        start_position = self._position
 
+                    evt = self._events[self._index]
+
+                    with self._lock:
+                        speed = self._speed
+                    target_wall = start_wall + (evt.time_seconds - start_position) / speed
+                    now = time.perf_counter()
+                    wait = target_wall - now
+
+                    if wait > 0.002:
+                        time.sleep(wait - 0.001)
+                    while time.perf_counter() < target_wall:
+                        if self._stop_flag.is_set():
+                            return
+
+                    if evt.event_type == "note_on":
+                        mapping = self._mapper.lookup(evt.note)
+                        if mapping is not None:
+                            self._simulator.press(evt.note, mapping)
+                    elif evt.event_type == "note_off":
+                        self._simulator.release(evt.note)
+
+                    self._position = evt.time_seconds
+                    self._index += 1
+
+                    self.note_event.emit(evt.event_type, evt.note, evt.velocity)
+                    self.progress_updated.emit(self._position, duration)
+
+                # Reached end of events
+                self._simulator.release_all()
+
+                # Check if loop is enabled
                 with self._lock:
-                    speed = self._speed
-                target_wall = start_wall + (evt.time_seconds - start_position) / speed
-                now = time.perf_counter()
-                wait = target_wall - now
+                    loop_enabled = self._loop_enabled
 
-                if wait > 0.002:
-                    time.sleep(wait - 0.001)
-                while time.perf_counter() < target_wall:
-                    if self._stop_flag.is_set():
-                        return
+                if loop_enabled and not self._stop_flag.is_set():
+                    # Restart from beginning
+                    self._index = 0
+                    self._position = 0.0
+                    continue
+                else:
+                    # Stop playback
+                    break
 
-                if evt.event_type == "note_on":
-                    mapping = self._mapper.lookup(evt.note)
-                    if mapping is not None:
-                        self._simulator.press(evt.note, mapping)
-                elif evt.event_type == "note_off":
-                    self._simulator.release(evt.note)
-
-                self._position = evt.time_seconds
-                self._index += 1
-
-                self.note_event.emit(evt.event_type, evt.note, evt.velocity)
-                self.progress_updated.emit(self._position, duration)
-
-            self._simulator.release_all()
             self._state = PlaybackState.STOPPED
             self._index = 0
             self._position = 0.0
@@ -511,6 +534,10 @@ def _ensure_qt_classes():
 
         def set_speed(self, speed: float) -> None:
             self._worker.set_speed(speed)
+
+        def set_loop(self, enabled: bool) -> None:
+            """Enable or disable loop playback."""
+            self._worker.set_loop(enabled)
 
         def cleanup(self) -> None:
             self._worker.stop()
