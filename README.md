@@ -5,8 +5,8 @@
 [![CI](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml/badge.svg)](https://github.com/EdmondVirelle/cyber-qin/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6)
-![Version](https://img.shields.io/badge/Version-0.9.0-green)
-![Tests](https://img.shields.io/badge/Tests-180%20passed-brightgreen)
+![Version](https://img.shields.io/badge/Version-1.0.0-green)
+![Tests](https://img.shields.io/badge/Tests-598%20passed-brightgreen)
 
 [中文版 (Traditional Chinese)](README_TW.md)
 
@@ -32,7 +32,10 @@ Beyond live performance, it also supports **Automatic MIDI Playback** and an int
 |------|------|
 | **Real-time MIDI Mapping** | Direct MIDI-to-SendInput injection on rtmidi C++ thread for < 2ms latency |
 | **5 Mapping Schemes** | WWM 36 / FF14 37 / Generic 24 / 48 / 88 schemes, switchable on the fly |
+| **MIDI Device Selection** | Preferred device setting with automatic prioritization on startup |
+| **Key Mapping Viewer** | Read-only dialog showing complete MIDI-to-keyboard mapping table |
 | **Smart Preprocessing** | Auto Transpose → Octave Folding → Collision Deduplication |
+| **Enhanced Hot-plug** | Automatic device detection with change logging every 5 seconds |
 | **Auto Reconnect** | Detects and reconnects MIDI devices every 3 seconds if disconnected |
 | **Watchdog** | Automatically releases keys stuck for more than 10 seconds |
 
@@ -41,8 +44,9 @@ Beyond live performance, it also supports **Automatic MIDI Playback** and an int
 |------|------|
 | **Import MIDI** | Drag and drop or import .mid files into the library |
 | **Speed Control** | Adjustable playback speed from 0.25x to 2.0x |
+| **Loop Playback** | Toggle loop mode to repeat tracks automatically |
+| **Metronome Count-in** | Optional 4-beat countdown with visual indicator |
 | **Seek Bar** | Jump to any position in the track |
-| **4-Beat Countdown** | Countdown before playback to allow switching to the game window |
 | **Sort & Search** | Sort by Name/BPM/Notes/Duration with search functionality |
 
 ### Sequencer (MIDI Editor)
@@ -50,6 +54,8 @@ Beyond live performance, it also supports **Automatic MIDI Playback** and an int
 |------|------|
 | **Piano Roll Editing** | Intuitive piano roll for drawing, selecting, and deleting notes |
 | **Playback Cursor** | Smooth cursor (30ms refresh) with dynamic glow feedback |
+| **Loop Playback** | Toggle loop mode (L key) to repeat during editing |
+| **Metronome Count-in** | Toggle 4-beat countdown (M key) with visual indicator |
 | **Multi-track Export** | Supports Type 1 multi-track MIDI file export |
 | **Shortcuts** | Full hotkey support (with built-in help dialog) |
 
@@ -57,6 +63,7 @@ Beyond live performance, it also supports **Automatic MIDI Playback** and an int
 | Feature | Description |
 |------|------|
 | **Cyber-Ink Theme** | Dark theme: Neon Cyan (#00F0FF) mixed with warm paper-white tones |
+| **Settings Dialog** | Centralized settings for MIDI device selection and preferences (Ctrl+,) |
 | **Vector Icons** | All icons drawn via QPainter for perfect scaling at any resolution |
 | **Dynamic Piano** | Real-time key state visualization with neon glow animations |
 | **Multi-Language** | Switch between Traditional Chinese / Simplified Chinese / English / Japanese / Korean |
@@ -95,10 +102,12 @@ cyber-qin
 ### Workflow
 
 1. **Connect Keyboard** — Select your MIDI device in "Live Mode" after startup
-2. **Select Scheme** — Choose the scheme corresponding to your game (WWM/FF14/Generic)
-3. **Perform** — Switch to your game window and start playing
-4. **Library** — Go to "Library" to import .mid files and play with speed control
-5. **Sequencer** — Go to "Sequencer" to edit notes and export modified MIDI
+2. **Configure Settings** — Press `Ctrl+,` to open Settings and set preferred MIDI device
+3. **View Key Mapping** — Click "View Mapping" button to see complete MIDI-to-keyboard layout
+4. **Select Scheme** — Choose the scheme corresponding to your game (WWM/FF14/Generic)
+5. **Perform** — Switch to your game window and start playing
+6. **Library** — Go to "Library" to import .mid files and play with speed/loop control
+7. **Sequencer** — Go to "Sequencer" to edit notes, toggle loop (L) / metronome (M), and export
 
 ### Building Executable
 
@@ -154,11 +163,14 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on co
 ### Testing
 
 ```bash
-# Run all 180 tests
+# Run all 598 tests
 pytest
 
 # Verbose output
 pytest -v
+
+# Run with coverage
+pytest --cov=cyber_qin
 ```
 
 ### Linting
@@ -172,9 +184,9 @@ ruff check --fix .
 
 | Metric | Value |
 |------|------|
-| Lines of Code | ~5,000 LOC |
-| Modules | 26 |
-| Tests | 180 |
+| Lines of Code | ~6,500 LOC |
+| Modules | 30 |
+| Tests | 598 |
 | Python Support | 3.11 / 3.12 / 3.13 |
 
 ---
@@ -188,7 +200,7 @@ ruff check --fix .
 | **GUI** | PyQt6 | Desktop interface, event loop, cross-thread signals |
 | **Bundling** | PyInstaller | Single-folder executable packaging |
 | **CI/CD** | GitHub Actions | Automated tagging & multi-platform testing |
-| **Quality** | Ruff + pytest | Linting & 180 unit/integration tests |
+| **Quality** | Ruff + pytest | Linting & 598 unit/integration tests |
 
 ---
 
