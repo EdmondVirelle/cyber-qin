@@ -310,33 +310,53 @@ releases/*.zip
 
 ## 下一步建議（v1.0 路線圖）
 
-### 🔴 高優先級（v0.9.3）
+### ✅ 已完成（v0.9.3）
 1. **提升測試覆蓋率**
-   - [ ] `midi_file_player.py` 從 33% 提升至 80%+
-   - [ ] 新增播放狀態機測試
+   - [x] `midi_file_player.py` 從 33% 提升至 94% ✅ (Task #6)
+   - [x] 新增播放狀態機測試 ✅
 
 2. **整合 ConfigManager**
-   - [ ] 遷移 `live_mode_view.py` 至 ConfigManager
-   - [ ] 遷移 `app_shell.py` 視窗狀態儲存
-   - [ ] 執行 QSettings → JSON 遷移
+   - [x] 遷移 `live_mode_view.py` 至 ConfigManager ✅ (Task #4)
+   - [x] 遷移 `app_shell.py` 視窗狀態儲存 ✅ (Task #5)
+   - [x] 執行 QSettings → JSON 遷移 ✅ (Task #3)
 
-### 🟡 中優先級（v1.0）
 3. **NoteRoll 優化**
-   - [ ] 實作二分搜尋視窗裁剪
-   - [ ] 驗證效能提升（基準測試）
+   - [x] 實作二分搜尋視窗裁剪 ✅ (Task #7)
+   - [x] 驗證效能提升（基準測試）✅ (7.6x 加速)
 
 4. **設定 UI**
-   - [ ] 建立設定對話框（語言、主題、MIDI 裝置）
-   - [ ] 支援設定匯入/匯出
+   - [x] 建立設定對話框（語言、主題、MIDI 裝置）✅ (Task #8)
+   - [x] 支援設定匯入/匯出 ✅
 
-### 🟢 低優先級（v1.1+）
 5. **CI/CD 自動化**
-   - [ ] GitHub Actions 自動測試
-   - [ ] 自動產生覆蓋率報告
-   - [ ] 阻擋低於 80% 覆蓋率的 PR
+   - [x] GitHub Actions 自動測試 ✅ (Task #10)
+   - [x] 自動產生覆蓋率報告 ✅
+   - [x] 阻擋低於門檻覆蓋率的 PR ✅ (45% 總體, 75% 核心)
 
 6. **GUI 測試**
+   - [x] pytest-qt 整合測試（Settings Dialog）✅ (Task #11)
    - [ ] pytest-qt 整合測試（Library View, Editor View）
+
+### 🔴 v1.0 剩餘工作
+7. **88-key 編輯器重新設計**
+   - [x] 實作 88-key 鍵盤範圍 ✅
+   - [x] 遊戲可用區域高亮顯示 ✅
+   - [ ] 更新使用者文檔與教學
+
+8. **多語言完整覆蓋**
+   - [ ] 編輯器介面 I18N
+   - [ ] 設定對話框 I18N
+   - [ ] 錯誤訊息 I18N
+
+### 🟡 v1.1+ 規劃
+9. **進階 GUI 測試**
+   - [ ] Library View 整合測試
+   - [ ] Editor View 整合測試
+   - [ ] Live Mode View 整合測試
+
+10. **效能監控**
+   - [ ] 持續效能基準測試 CI 整合
+   - [ ] 回歸測試防護機制
 
 ---
 
