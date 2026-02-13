@@ -11,6 +11,7 @@ note resize (right-edge drag), note labels, and snap-to-grid.
 from __future__ import annotations
 
 import bisect
+from enum import Enum
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QWheelEvent
@@ -40,6 +41,7 @@ _NOTE_RADIUS = 2.5
 _CURSOR_WIDTH = 2.0
 _HEADER_HEIGHT = 22  # bar number header
 _RESIZE_THRESHOLD = 6  # pixels from right edge to trigger resize
+_VELOCITY_LANE_HEIGHT = 80  # velocity lane height in pixels
 
 # Grid line colors
 _BAR_LINE_COLOR = "#3A4050"
@@ -56,6 +58,15 @@ _MARQUEE_BORDER = QColor(0xD4, 0xAF, 0x37, 180)  # Gold 70% alpha
 
 # Note names for labels
 _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+
+class FollowMode(Enum):
+    """Playback cursor auto-follow behavior modes."""
+
+    OFF = 0  # No auto-scroll
+    PAGE = 1  # Jump by page when cursor leaves view
+    CONTINUOUS = 2  # Keep cursor centered (timeline scrolls)
+    SMART = 3  # Current 80%/20% threshold mode (default)
 
 
 class NoteRoll(QWidget):
@@ -104,6 +115,9 @@ class NoteRoll(QWidget):
         self._snap_enabled: bool = True
         self._grid_precision: int = 32  # 1/32 note precision (4, 8, 16, or 32)
 
+        # Playback follow mode
+        self._follow_mode: FollowMode = FollowMode.SMART  # Default to smart mode
+
         # Flash state
         self._flash_beat: float = -1.0
 
@@ -135,6 +149,11 @@ class NoteRoll(QWidget):
 
         # Pencil (draw) mode
         self._pencil_mode: bool = False
+
+        # Velocity lane drag state
+        self._velocity_dragging: bool = False
+        self._velocity_drag_index: int = -1
+        self._velocity_drag_start_y: float = 0.0
 
         # Auto-scroll during drag
         self._auto_scroll_timer = QTimer(self)
@@ -213,6 +232,15 @@ class NoteRoll(QWidget):
         if precision in (4, 8, 16, 32):
             self._grid_precision = precision
             self.update()
+
+    def set_zoom(self, zoom: float) -> None:
+        """Set horizontal zoom level (pixels per beat)."""
+        self._zoom = max(_MIN_ZOOM, min(_MAX_ZOOM, zoom))
+        self.update()
+
+    def set_follow_mode(self, mode: FollowMode) -> None:
+        """Set playback cursor auto-follow mode."""
+        self._follow_mode = mode
 
     def _is_note_playable(self, midi_note: int) -> bool:
         """Check if note is in the playable game zone (60-83)."""
@@ -300,12 +328,29 @@ class NoteRoll(QWidget):
     # ── Coordinate helpers ──────────────────────────────────
 
     def _ensure_cursor_visible(self) -> None:
+        """Auto-scroll to keep cursor visible based on follow mode."""
+        if self._follow_mode == FollowMode.OFF:
+            # No auto-scroll
+            return
+
         cursor_px = self._cursor_beats * self._zoom
         visible_w = self.width()
-        if cursor_px - self._scroll_x > visible_w * 0.8:
-            self._scroll_x = cursor_px - visible_w * 0.5
-        elif cursor_px < self._scroll_x:
-            self._scroll_x = max(0, cursor_px - visible_w * 0.2)
+
+        if self._follow_mode == FollowMode.PAGE:
+            # Jump by page when cursor leaves view
+            if cursor_px < self._scroll_x or cursor_px > self._scroll_x + visible_w:
+                self._scroll_x = max(0, cursor_px - visible_w * 0.2)
+
+        elif self._follow_mode == FollowMode.CONTINUOUS:
+            # Keep cursor centered (timeline scrolls continuously)
+            self._scroll_x = max(0, cursor_px - visible_w * 0.5)
+
+        elif self._follow_mode == FollowMode.SMART:
+            # Original 80%/20% threshold mode
+            if cursor_px - self._scroll_x > visible_w * 0.8:
+                self._scroll_x = cursor_px - visible_w * 0.5
+            elif cursor_px < self._scroll_x:
+                self._scroll_x = max(0, cursor_px - visible_w * 0.2)
 
     def _beat_to_x(self, beat: float) -> float:
         return beat * self._zoom - self._scroll_x
@@ -376,6 +421,13 @@ class NoteRoll(QWidget):
         shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicking in velocity lane
+            h = self.height()
+            lane_top = h - _VELOCITY_LANE_HEIGHT
+            if pos.y() >= lane_top:
+                self._handle_velocity_lane_press(pos)
+                return
+
             # Check resize first
             resize_idx = self._is_on_right_edge(pos.x(), pos.y())
             if resize_idx >= 0:
@@ -447,6 +499,21 @@ class NoteRoll(QWidget):
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
         pos = event.position()
         self._last_mouse_x = pos.x()
+
+        # Velocity drag
+        if self._velocity_dragging:
+            h = self.height()
+            lane_top = h - _VELOCITY_LANE_HEIGHT
+            y_rel = pos.y() - lane_top
+            # Calculate new velocity (inverted: top = 127, bottom = 1)
+            new_velocity = int(127 * (1 - y_rel / _VELOCITY_LANE_HEIGHT))
+            new_velocity = max(1, min(127, new_velocity))
+            # Update note velocity
+            if 0 <= self._velocity_drag_index < len(self._notes):
+                self._notes[self._velocity_drag_index].velocity = new_velocity
+                self.notes_changed.emit()
+            self.update()
+            return
 
         # Marquee drag
         if self._marquee_active:
@@ -538,6 +605,13 @@ class NoteRoll(QWidget):
         self._auto_scroll_timer.stop()
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Velocity drag release
+            if self._velocity_dragging:
+                self._velocity_dragging = False
+                self._velocity_drag_index = -1
+                self.update()
+                return
+
             # Range-select release
             if self._range_select_active:
                 self._range_select_active = False
@@ -844,14 +918,17 @@ class NoteRoll(QWidget):
                 painter.drawPath(path)
             else:
                 # Zone-based coloring: playable (60-83) vs out-of-range
+                # Alpha encodes velocity (64-255 range for visibility)
+                velocity_alpha = int(64 + (note.velocity / 127.0) * 191)
+
                 if self._is_note_playable(note.note):
-                    # Playable zone: use track color at full brightness
+                    # Playable zone: use track color with velocity-based brightness
                     fill = QColor(track_color)
-                    fill.setAlpha(200)
+                    fill.setAlpha(velocity_alpha)
                 else:
-                    # Out-of-range: dim with TEXT_SECONDARY at 60% opacity
+                    # Out-of-range: dim with TEXT_SECONDARY, still velocity-aware
                     fill = QColor(TEXT_SECONDARY)
-                    fill.setAlpha(int(255 * 0.6))  # 60% opacity
+                    fill.setAlpha(int(velocity_alpha * 0.6))  # 60% of velocity alpha
 
                 painter.fillPath(path, fill)
                 painter.setPen(Qt.PenStyle.NoPen)
@@ -907,4 +984,89 @@ class NoteRoll(QWidget):
             painter.setPen(QPen(_MARQUEE_BORDER, 1.0, Qt.PenStyle.DashLine))
             painter.drawRect(m_rect)
 
+        # ── Velocity Lane ───────────────────────────────────
+        self._draw_velocity_lane(painter, w, h)
+
         painter.end()
+
+    def _draw_velocity_lane(self, painter: QPainter, w: int, h: int) -> None:
+        """Draw velocity bars in dedicated lane below piano roll."""
+        lane_top = h - _VELOCITY_LANE_HEIGHT
+
+        # Background
+        painter.fillRect(0, lane_top, w, _VELOCITY_LANE_HEIGHT, QColor(BG_SCROLL))
+
+        # Top separator line
+        painter.setPen(QPen(QColor(BORDER_SUBTLE), 1))
+        painter.drawLine(0, lane_top, w, lane_top)
+
+        # Grid lines (match main grid)
+        bpb = self._beats_per_bar if self._beats_per_bar > 0 else 4.0
+        first_beat = max(0, int(self._scroll_x / self._zoom) - 1)
+        last_beat = int((self._scroll_x + w) / self._zoom) + 2
+
+        for beat_num in range(first_beat, last_beat):
+            x = self._beat_to_x(float(beat_num))
+            if x < -10 or x > w + 10:
+                continue
+
+            is_bar = abs(beat_num % bpb) < 0.001
+            if is_bar:
+                painter.setPen(QPen(QColor(_BAR_LINE_COLOR), 0.8))
+            else:
+                painter.setPen(QPen(QColor(_BEAT_LINE_COLOR), 0.3))
+            painter.drawLine(int(x), lane_top, int(x), h)
+
+        # Draw velocity bars for visible notes
+        track_color = QColor(self._active_track_color)
+
+        for i, note in enumerate(self._notes):
+            x = self._beat_to_x(note.time_beats)
+            nw = max(4.0, note.duration_beats * self._zoom)
+
+            if x + nw < 0 or x > w:  # Viewport culling
+                continue
+
+            # Bar height = velocity ratio
+            bar_height = (note.velocity / 127.0) * (_VELOCITY_LANE_HEIGHT - 10)
+            bar_y = lane_top + _VELOCITY_LANE_HEIGHT - bar_height - 5
+
+            # Color: track color with alpha based on velocity
+            color = QColor(track_color)
+            color.setAlpha(int(100 + (note.velocity / 127.0) * 155))
+
+            # Draw bar
+            bar_width = max(3, nw - 1)
+            painter.fillRect(QRectF(x, bar_y, bar_width, bar_height), color)
+
+            # Selected note: add gold border
+            if i in self._selected_note_indices:
+                painter.setPen(QPen(QColor(ACCENT_GOLD), 2))
+                painter.drawRect(QRectF(x, bar_y, bar_width, bar_height))
+
+            # Velocity label (show when wide enough)
+            if nw > 25:
+                painter.setFont(QFont("Microsoft JhengHei", 7))
+                painter.setPen(QColor(TEXT_SECONDARY))
+                painter.drawText(
+                    QRectF(x, lane_top + 2, bar_width, 12),
+                    Qt.AlignmentFlag.AlignCenter,
+                    str(note.velocity),
+                )
+
+    def _handle_velocity_lane_press(self, pos: QPointF) -> None:
+        """Handle mouse press in velocity lane."""
+        beat = self._x_to_beat(pos.x())
+
+        # Find note at this beat position
+        for i, note in enumerate(self._notes):
+            if note.time_beats <= beat < note.time_beats + note.duration_beats:
+                # Start velocity drag
+                self._velocity_dragging = True
+                self._velocity_drag_index = i
+                self._velocity_drag_start_y = pos.y()
+                # Select this note
+                self._selected_note_indices = {i}
+                self._selected_rest_indices.clear()
+                self._emit_selection_changed()
+                return

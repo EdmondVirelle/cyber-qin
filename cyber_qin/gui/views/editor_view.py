@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
     QScrollArea,
+    QSlider,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -49,7 +50,7 @@ from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
 from ..widgets.clickable_piano import ClickablePiano
 from ..widgets.editor_track_panel import EditorTrackPanel
-from ..widgets.note_roll import NoteRoll
+from ..widgets.note_roll import FollowMode, NoteRoll
 from ..widgets.pitch_ruler import PitchRuler
 from ..widgets.speed_control import SpeedControl
 
@@ -379,6 +380,27 @@ class EditorView(QWidget):
         self._grid_precision_combo.currentIndexChanged.connect(self._on_grid_precision_changed)
         row2.addWidget(self._grid_precision_combo)
 
+        row2.addSpacing(8)
+
+        # Zoom slider
+        self._zoom_lbl = QLabel()
+        self._zoom_lbl.setStyleSheet("background: transparent;")
+        row2.addWidget(self._zoom_lbl)
+
+        self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
+        self._zoom_slider.setRange(20, 400)  # _MIN_ZOOM to _MAX_ZOOM
+        self._zoom_slider.setValue(80)  # _PIXELS_PER_BEAT
+        self._zoom_slider.setFixedWidth(120)
+        self._zoom_slider.setToolTip(
+            "水平縮放：調整時間軸顯示比例\n"
+            "20 = 最遠, 80 = 預設, 400 = 最近\n"
+            "Horizontal Zoom: Adjust timeline scale"
+        )
+        self._zoom_slider.valueChanged.connect(self._on_zoom_slider_changed)
+        row2.addWidget(self._zoom_slider)
+
+        row2.addSpacing(8)
+
         self._auto_tune_cb = QCheckBox()
         self._auto_tune_cb.setToolTip(
             "自動音高校正：將音符對齊到黃色可用區域\n"
@@ -400,6 +422,30 @@ class EditorView(QWidget):
         self._velocity_spin.setFixedWidth(60)
         self._velocity_spin.setEnabled(False)
         row2.addWidget(self._velocity_spin)
+
+        row2.addSpacing(8)
+
+        # Follow mode combo
+        follow_lbl = QLabel("跟隨 Follow")
+        follow_lbl.setStyleSheet("background: transparent;")
+        row2.addWidget(follow_lbl)
+
+        self._follow_mode_combo = QComboBox()
+        self._follow_mode_combo.addItem("關閉 OFF", 0)
+        self._follow_mode_combo.addItem("翻頁 PAGE", 1)
+        self._follow_mode_combo.addItem("居中 CONTINUOUS", 2)
+        self._follow_mode_combo.addItem("智能 SMART", 3)
+        self._follow_mode_combo.setCurrentIndex(3)  # Default to SMART
+        self._follow_mode_combo.setFixedWidth(100)
+        self._follow_mode_combo.setToolTip(
+            "播放跟隨模式：\n"
+            "關閉 = 不自動滾動\n"
+            "翻頁 = 離開視野時跳頁\n"
+            "居中 = 游標永遠居中\n"
+            "智能 = 智能門檻跟隨（預設）"
+        )
+        self._follow_mode_combo.currentIndexChanged.connect(self._on_follow_mode_changed)
+        row2.addWidget(self._follow_mode_combo)
 
         row2.addSpacing(8)
 
@@ -491,6 +537,7 @@ class EditorView(QWidget):
         self._ts_lbl.setText(translator.tr("editor.time_sig"))
         self._bpm_lbl.setText(translator.tr("editor.bpm"))
         self._snap_cb.setText(translator.tr("editor.snap"))
+        self._zoom_lbl.setText("縮放 Zoom")  # Simple label, no translation key yet
         self._auto_tune_cb.setText(translator.tr("live.auto_tune"))
         self._vel_lbl.setText(translator.tr("editor.velocity"))
         self._shortcuts_cb.setText(translator.tr("editor.shortcuts"))
@@ -662,6 +709,19 @@ class EditorView(QWidget):
         precision = self._grid_precision_combo.itemData(index)
         if precision:
             self._note_roll.set_grid_precision(precision)
+
+    def _on_zoom_slider_changed(self, value: int) -> None:
+        """Handle zoom slider value change."""
+        # Block signals to prevent feedback loop
+        self._note_roll.blockSignals(True)
+        self._note_roll.set_zoom(float(value))
+        self._note_roll.blockSignals(False)
+
+    def _on_follow_mode_changed(self, index: int) -> None:
+        """Handle follow mode selection change."""
+        mode_value = self._follow_mode_combo.itemData(index)
+        if mode_value is not None:
+            self._note_roll.set_follow_mode(FollowMode(mode_value))
 
     # ── Index mapping helpers ────────────────────────────────
 
