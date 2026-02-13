@@ -5,11 +5,16 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import logging
+import sys
 
 log = logging.getLogger(__name__)
 
-_imm32 = ctypes.windll.imm32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
-_user32 = ctypes.windll.user32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
+if sys.platform == "win32":
+    _imm32 = ctypes.windll.imm32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
+    _user32 = ctypes.windll.user32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
+else:
+    _imm32 = None  # type: ignore[assignment]  # Placeholder for non-Windows
+    _user32 = None  # type: ignore[assignment]  # Placeholder for non-Windows
 
 
 def is_ime_active() -> bool:

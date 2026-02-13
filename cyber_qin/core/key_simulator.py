@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
+import sys
 import time
 from typing import TYPE_CHECKING
 
@@ -65,9 +66,12 @@ class INPUT(ctypes.Structure):
     ]
 
 
-_SendInput = ctypes.windll.user32.SendInput  # type: ignore[attr-defined, unused-ignore]  # Windows-only
-_SendInput.argtypes = [ctypes.c_uint, ctypes.POINTER(INPUT), ctypes.c_int]
-_SendInput.restype = ctypes.c_uint
+if sys.platform == "win32":
+    _SendInput = ctypes.windll.user32.SendInput  # type: ignore[attr-defined, unused-ignore]  # Windows-only
+    _SendInput.argtypes = [ctypes.c_uint, ctypes.POINTER(INPUT), ctypes.c_int]
+    _SendInput.restype = ctypes.c_uint
+else:
+    _SendInput = None  # type: ignore[assignment]  # Placeholder for non-Windows
 
 
 def _make_input(scan_code: int, key_up: bool = False) -> INPUT:
