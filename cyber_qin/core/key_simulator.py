@@ -91,6 +91,8 @@ def _make_input(scan_code: int, key_up: bool = False) -> INPUT:
 
 def _send(*inputs: INPUT) -> None:
     """Send an array of INPUT events via SendInput."""
+    if sys.platform != "win32":
+        return  # No-op on non-Windows platforms
     arr = (INPUT * len(inputs))(*inputs)
     _SendInput(len(inputs), arr, ctypes.sizeof(INPUT))  # type: ignore[misc]
 
