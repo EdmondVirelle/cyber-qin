@@ -19,13 +19,22 @@ from cyber_qin.core.midi_preprocessor import (
 
 
 def _evt(
-    t: float, typ: str, note: int, vel: int = 80,
-    *, track: int = 0, channel: int = 0,
+    t: float,
+    typ: str,
+    note: int,
+    vel: int = 80,
+    *,
+    track: int = 0,
+    channel: int = 0,
 ) -> MidiFileEvent:
     """Shorthand event constructor with optional track/channel."""
     return MidiFileEvent(
-        time_seconds=t, event_type=typ, note=note, velocity=vel,
-        track=track, channel=channel,
+        time_seconds=t,
+        event_type=typ,
+        note=note,
+        velocity=vel,
+        track=track,
+        channel=channel,
     )
 
 
@@ -218,8 +227,8 @@ class TestDeduplicateNotes:
         """Two notes an octave apart collapse after folding → dedup."""
         # Simulate post-fold: both became note 72 at time 0
         events = [
-            _evt(0, "note_on", 72),   # was originally 72
-            _evt(0, "note_on", 72),   # was originally 84, folded to 72
+            _evt(0, "note_on", 72),  # was originally 72
+            _evt(0, "note_on", 72),  # was originally 84, folded to 72
             _evt(0.5, "note_off", 72),
             _evt(0.5, "note_off", 72),
         ]
@@ -328,7 +337,7 @@ class TestPreprocess:
 
     def test_all_transforms_applied(self):
         events = [
-            _evt(0.001, "note_on", 96, vel=50),   # high note, low velocity, off-grid
+            _evt(0.001, "note_on", 96, vel=50),  # high note, low velocity, off-grid
             _evt(0.501, "note_off", 96, vel=0),
         ]
         result, stats = preprocess(events)
@@ -376,9 +385,9 @@ class TestPreprocess:
 
     def test_multiple_shifts(self):
         events = [
-            _evt(0, "note_on", 30),     # very low
-            _evt(0.1, "note_on", 60),    # in range
-            _evt(0.2, "note_on", 100),   # very high
+            _evt(0, "note_on", 30),  # very low
+            _evt(0.1, "note_on", 60),  # in range
+            _evt(0.2, "note_on", 100),  # very high
         ]
         _, stats = preprocess(events)
         assert stats.total_notes == 3
@@ -415,7 +424,7 @@ class TestPreprocessCustomRange:
     def test_custom_range_narrow(self):
         # Range 60-71 — only one octave
         events = [
-            _evt(0, "note_on", 48),   # below range
+            _evt(0, "note_on", 48),  # below range
             _evt(0.1, "note_on", 60),  # in range
             _evt(0.2, "note_on", 72),  # above range
         ]
@@ -456,10 +465,7 @@ class TestPreprocessSmartTranspose:
 
     def test_centered_no_transpose(self):
         """Notes already centered in range should not be transposed."""
-        events = [
-            _evt(i * 0.1, "note_on", 60 + (i % 12))
-            for i in range(20)
-        ]
+        events = [_evt(i * 0.1, "note_on", 60 + (i % 12)) for i in range(20)]
         _, stats = preprocess(events)
         assert stats.global_transpose == 0
 
@@ -470,7 +476,7 @@ class TestPreprocessSmartTranspose:
         # After dedup only one C remains; flowing fold places it in range
         events = [
             _evt(0, "note_on", 72),
-            _evt(0, "note_on", 96),    # same pitch class as 72 → deduped
+            _evt(0, "note_on", 96),  # same pitch class as 72 → deduped
             _evt(0.5, "note_off", 72),
             _evt(0.5, "note_off", 96),
             # Add enough in-range notes so transpose stays at 0
@@ -504,8 +510,8 @@ class TestPreprocessSmartTranspose:
 class TestFilterPercussion:
     def test_removes_channel_9(self):
         events = [
-            _evt(0, "note_on", 36, channel=9),   # kick drum
-            _evt(0, "note_on", 60, channel=0),    # piano
+            _evt(0, "note_on", 36, channel=9),  # kick drum
+            _evt(0, "note_on", 60, channel=0),  # piano
             _evt(0.5, "note_off", 36, channel=9),
             _evt(0.5, "note_off", 60, channel=0),
         ]
@@ -702,8 +708,8 @@ class TestDeduplicateOctaves:
     def test_note_off_also_removed(self):
         """When a note_on is dropped, its matching note_off should also be dropped."""
         events = [
-            _evt(0, "note_on", 60),    # C4 — will be dropped
-            _evt(0, "note_on", 72),    # C5 — kept
+            _evt(0, "note_on", 60),  # C4 — will be dropped
+            _evt(0, "note_on", 72),  # C5 — kept
             _evt(0.5, "note_off", 60),  # should also be dropped
             _evt(0.5, "note_off", 72),  # kept
         ]
@@ -763,8 +769,8 @@ class TestLimitPolyphony:
     def test_limit_to_one_voice(self):
         """With max_voices=1, highest note wins (no bass anchor at 1 voice)."""
         events = [
-            _evt(0, "note_on", 60),     # lower → dropped
-            _evt(0, "note_on", 64),     # higher → kept
+            _evt(0, "note_on", 60),  # lower → dropped
+            _evt(0, "note_on", 64),  # higher → kept
             _evt(0.5, "note_off", 60),
             _evt(0.5, "note_off", 64),
         ]
@@ -777,9 +783,9 @@ class TestLimitPolyphony:
     def test_limit_to_two_keeps_highest_and_lowest(self):
         """With 3 simultaneous notes and max_voices=2, keep highest + lowest."""
         events = [
-            _evt(0, "note_on", 60),    # C4 — lowest → kept
-            _evt(0, "note_on", 64),    # E4 — middle → may be dropped
-            _evt(0, "note_on", 72),    # C5 — highest → kept
+            _evt(0, "note_on", 60),  # C4 — lowest → kept
+            _evt(0, "note_on", 64),  # E4 — middle → may be dropped
+            _evt(0, "note_on", 72),  # C5 — highest → kept
             _evt(0.5, "note_off", 60),
             _evt(0.5, "note_off", 64),
             _evt(0.5, "note_off", 72),
@@ -794,8 +800,8 @@ class TestLimitPolyphony:
     def test_dropped_note_off_also_removed(self):
         """When a note_on is dropped, its note_off should also be removed."""
         events = [
-            _evt(0, "note_on", 60),     # lower → dropped (max_voices=1, high-note priority)
-            _evt(0, "note_on", 64),     # higher → kept
+            _evt(0, "note_on", 60),  # lower → dropped (max_voices=1, high-note priority)
+            _evt(0, "note_on", 64),  # higher → kept
             _evt(0.5, "note_off", 60),  # should also be removed
             _evt(0.5, "note_off", 64),
         ]
@@ -808,8 +814,8 @@ class TestLimitPolyphony:
         """After a note_off frees a voice, new notes should be accepted."""
         events = [
             _evt(0, "note_on", 60),
-            _evt(0.5, "note_off", 60),    # frees the voice
-            _evt(1, "note_on", 64),        # should be accepted now
+            _evt(0.5, "note_off", 60),  # frees the voice
+            _evt(1, "note_on", 64),  # should be accepted now
         ]
         result, removed = limit_polyphony(events, max_voices=1)
         note_ons = [e for e in result if e.event_type == "note_on"]
@@ -824,12 +830,12 @@ class TestLimitPolyphony:
     def test_realistic_4_voice_limit(self):
         """Simulate a 4-voice limit on a 6-note chord."""
         events = [
-            _evt(0, "note_on", 48),   # C3
-            _evt(0, "note_on", 52),   # E3
-            _evt(0, "note_on", 55),   # G3
-            _evt(0, "note_on", 60),   # C4
-            _evt(0, "note_on", 64),   # E4
-            _evt(0, "note_on", 72),   # C5
+            _evt(0, "note_on", 48),  # C3
+            _evt(0, "note_on", 52),  # E3
+            _evt(0, "note_on", 55),  # G3
+            _evt(0, "note_on", 60),  # C4
+            _evt(0, "note_on", 64),  # E4
+            _evt(0, "note_on", 72),  # C5
         ]
         result, removed = limit_polyphony(events, max_voices=4)
         note_ons = [e for e in result if e.event_type == "note_on"]
@@ -848,7 +854,7 @@ class TestPreprocessPercussion:
     def test_percussion_removed_by_default(self):
         events = [
             _evt(0, "note_on", 60, channel=0),
-            _evt(0, "note_on", 36, channel=9),   # percussion
+            _evt(0, "note_on", 36, channel=9),  # percussion
             _evt(0.5, "note_off", 60, channel=0),
             _evt(0.5, "note_off", 36, channel=9),
         ]
@@ -891,9 +897,9 @@ class TestPreprocessOctaveDedup:
     def test_octave_dedup_in_pipeline(self):
         """Octave doublings should be removed in the full pipeline."""
         events = [
-            _evt(0, "note_on", 60),     # C4
-            _evt(0, "note_on", 72),     # C5 — octave doubling
-            _evt(0, "note_on", 62),     # D4 — different pitch class
+            _evt(0, "note_on", 60),  # C4
+            _evt(0, "note_on", 72),  # C5 — octave doubling
+            _evt(0, "note_on", 62),  # D4 — different pitch class
             _evt(0.5, "note_off", 60),
             _evt(0.5, "note_off", 72),
             _evt(0.5, "note_off", 62),
@@ -904,21 +910,13 @@ class TestPreprocessOctaveDedup:
 
 class TestPreprocessPolyphonyLimit:
     def test_polyphony_limit_in_pipeline(self):
-        events = [
-            _evt(i * 0.001, "note_on", 48 + i)
-            for i in range(10)
-        ]
-        events += [
-            _evt(1.0 + i * 0.001, "note_off", 48 + i)
-            for i in range(10)
-        ]
+        events = [_evt(i * 0.001, "note_on", 48 + i) for i in range(10)]
+        events += [_evt(1.0 + i * 0.001, "note_off", 48 + i) for i in range(10)]
         _, stats = preprocess(events, max_voices=4)
         assert stats.polyphony_limited > 0
 
     def test_polyphony_limit_zero_means_no_limit(self):
-        events = [
-            _evt(0, "note_on", 48 + i) for i in range(10)
-        ]
+        events = [_evt(0, "note_on", 48 + i) for i in range(10)]
         _, stats = preprocess(events, max_voices=0)
         assert stats.polyphony_limited == 0
 
@@ -929,10 +927,10 @@ class TestPreprocessFullPipeline:
     def test_all_stats_populated(self):
         """Pipeline should populate all stat fields."""
         events = [
-            _evt(0, "note_on", 36, channel=9),      # percussion
-            _evt(0, "note_on", 60, channel=0),       # C4
-            _evt(0, "note_on", 72, channel=0),       # C5 — octave dup
-            _evt(0, "note_on", 96, channel=0),       # C7 — out of range
+            _evt(0, "note_on", 36, channel=9),  # percussion
+            _evt(0, "note_on", 60, channel=0),  # C4
+            _evt(0, "note_on", 72, channel=0),  # C5 — octave dup
+            _evt(0, "note_on", 96, channel=0),  # C7 — out of range
             _evt(0.5, "note_off", 36, channel=9),
             _evt(0.5, "note_off", 60, channel=0),
             _evt(0.5, "note_off", 72, channel=0),
@@ -948,8 +946,8 @@ class TestPreprocessFullPipeline:
         """Percussion filter runs before track filter."""
         events = [
             _evt(0, "note_on", 36, channel=9, track=0),  # percussion on track 0
-            _evt(0, "note_on", 60, channel=0, track=0),   # piano on track 0
-            _evt(0, "note_on", 72, channel=0, track=1),   # piano on track 1
+            _evt(0, "note_on", 60, channel=0, track=0),  # piano on track 0
+            _evt(0, "note_on", 72, channel=0, track=1),  # piano on track 1
         ]
         # Include only track 0 — percussion should already be removed
         _, stats = preprocess(events, include_tracks={0})
@@ -1104,7 +1102,7 @@ class TestFlowingFold:
     def test_note_off_pairing(self):
         """note_off should be folded to match its corresponding note_on."""
         events = [
-            _evt(0, "note_on", 96),   # out of range → folded
+            _evt(0, "note_on", 96),  # out of range → folded
             _evt(0.5, "note_off", 96),  # should match the folded note_on
         ]
         result = normalize_octave_flowing(events)
@@ -1147,10 +1145,7 @@ class TestFlowingFold:
 
     def test_all_notes_in_range_after_fold(self):
         """Every note after flowing fold must be in [note_min, note_max]."""
-        events = [
-            _evt(i * 0.1, "note_on", 20 + i * 7)
-            for i in range(16)
-        ]
+        events = [_evt(i * 0.1, "note_on", 20 + i * 7) for i in range(16)]
         result = normalize_octave_flowing(events)
         for e in result:
             if e.event_type == "note_on":

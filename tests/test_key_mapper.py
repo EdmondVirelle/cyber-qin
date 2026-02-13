@@ -16,63 +16,72 @@ class TestBaseMapping:
         for note in range(MIDI_NOTE_MIN, MIDI_NOTE_MAX + 1):
             assert note in _BASE_MAP, f"MIDI note {note} missing from mapping"
 
-    @pytest.mark.parametrize("midi,key,mod", [
-        # Low octave naturals
-        (48, "Z", Modifier.NONE),
-        (50, "X", Modifier.NONE),
-        (52, "C", Modifier.NONE),
-        (53, "V", Modifier.NONE),
-        (55, "B", Modifier.NONE),
-        (57, "N", Modifier.NONE),
-        (59, "M", Modifier.NONE),
-        # Mid octave naturals
-        (60, "A", Modifier.NONE),
-        (62, "S", Modifier.NONE),
-        (64, "D", Modifier.NONE),
-        (65, "F", Modifier.NONE),
-        (67, "G", Modifier.NONE),
-        (69, "H", Modifier.NONE),
-        (71, "J", Modifier.NONE),
-        # High octave naturals
-        (72, "Q", Modifier.NONE),
-        (74, "W", Modifier.NONE),
-        (76, "E", Modifier.NONE),
-        (77, "R", Modifier.NONE),
-        (79, "T", Modifier.NONE),
-        (81, "Y", Modifier.NONE),
-        (83, "U", Modifier.NONE),
-    ])
+    @pytest.mark.parametrize(
+        "midi,key,mod",
+        [
+            # Low octave naturals
+            (48, "Z", Modifier.NONE),
+            (50, "X", Modifier.NONE),
+            (52, "C", Modifier.NONE),
+            (53, "V", Modifier.NONE),
+            (55, "B", Modifier.NONE),
+            (57, "N", Modifier.NONE),
+            (59, "M", Modifier.NONE),
+            # Mid octave naturals
+            (60, "A", Modifier.NONE),
+            (62, "S", Modifier.NONE),
+            (64, "D", Modifier.NONE),
+            (65, "F", Modifier.NONE),
+            (67, "G", Modifier.NONE),
+            (69, "H", Modifier.NONE),
+            (71, "J", Modifier.NONE),
+            # High octave naturals
+            (72, "Q", Modifier.NONE),
+            (74, "W", Modifier.NONE),
+            (76, "E", Modifier.NONE),
+            (77, "R", Modifier.NONE),
+            (79, "T", Modifier.NONE),
+            (81, "Y", Modifier.NONE),
+            (83, "U", Modifier.NONE),
+        ],
+    )
     def test_natural_notes(self, midi, key, mod):
         m = _BASE_MAP[midi]
         assert m.scan_code == SCAN[key]
         assert m.modifier == mod
 
-    @pytest.mark.parametrize("midi,key,mod", [
-        # Sharps (Shift)
-        (49, "Z", Modifier.SHIFT),   # C#3
-        (54, "V", Modifier.SHIFT),   # F#3
-        (56, "B", Modifier.SHIFT),   # G#3
-        (61, "A", Modifier.SHIFT),   # C#4
-        (66, "F", Modifier.SHIFT),   # F#4
-        (68, "G", Modifier.SHIFT),   # G#4
-        (73, "Q", Modifier.SHIFT),   # C#5
-        (78, "R", Modifier.SHIFT),   # F#5
-        (80, "T", Modifier.SHIFT),   # G#5
-    ])
+    @pytest.mark.parametrize(
+        "midi,key,mod",
+        [
+            # Sharps (Shift)
+            (49, "Z", Modifier.SHIFT),  # C#3
+            (54, "V", Modifier.SHIFT),  # F#3
+            (56, "B", Modifier.SHIFT),  # G#3
+            (61, "A", Modifier.SHIFT),  # C#4
+            (66, "F", Modifier.SHIFT),  # F#4
+            (68, "G", Modifier.SHIFT),  # G#4
+            (73, "Q", Modifier.SHIFT),  # C#5
+            (78, "R", Modifier.SHIFT),  # F#5
+            (80, "T", Modifier.SHIFT),  # G#5
+        ],
+    )
     def test_sharp_notes(self, midi, key, mod):
         m = _BASE_MAP[midi]
         assert m.scan_code == SCAN[key]
         assert m.modifier == mod
 
-    @pytest.mark.parametrize("midi,key,mod", [
-        # Flats (Ctrl)
-        (51, "C", Modifier.CTRL),    # Eb3
-        (58, "M", Modifier.CTRL),    # Bb3
-        (63, "D", Modifier.CTRL),    # Eb4
-        (70, "J", Modifier.CTRL),    # Bb4
-        (75, "E", Modifier.CTRL),    # Eb5
-        (82, "U", Modifier.CTRL),    # Bb5
-    ])
+    @pytest.mark.parametrize(
+        "midi,key,mod",
+        [
+            # Flats (Ctrl)
+            (51, "C", Modifier.CTRL),  # Eb3
+            (58, "M", Modifier.CTRL),  # Bb3
+            (63, "D", Modifier.CTRL),  # Eb4
+            (70, "J", Modifier.CTRL),  # Bb4
+            (75, "E", Modifier.CTRL),  # Eb5
+            (82, "U", Modifier.CTRL),  # Bb5
+        ],
+    )
     def test_flat_notes(self, midi, key, mod):
         m = _BASE_MAP[midi]
         assert m.scan_code == SCAN[key]

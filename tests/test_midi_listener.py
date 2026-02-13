@@ -10,6 +10,7 @@ import pytest
 class TestMidiListener:
     def _make_listener(self):
         from cyber_qin.core.midi_listener import MidiListener
+
         return MidiListener()
 
     def test_initial_state(self):
@@ -20,6 +21,7 @@ class TestMidiListener:
     def test_list_ports(self):
         with mock.patch("mido.get_input_names", return_value=["Port A", "Port B"]):
             from cyber_qin.core.midi_listener import MidiListener
+
             ports = MidiListener.list_ports()
             assert ports == ["Port A", "Port B"]
 

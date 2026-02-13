@@ -12,22 +12,23 @@ from .key_mapper import KeyMapping, _km
 class MappingScheme:
     """A complete key mapping scheme for a specific game/layout."""
 
-    id: str                         # "wwm_36", "ff14_32", ...
-    name: str                       # "燕雲十六聲 36鍵"
-    game: str                       # "燕雲十六聲" or "通用"
-    key_count: int                  # 24, 32, 36, 48, 88
-    midi_range: tuple[int, int]     # (min_note, max_note) inclusive
+    id: str  # "wwm_36", "ff14_32", ...
+    name: str  # "燕雲十六聲 36鍵"
+    game: str  # "燕雲十六聲" or "通用"
+    key_count: int  # 24, 32, 36, 48, 88
+    midi_range: tuple[int, int]  # (min_note, max_note) inclusive
     mapping: dict[int, KeyMapping]  # MIDI note → KeyMapping
     description: str
-    rows: int                       # display rows
-    keys_per_row: int               # keys per row
-    name_key: str = ""              # translator key for i18n name
-    desc_key: str = ""              # translator key for i18n description
+    rows: int  # display rows
+    keys_per_row: int  # keys per row
+    name_key: str = ""  # translator key for i18n name
+    desc_key: str = ""  # translator key for i18n description
 
     def translated_name(self) -> str:
         """Return translated scheme name, falling back to self.name."""
         if self.name_key:
             from .translator import translator
+
             return translator.tr(self.name_key)
         return self.name
 
@@ -35,6 +36,7 @@ class MappingScheme:
         """Return translated description, falling back to self.description."""
         if self.desc_key:
             from .translator import translator
+
             return translator.tr(self.desc_key)
         return self.description
 
@@ -125,36 +127,36 @@ def _build_generic_24() -> MappingScheme:
     # Row 1 (low octave, MIDI 48-59): Z X C V B N M + Shift/Ctrl variants
     # Same pattern as WWM low octave
     low_map = [
-        ("Z", Modifier.NONE),     # C
-        ("Z", Modifier.SHIFT),    # C#
-        ("X", Modifier.NONE),     # D
-        ("C", Modifier.CTRL),     # Eb
-        ("C", Modifier.NONE),     # E
-        ("V", Modifier.NONE),     # F
-        ("V", Modifier.SHIFT),    # F#
-        ("B", Modifier.NONE),     # G
-        ("B", Modifier.SHIFT),    # G#
-        ("N", Modifier.NONE),     # A
-        ("M", Modifier.CTRL),     # Bb
-        ("M", Modifier.NONE),     # B
+        ("Z", Modifier.NONE),  # C
+        ("Z", Modifier.SHIFT),  # C#
+        ("X", Modifier.NONE),  # D
+        ("C", Modifier.CTRL),  # Eb
+        ("C", Modifier.NONE),  # E
+        ("V", Modifier.NONE),  # F
+        ("V", Modifier.SHIFT),  # F#
+        ("B", Modifier.NONE),  # G
+        ("B", Modifier.SHIFT),  # G#
+        ("N", Modifier.NONE),  # A
+        ("M", Modifier.CTRL),  # Bb
+        ("M", Modifier.NONE),  # B
     ]
     for i, (key, mod) in enumerate(low_map):
         m[48 + i] = _km(key, mod)
 
     # Row 2 (high octave, MIDI 60-71): Q W E R T Y U + Shift/Ctrl variants
     high_map = [
-        ("Q", Modifier.NONE),     # C
-        ("Q", Modifier.SHIFT),    # C#
-        ("W", Modifier.NONE),     # D
-        ("E", Modifier.CTRL),     # Eb
-        ("E", Modifier.NONE),     # E
-        ("R", Modifier.NONE),     # F
-        ("R", Modifier.SHIFT),    # F#
-        ("T", Modifier.NONE),     # G
-        ("T", Modifier.SHIFT),    # G#
-        ("Y", Modifier.NONE),     # A
-        ("U", Modifier.CTRL),     # Bb
-        ("U", Modifier.NONE),     # B
+        ("Q", Modifier.NONE),  # C
+        ("Q", Modifier.SHIFT),  # C#
+        ("W", Modifier.NONE),  # D
+        ("E", Modifier.CTRL),  # Eb
+        ("E", Modifier.NONE),  # E
+        ("R", Modifier.NONE),  # F
+        ("R", Modifier.SHIFT),  # F#
+        ("T", Modifier.NONE),  # G
+        ("T", Modifier.SHIFT),  # G#
+        ("Y", Modifier.NONE),  # A
+        ("U", Modifier.CTRL),  # Bb
+        ("U", Modifier.NONE),  # B
     ]
     for i, (key, mod) in enumerate(high_map):
         m[60 + i] = _km(key, mod)
@@ -187,30 +189,54 @@ def _build_generic_48() -> MappingScheme:
 
     # Row 2 (MIDI 48-59): Z X C V B N M + Shift/Ctrl (same as wwm_36 low octave)
     low_map = [
-        ("Z", Modifier.NONE), ("Z", Modifier.SHIFT), ("X", Modifier.NONE),
-        ("C", Modifier.CTRL), ("C", Modifier.NONE), ("V", Modifier.NONE),
-        ("V", Modifier.SHIFT), ("B", Modifier.NONE), ("B", Modifier.SHIFT),
-        ("N", Modifier.NONE), ("M", Modifier.CTRL), ("M", Modifier.NONE),
+        ("Z", Modifier.NONE),
+        ("Z", Modifier.SHIFT),
+        ("X", Modifier.NONE),
+        ("C", Modifier.CTRL),
+        ("C", Modifier.NONE),
+        ("V", Modifier.NONE),
+        ("V", Modifier.SHIFT),
+        ("B", Modifier.NONE),
+        ("B", Modifier.SHIFT),
+        ("N", Modifier.NONE),
+        ("M", Modifier.CTRL),
+        ("M", Modifier.NONE),
     ]
     for i, (key, mod) in enumerate(low_map):
         m[48 + i] = _km(key, mod)
 
     # Row 3 (MIDI 60-71): A S D F G H J + Shift/Ctrl (same as wwm_36 mid octave)
     mid_map = [
-        ("A", Modifier.NONE), ("A", Modifier.SHIFT), ("S", Modifier.NONE),
-        ("D", Modifier.CTRL), ("D", Modifier.NONE), ("F", Modifier.NONE),
-        ("F", Modifier.SHIFT), ("G", Modifier.NONE), ("G", Modifier.SHIFT),
-        ("H", Modifier.NONE), ("J", Modifier.CTRL), ("J", Modifier.NONE),
+        ("A", Modifier.NONE),
+        ("A", Modifier.SHIFT),
+        ("S", Modifier.NONE),
+        ("D", Modifier.CTRL),
+        ("D", Modifier.NONE),
+        ("F", Modifier.NONE),
+        ("F", Modifier.SHIFT),
+        ("G", Modifier.NONE),
+        ("G", Modifier.SHIFT),
+        ("H", Modifier.NONE),
+        ("J", Modifier.CTRL),
+        ("J", Modifier.NONE),
     ]
     for i, (key, mod) in enumerate(mid_map):
         m[60 + i] = _km(key, mod)
 
     # Row 4 (MIDI 72-83): Q W E R T Y U + Shift/Ctrl (same as wwm_36 high octave)
     high_map = [
-        ("Q", Modifier.NONE), ("Q", Modifier.SHIFT), ("W", Modifier.NONE),
-        ("E", Modifier.CTRL), ("E", Modifier.NONE), ("R", Modifier.NONE),
-        ("R", Modifier.SHIFT), ("T", Modifier.NONE), ("T", Modifier.SHIFT),
-        ("Y", Modifier.NONE), ("U", Modifier.CTRL), ("U", Modifier.NONE),
+        ("Q", Modifier.NONE),
+        ("Q", Modifier.SHIFT),
+        ("W", Modifier.NONE),
+        ("E", Modifier.CTRL),
+        ("E", Modifier.NONE),
+        ("R", Modifier.NONE),
+        ("R", Modifier.SHIFT),
+        ("T", Modifier.NONE),
+        ("T", Modifier.SHIFT),
+        ("Y", Modifier.NONE),
+        ("U", Modifier.CTRL),
+        ("U", Modifier.NONE),
     ]
     for i, (key, mod) in enumerate(high_map):
         m[72 + i] = _km(key, mod)
@@ -239,9 +265,9 @@ def _build_generic_88() -> MappingScheme:
     # 8 rows × 11 keys = 88
 
     layers = [
-        Modifier.NONE,     # Row 1: plain
-        Modifier.SHIFT,    # Row 2: Shift
-        Modifier.CTRL,     # Row 3: Ctrl
+        Modifier.NONE,  # Row 1: plain
+        Modifier.SHIFT,  # Row 2: Shift
+        Modifier.CTRL,  # Row 3: Ctrl
     ]
 
     row_key_sets = [

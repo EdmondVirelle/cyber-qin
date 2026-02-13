@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 def is_admin() -> bool:
     """Check if the current process has administrator privileges."""
     try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())  # type: ignore[attr-defined, unused-ignore]  # Windows-only
     except Exception:
         return False
 
@@ -24,7 +24,7 @@ def request_elevation() -> bool:
     should then exit). Returns False if elevation failed.
     """
     try:
-        ret = ctypes.windll.shell32.ShellExecuteW(
+        ret = ctypes.windll.shell32.ShellExecuteW(  # type: ignore[attr-defined, unused-ignore]  # Windows-only
             None,
             "runas",
             sys.executable,

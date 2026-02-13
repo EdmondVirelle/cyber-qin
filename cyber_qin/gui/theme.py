@@ -8,21 +8,21 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 # --- Color Palette: 賽博墨韻 ---
-BG_INK = "#0A0E14"          # 墨黑底（帶微藍）
-BG_SCROLL = "#101820"       # 卷軸面
-BG_PAPER = "#1A2332"        # 宣紙暗面
-BG_WASH = "#243040"         # 墨染懸停
-BG_MIST = "#2E3D50"         # 雲霧層
-ACCENT = "#00F0FF"          # 賽博青（霓虹青）
-ACCENT_GLOW = "#40FFFF"     # 青光暈
-ACCENT_DIM = "#008B99"      # 青暗
-ACCENT_GOLD = "#D4A853"     # 金墨（古風金）
-TEXT_PRIMARY = "#E8E0D0"    # 宣紙白（暖白）
+BG_INK = "#0A0E14"  # 墨黑底（帶微藍）
+BG_SCROLL = "#101820"  # 卷軸面
+BG_PAPER = "#1A2332"  # 宣紙暗面
+BG_WASH = "#243040"  # 墨染懸停
+BG_MIST = "#2E3D50"  # 雲霧層
+ACCENT = "#00F0FF"  # 賽博青（霓虹青）
+ACCENT_GLOW = "#40FFFF"  # 青光暈
+ACCENT_DIM = "#008B99"  # 青暗
+ACCENT_GOLD = "#D4A853"  # 金墨（古風金）
+TEXT_PRIMARY = "#E8E0D0"  # 宣紙白（暖白）
 TEXT_SECONDARY = "#7A8899"  # 水墨灰
-TEXT_DISABLED = "#4A5568"   # 淡墨
-DIVIDER = "#1E2D3D"         # 墨痕
-ERROR = "#FF4444"           # 硃紅
-WARNING = "#E8A830"         # 琥珀金
+TEXT_DISABLED = "#4A5568"  # 淡墨
+DIVIDER = "#1E2D3D"  # 墨痕
+ERROR = "#FF4444"  # 硃紅
+WARNING = "#E8A830"  # 琥珀金
 
 # Legacy aliases (used by widgets that import the old names)
 BG_DARK = BG_INK

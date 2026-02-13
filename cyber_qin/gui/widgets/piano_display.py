@@ -28,21 +28,21 @@ if TYPE_CHECKING:
 _BLACK_SEMITONES = {1, 3, 6, 8, 10}
 
 # 賽博墨韻 colors
-_COLOR_NATURAL = QColor(0x1A, 0x23, 0x32)       # #1A2332 宣紙暗面
-_COLOR_SHARP = QColor(0x1A, 0x14, 0x28)          # #1A1428 深紫墨
-_COLOR_FLAT = QColor(0x14, 0x1A, 0x2E)           # #141A2E 深藍墨
-_COLOR_ACTIVE = QColor(0x00, 0xF0, 0xFF)         # #00F0FF 賽博青
-_COLOR_ACTIVE_DARK = QColor(0x00, 0x8B, 0x99)    # #008B99 暗青
-_COLOR_BORDER = QColor(0x2E, 0x3D, 0x50)         # #2E3D50 雲霧層
-_COLOR_TEXT_LIGHT = QColor(0xE8, 0xE0, 0xD0)     # #E8E0D0 宣紙白
-_COLOR_TEXT_DIM = QColor(0x7A, 0x88, 0x99)        # #7A8899 水墨灰
+_COLOR_NATURAL = QColor(0x1A, 0x23, 0x32)  # #1A2332 宣紙暗面
+_COLOR_SHARP = QColor(0x1A, 0x14, 0x28)  # #1A1428 深紫墨
+_COLOR_FLAT = QColor(0x14, 0x1A, 0x2E)  # #141A2E 深藍墨
+_COLOR_ACTIVE = QColor(0x00, 0xF0, 0xFF)  # #00F0FF 賽博青
+_COLOR_ACTIVE_DARK = QColor(0x00, 0x8B, 0x99)  # #008B99 暗青
+_COLOR_BORDER = QColor(0x2E, 0x3D, 0x50)  # #2E3D50 雲霧層
+_COLOR_TEXT_LIGHT = QColor(0xE8, 0xE0, 0xD0)  # #E8E0D0 宣紙白
+_COLOR_TEXT_DIM = QColor(0x7A, 0x88, 0x99)  # #7A8899 水墨灰
 
 _FLASH_DURATION = 0.15  # seconds — bright flash on note-on
-_FADE_DURATION = 0.25   # seconds — fade after note-off
+_FADE_DURATION = 0.25  # seconds — fade after note-off
 
 # Label abbreviation map
 _MODIFIER_ABBREV = {
-    "Shift+": "\u21e7",   # ⇧
+    "Shift+": "\u21e7",  # ⇧
     "Ctrl+": "^",
 }
 
@@ -51,7 +51,7 @@ def _abbreviate_label(label: str) -> str:
     """Shorten modifier labels: 'Shift+Q' → '⇧Q', 'Ctrl+E' → '^E'."""
     for prefix, abbrev in _MODIFIER_ABBREV.items():
         if label.startswith(prefix):
-            return abbrev + label[len(prefix):]
+            return abbrev + label[len(prefix) :]
     return label
 
 
@@ -70,7 +70,7 @@ class PianoDisplay(QWidget):
         self._mapper = mapper
         self._active_notes: set[int] = set()
         self._flash_notes: dict[int, float] = {}  # midi_note -> note_on time
-        self._fade_notes: dict[int, float] = {}   # midi_note -> note_off time
+        self._fade_notes: dict[int, float] = {}  # midi_note -> note_off time
         self.setMinimumHeight(180)
         self.setMinimumWidth(480)
 
@@ -218,7 +218,11 @@ class PianoDisplay(QWidget):
                         off = _COLOR_FLAT
                     bg = _lerp_color(off, _COLOR_ACTIVE, ratio * 0.5)
                 elif is_black:
-                    bg = _COLOR_FLAT if (mapping and mapping.modifier == Modifier.CTRL) else _COLOR_SHARP
+                    bg = (
+                        _COLOR_FLAT
+                        if (mapping and mapping.modifier == Modifier.CTRL)
+                        else _COLOR_SHARP
+                    )
                 else:
                     bg = _COLOR_NATURAL
 
@@ -251,7 +255,8 @@ class PianoDisplay(QWidget):
 
                 # Text
                 text_color = (
-                    _COLOR_TEXT_LIGHT if is_active
+                    _COLOR_TEXT_LIGHT
+                    if is_active
                     else (_COLOR_TEXT_DIM if not is_black else QColor(0x5A, 0x68, 0x78))
                 )
                 painter.setPen(text_color)
@@ -269,15 +274,23 @@ class PianoDisplay(QWidget):
 
                     painter.setFont(label_font)
                     painter.drawText(
-                        int(x), int(y), int(kw), int(kh * 0.55),
-                        Qt.AlignmentFlag.AlignCenter, label,
+                        int(x),
+                        int(y),
+                        int(kw),
+                        int(kh * 0.55),
+                        Qt.AlignmentFlag.AlignCenter,
+                        label,
                     )
 
                 note_name = KeyMapper.note_name(midi_note)
                 painter.setFont(small_font)
                 painter.drawText(
-                    int(x), int(y + kh * 0.55), int(kw), int(kh * 0.42),
-                    Qt.AlignmentFlag.AlignCenter, note_name,
+                    int(x),
+                    int(y + kh * 0.55),
+                    int(kw),
+                    int(kh * 0.42),
+                    Qt.AlignmentFlag.AlignCenter,
+                    note_name,
                 )
 
         painter.end()

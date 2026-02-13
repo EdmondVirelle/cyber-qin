@@ -16,7 +16,7 @@ class EditableNote:
 
     time_seconds: float
     duration_seconds: float
-    note: int             # MIDI note number (0-127)
+    note: int  # MIDI note number (0-127)
     velocity: int = 100
 
 
@@ -173,20 +173,24 @@ class NoteSequence:
             elif evt.event_type == "note_off" and evt.note in pending:
                 on_time, vel = pending.pop(evt.note)
                 dur = max(0.01, evt.time_seconds - on_time)
-                seq._notes.append(EditableNote(
-                    time_seconds=on_time,
-                    duration_seconds=dur,
-                    note=evt.note,
-                    velocity=vel,
-                ))
+                seq._notes.append(
+                    EditableNote(
+                        time_seconds=on_time,
+                        duration_seconds=dur,
+                        note=evt.note,
+                        velocity=vel,
+                    )
+                )
         # Any remaining on events without off — give default duration
         for note, (t, vel) in pending.items():
-            seq._notes.append(EditableNote(
-                time_seconds=t,
-                duration_seconds=0.25,
-                note=note,
-                velocity=vel,
-            ))
+            seq._notes.append(
+                EditableNote(
+                    time_seconds=t,
+                    duration_seconds=0.25,
+                    note=note,
+                    velocity=vel,
+                )
+            )
         seq._notes.sort(key=lambda n: n.time_seconds)
         return seq
 
@@ -196,18 +200,22 @@ class NoteSequence:
 
         result: list[MidiFileEvent] = []
         for n in self._notes:
-            result.append(MidiFileEvent(
-                time_seconds=n.time_seconds,
-                event_type="note_on",
-                note=n.note,
-                velocity=n.velocity,
-            ))
-            result.append(MidiFileEvent(
-                time_seconds=n.time_seconds + n.duration_seconds,
-                event_type="note_off",
-                note=n.note,
-                velocity=0,
-            ))
+            result.append(
+                MidiFileEvent(
+                    time_seconds=n.time_seconds,
+                    event_type="note_on",
+                    note=n.note,
+                    velocity=n.velocity,
+                )
+            )
+            result.append(
+                MidiFileEvent(
+                    time_seconds=n.time_seconds + n.duration_seconds,
+                    event_type="note_off",
+                    note=n.note,
+                    velocity=0,
+                )
+            )
         result.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
         return result
 
@@ -217,17 +225,21 @@ class NoteSequence:
 
         result: list[RecordedEvent] = []
         for n in self._notes:
-            result.append(RecordedEvent(
-                timestamp=n.time_seconds,
-                event_type="note_on",
-                note=n.note,
-                velocity=n.velocity,
-            ))
-            result.append(RecordedEvent(
-                timestamp=n.time_seconds + n.duration_seconds,
-                event_type="note_off",
-                note=n.note,
-                velocity=0,
-            ))
+            result.append(
+                RecordedEvent(
+                    timestamp=n.time_seconds,
+                    event_type="note_on",
+                    note=n.note,
+                    velocity=n.velocity,
+                )
+            )
+            result.append(
+                RecordedEvent(
+                    timestamp=n.time_seconds + n.duration_seconds,
+                    event_type="note_off",
+                    note=n.note,
+                    velocity=0,
+                )
+            )
         result.sort(key=lambda e: e.timestamp)
         return result

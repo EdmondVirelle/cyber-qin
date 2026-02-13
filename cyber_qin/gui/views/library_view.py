@@ -37,8 +37,8 @@ class _LibraryGradientHeader(QWidget):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(212, 168, 83, 35))   # 金墨半透明
-        gradient.setColorAt(1, QColor(10, 14, 20, 0))       # 透明
+        gradient.setColorAt(0, QColor(212, 168, 83, 35))  # 金墨半透明
+        gradient.setColorAt(1, QColor(10, 14, 20, 0))  # 透明
         painter.fillRect(QRectF(0, 0, self.width(), self.height()), gradient)
         painter.end()
 
@@ -69,7 +69,10 @@ class _EmptyStateWidget(QWidget):
         painter.setFont(font)
         text_y = h * 0.2 + icon_size + 20
         painter.drawText(
-            0, int(text_y), w, 30,
+            0,
+            int(text_y),
+            w,
+            30,
             int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop),
             translator.tr("lib.empty.title"),
         )
@@ -77,7 +80,10 @@ class _EmptyStateWidget(QWidget):
         sub_font = QFont("Microsoft JhengHei", 12)
         painter.setFont(sub_font)
         painter.drawText(
-            0, int(text_y + 35), w, 25,
+            0,
+            int(text_y + 35),
+            w,
+            25,
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
             translator.tr("lib.empty.sub"),
         )
@@ -152,13 +158,19 @@ class LibraryView(QWidget):
         cols.setContentsMargins(12 + 40 + 12, 0, 12, 0)  # Account for track icon
         self._col_num = QLabel()
         self._col_num.setFixedWidth(24)
-        self._col_num.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        self._col_num.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;"
+        )
         cols.addWidget(self._col_num)
         self._col_title = QLabel()
-        self._col_title.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        self._col_title.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;"
+        )
         cols.addWidget(self._col_title, 1)
         self._col_dur = QLabel()
-        self._col_dur.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        self._col_dur.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;"
+        )
         cols.addWidget(self._col_dur)
         cols.addSpacing(80)  # Space for buttons
         content.addLayout(cols)
@@ -167,7 +179,7 @@ class LibraryView(QWidget):
         self._track_list = TrackList()
         self._track_list.play_requested.connect(self._on_play)
         self._track_list.remove_requested.connect(self._on_remove)
-        if hasattr(self._track_list, 'edit_requested'):
+        if hasattr(self._track_list, "edit_requested"):
             self._track_list.edit_requested.connect(self._on_edit)
         content.addWidget(self._track_list, 1)
 
@@ -190,11 +202,11 @@ class LibraryView(QWidget):
         self._col_num.setText(translator.tr("lib.col.num"))
         self._col_title.setText(translator.tr("lib.col.title"))
         self._col_dur.setText(translator.tr("lib.col.duration"))
-        self._empty_state.update() # Trigger repaint for empty state text
+        self._empty_state.update()  # Trigger repaint for empty state text
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        if hasattr(self, '_gradient_header'):
+        if hasattr(self, "_gradient_header"):
             for child in self._gradient_header.children():
                 if isinstance(child, QWidget):
                     child.setGeometry(0, 0, self.width(), 100)
@@ -301,9 +313,7 @@ class LibraryView(QWidget):
     # --- Persistence ---
 
     def _library_path(self) -> Path:
-        data_dir = QStandardPaths.writableLocation(
-            QStandardPaths.StandardLocation.AppDataLocation
-        )
+        data_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
         p = Path(data_dir) / "CyberQin"
         p.mkdir(parents=True, exist_ok=True)
         return p / "library.json"

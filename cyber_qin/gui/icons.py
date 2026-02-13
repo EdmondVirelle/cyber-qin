@@ -184,9 +184,12 @@ def draw_music_note(painter: QPainter, rect: QRectF, color: QColor) -> None:
     flag = QPainterPath()
     flag.moveTo(stem_x, stem_top)
     flag.cubicTo(
-        stem_x + r.width() * 0.4, stem_top + r.height() * 0.1,
-        stem_x + r.width() * 0.3, stem_top + r.height() * 0.35,
-        stem_x, stem_top + r.height() * 0.4,
+        stem_x + r.width() * 0.4,
+        stem_top + r.height() * 0.1,
+        stem_x + r.width() * 0.3,
+        stem_top + r.height() * 0.35,
+        stem_x,
+        stem_top + r.height() * 0.4,
     )
     flag.lineTo(stem_x, stem_top)
     painter.drawPath(flag)
@@ -473,8 +476,9 @@ def draw_mute(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(color)
     body = QPainterPath()
-    body.addRect(QRectF(r.left(), r.center().y() - r.height() * 0.15,
-                        r.width() * 0.25, r.height() * 0.3))
+    body.addRect(
+        QRectF(r.left(), r.center().y() - r.height() * 0.15, r.width() * 0.25, r.height() * 0.3)
+    )
     painter.drawPath(body)
 
     # Speaker cone
@@ -492,10 +496,12 @@ def draw_mute(painter: QPainter, rect: QRectF, color: QColor) -> None:
     cx = x_start + x_size / 2
     cy = r.center().y()
     painter.setPen(QPen(color, pen_w))
-    painter.drawLine(QPointF(cx - x_size / 2, cy - x_size / 2),
-                     QPointF(cx + x_size / 2, cy + x_size / 2))
-    painter.drawLine(QPointF(cx + x_size / 2, cy - x_size / 2),
-                     QPointF(cx - x_size / 2, cy + x_size / 2))
+    painter.drawLine(
+        QPointF(cx - x_size / 2, cy - x_size / 2), QPointF(cx + x_size / 2, cy + x_size / 2)
+    )
+    painter.drawLine(
+        QPointF(cx + x_size / 2, cy - x_size / 2), QPointF(cx - x_size / 2, cy + x_size / 2)
+    )
 
     painter.restore()
 
@@ -512,8 +518,7 @@ def draw_solo(painter: QPainter, rect: QRectF, color: QColor) -> None:
     # Headband arc
     painter.setPen(QPen(color, pen_w))
     painter.setBrush(Qt.BrushStyle.NoBrush)
-    arc_rect = QRectF(r.left() + r.width() * 0.1, r.top(),
-                      r.width() * 0.8, r.height() * 0.8)
+    arc_rect = QRectF(r.left() + r.width() * 0.1, r.top(), r.width() * 0.8, r.height() * 0.8)
     painter.drawArc(arc_rect, 0, 180 * 16)
 
     # Left earpiece
@@ -521,14 +526,15 @@ def draw_solo(painter: QPainter, rect: QRectF, color: QColor) -> None:
     painter.setBrush(color)
     painter.drawRoundedRect(
         QRectF(r.left(), r.center().y(), r.width() * 0.2, r.height() * 0.4),
-        2, 2,
+        2,
+        2,
     )
 
     # Right earpiece
     painter.drawRoundedRect(
-        QRectF(r.right() - r.width() * 0.2, r.center().y(),
-               r.width() * 0.2, r.height() * 0.4),
-        2, 2,
+        QRectF(r.right() - r.width() * 0.2, r.center().y(), r.width() * 0.2, r.height() * 0.4),
+        2,
+        2,
     )
 
     painter.restore()
@@ -582,15 +588,21 @@ def draw_help(painter: QPainter, rect: QRectF, color: QColor) -> None:
     left = QPainterPath()
     left.moveTo(r.center().x(), r.top() + r.height() * 0.1)
     left.cubicTo(
-        r.center().x() - r.width() * 0.15, r.top(),
-        r.left() + r.width() * 0.1, r.top(),
-        r.left(), r.top() + r.height() * 0.08,
+        r.center().x() - r.width() * 0.15,
+        r.top(),
+        r.left() + r.width() * 0.1,
+        r.top(),
+        r.left(),
+        r.top() + r.height() * 0.08,
     )
     left.lineTo(r.left(), r.bottom() - r.height() * 0.08)
     left.cubicTo(
-        r.left() + r.width() * 0.1, r.bottom(),
-        r.center().x() - r.width() * 0.15, r.bottom(),
-        r.center().x(), r.bottom() - r.height() * 0.1,
+        r.left() + r.width() * 0.1,
+        r.bottom(),
+        r.center().x() - r.width() * 0.15,
+        r.bottom(),
+        r.center().x(),
+        r.bottom() - r.height() * 0.1,
     )
     painter.drawPath(left)
 
@@ -598,15 +610,21 @@ def draw_help(painter: QPainter, rect: QRectF, color: QColor) -> None:
     right = QPainterPath()
     right.moveTo(r.center().x(), r.top() + r.height() * 0.1)
     right.cubicTo(
-        r.center().x() + r.width() * 0.15, r.top(),
-        r.right() - r.width() * 0.1, r.top(),
-        r.right(), r.top() + r.height() * 0.08,
+        r.center().x() + r.width() * 0.15,
+        r.top(),
+        r.right() - r.width() * 0.1,
+        r.top(),
+        r.right(),
+        r.top() + r.height() * 0.08,
     )
     right.lineTo(r.right(), r.bottom() - r.height() * 0.08)
     right.cubicTo(
-        r.right() - r.width() * 0.1, r.bottom(),
-        r.center().x() + r.width() * 0.15, r.bottom(),
-        r.center().x(), r.bottom() - r.height() * 0.1,
+        r.right() - r.width() * 0.1,
+        r.bottom(),
+        r.center().x() + r.width() * 0.15,
+        r.bottom(),
+        r.center().x(),
+        r.bottom() - r.height() * 0.1,
     )
     painter.drawPath(right)
 

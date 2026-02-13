@@ -11,6 +11,7 @@ from cyber_qin.core.beat_sequence import BeatNote, BeatRest
 
 # ── NoteRoll.select_notes_in_time_range ──────────────────────
 
+
 class TestSelectNotesInTimeRange:
     """Tests for the new NoteRoll.select_notes_in_time_range method."""
 
@@ -20,6 +21,7 @@ class TestSelectNotesInTimeRange:
 
     def _make_roll(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         notes = [
             BeatNote(0.0, 1.0, 60),
@@ -74,6 +76,7 @@ class TestSelectNotesInTimeRange:
 
 # ── NoteRoll mouse range select ──────────────────────────────
 
+
 class TestNoteRollMouseRangeSelect:
     """Tests for drag-on-empty-space range selection in NoteRoll."""
 
@@ -83,6 +86,7 @@ class TestNoteRollMouseRangeSelect:
 
     def _make_roll_with_notes(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)  # give it a real size for coordinate math
         notes = [
@@ -130,13 +134,16 @@ class TestNoteRollMouseRangeSelect:
 
         from PyQt6.QtCore import Qt
         from PyQt6.QtGui import QKeyEvent
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Delete,
-                          Qt.KeyboardModifier.NoModifier)
+
+        event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_Delete, Qt.KeyboardModifier.NoModifier
+        )
         roll.keyPressEvent(event)
         assert deleted_signals == [-1]
 
 
 # ── EditorView cursor navigation ────────────────────────────
+
 
 class TestEditorViewCursorNavigation:
     """Tests for _move_cursor and arrow key remap in EditorView."""
@@ -147,6 +154,7 @@ class TestEditorViewCursorNavigation:
 
     def _make_view(self):
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
         # Add some notes for selection tests
         view._sequence.add_note(60)  # cursor starts at 0, step=1.0
@@ -176,6 +184,7 @@ class TestEditorViewCursorNavigation:
 
 # ── EditorView keyPressEvent arrow logic ─────────────────────
 
+
 class TestEditorViewArrowKeys:
     """Verify that arrow keys now control cursor, not note movement."""
 
@@ -189,11 +198,14 @@ class TestEditorViewArrowKeys:
 
         mods = modifiers if modifiers is not None else Qt.KeyboardModifier.NoModifier
         return QKeyEvent(
-            QKeyEvent.Type.KeyPress, key, mods,
+            QKeyEvent.Type.KeyPress,
+            key,
+            mods,
         )
 
     def _make_view_with_notes(self):
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
         view._sequence.add_note(60)
         view._sequence.add_note(64)
@@ -203,6 +215,7 @@ class TestEditorViewArrowKeys:
 
     def test_plain_right_moves_cursor(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         cursor_before = view._sequence.cursor_beats
         event = self._make_key_event(Qt.Key.Key_Right)
@@ -211,6 +224,7 @@ class TestEditorViewArrowKeys:
 
     def test_plain_left_moves_cursor(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         view._sequence.cursor_beats = 2.0
         event = self._make_key_event(Qt.Key.Key_Left)
@@ -219,10 +233,12 @@ class TestEditorViewArrowKeys:
 
     def test_shift_right_sets_anchor_and_selects(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         view._sequence.cursor_beats = 0.0
         event = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         view.keyPressEvent(event)
         assert view._selection_anchor == 0.0
@@ -230,10 +246,12 @@ class TestEditorViewArrowKeys:
 
     def test_shift_multiple_expands_selection(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         view._sequence.cursor_beats = 0.0
         event = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         # Shift+Right twice
         view.keyPressEvent(event)
@@ -243,11 +261,13 @@ class TestEditorViewArrowKeys:
 
     def test_plain_arrow_after_shift_clears_anchor(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         view._sequence.cursor_beats = 0.0
         # Shift+Right
         shift_event = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         view.keyPressEvent(shift_event)
         assert view._selection_anchor is not None
@@ -258,17 +278,20 @@ class TestEditorViewArrowKeys:
 
     def test_alt_right_moves_selection(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         # Select notes via internal state
         view._current_note_selection = [0]
         event = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.AltModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.AltModifier,
         )
         # Just verify it doesn't crash — actual note move tested elsewhere
         view.keyPressEvent(event)
 
     def test_alt_shift_right_resizes_selection(self):
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         view._current_note_selection = [0]
         event = self._make_key_event(
@@ -280,21 +303,24 @@ class TestEditorViewArrowKeys:
     def test_shift_select_populates_current_selection(self):
         """Shift+Arrow must update _current_note_selection via signal."""
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         # Notes at beats 0, 1, 2; cursor at 3
         view._sequence.cursor_beats = 0.0
         view._note_roll.set_cursor_beats(0.0)
         event = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         view.keyPressEvent(event)
         # Range [0, 1) → note at beat 0 should be selected
-        sel = getattr(view, '_current_note_selection', [])
+        sel = getattr(view, "_current_note_selection", [])
         assert len(sel) == 1, f"Expected 1 selected note, got {sel}"
 
     def test_shift_select_then_delete_removes_notes(self):
         """Full flow: Shift+Arrow range select → Delete → notes removed."""
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         initial_count = view._sequence.note_count  # 3 notes
         assert initial_count == 3
@@ -305,12 +331,13 @@ class TestEditorViewArrowKeys:
 
         # Shift+Right twice → select notes in [0, 2)
         shift_right = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         view.keyPressEvent(shift_right)
         view.keyPressEvent(shift_right)
 
-        sel = getattr(view, '_current_note_selection', [])
+        sel = getattr(view, "_current_note_selection", [])
         assert len(sel) == 2, f"Expected 2 selected notes, got {sel}"
 
         # Delete
@@ -324,6 +351,7 @@ class TestEditorViewArrowKeys:
     def test_shift_select_then_delete_preserves_unselected(self):
         """Notes outside the range selection should survive delete."""
         from PyQt6.QtCore import Qt
+
         view = self._make_view_with_notes()
         # Notes at 0, 1, 2 (pitches 60, 64, 67)
 
@@ -332,7 +360,8 @@ class TestEditorViewArrowKeys:
 
         # Select only first note [0, 1)
         shift_right = self._make_key_event(
-            Qt.Key.Key_Right, Qt.KeyboardModifier.ShiftModifier,
+            Qt.Key.Key_Right,
+            Qt.KeyboardModifier.ShiftModifier,
         )
         view.keyPressEvent(shift_right)
 
@@ -342,11 +371,12 @@ class TestEditorViewArrowKeys:
         assert view._sequence.note_count == 2
         remaining = [n.note for n in view._sequence.notes]
         assert 60 not in remaining  # deleted
-        assert 64 in remaining      # kept
-        assert 67 in remaining      # kept
+        assert 64 in remaining  # kept
+        assert 67 in remaining  # kept
 
 
 # ── MidiOutputPlayer ─────────────────────────────────────────
+
 
 class TestMidiOutputPlayer:
     """Tests for the MidiOutputPlayer core logic."""
@@ -365,6 +395,7 @@ class TestMidiOutputPlayer:
 
             # Force class re-creation
             import cyber_qin.core.midi_output_player as mod
+
             mod._MidiOutputPlayerClass = None
 
             player = mod.create_midi_output_player()
@@ -379,6 +410,7 @@ class TestMidiOutputPlayer:
             mock_rtmidi.MidiOut.return_value = mock_out
 
             import cyber_qin.core.midi_output_player as mod
+
             mod._MidiOutputPlayerClass = None
 
             player = mod.create_midi_output_player()
@@ -395,12 +427,14 @@ class TestMidiOutputPlayer:
             mock_rtmidi.MidiOut.return_value = mock_out
 
             import cyber_qin.core.midi_output_player as mod
+
             mod._MidiOutputPlayerClass = None
 
             player = mod.create_midi_output_player()
             assert player is not None
 
             from cyber_qin.core.midi_file_player import MidiFileEvent, PlaybackState
+
             events = [
                 MidiFileEvent(0.0, "note_on", 60, 100),
                 MidiFileEvent(0.5, "note_off", 60, 0),
@@ -418,12 +452,14 @@ class TestMidiOutputPlayer:
             mock_rtmidi.MidiOut.return_value = mock_out
 
             import cyber_qin.core.midi_output_player as mod
+
             mod._MidiOutputPlayerClass = None
 
             player = mod.create_midi_output_player()
             assert player is not None
 
             from cyber_qin.core.midi_file_player import MidiFileEvent
+
             events = [
                 MidiFileEvent(0.0, "note_on", 60, 100),
                 MidiFileEvent(10.0, "note_off", 60, 0),
@@ -435,8 +471,7 @@ class TestMidiOutputPlayer:
             # Verify CC 123 was sent on all 16 channels
             calls = mock_out.send_message.call_args_list
             cc123_calls = [
-                c for c in calls
-                if len(c.args) > 0 and len(c.args[0]) == 3 and c.args[0][1] == 123
+                c for c in calls if len(c.args) > 0 and len(c.args[0]) == 3 and c.args[0][1] == 123
             ]
             assert len(cc123_calls) == 16
             player.cleanup()
@@ -450,6 +485,7 @@ class TestMidiOutputPlayer:
             mock_rtmidi.MidiOut.return_value = mock_out
 
             import cyber_qin.core.midi_output_player as mod
+
             mod._MidiOutputPlayerClass = None
 
             player = mod.create_midi_output_player()
@@ -462,6 +498,7 @@ class TestMidiOutputPlayer:
 
             # Wait for note_off timer
             import time
+
             time.sleep(0.15)
             calls = mock_out.send_message.call_args_list
             assert any(c.args[0] == [0x80, 60, 0] for c in calls)
@@ -470,11 +507,13 @@ class TestMidiOutputPlayer:
 
 # ── EditorSequence.add_note_at ─────────────────────────────────
 
+
 class TestAddNoteAt:
     """Tests for placing notes at specific positions (pencil tool)."""
 
     def test_add_note_at_specific_time(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note_at(2.5, 60)
         assert seq.note_count == 1
@@ -483,6 +522,7 @@ class TestAddNoteAt:
 
     def test_add_note_at_does_not_advance_cursor(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.cursor_beats = 0.0
         seq.add_note_at(3.0, 65)
@@ -490,6 +530,7 @@ class TestAddNoteAt:
 
     def test_add_note_at_uses_step_duration(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.set_step_duration("1/8")
         seq.add_note_at(1.0, 72)
@@ -497,12 +538,14 @@ class TestAddNoteAt:
 
     def test_add_note_at_clamps_negative_time(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note_at(-1.0, 60)
         assert seq.notes[0].time_beats == 0.0
 
     def test_add_note_at_undoable(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note_at(1.0, 60)
         assert seq.note_count == 1
@@ -511,6 +554,7 @@ class TestAddNoteAt:
 
     def test_add_note_at_assigns_active_track(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence(num_tracks=4)
         seq.set_active_track(2)
         seq.add_note_at(0.0, 60)
@@ -519,11 +563,13 @@ class TestAddNoteAt:
 
 # ── EditorSequence.quantize_notes ──────────────────────────────
 
+
 class TestQuantizeNotes:
     """Tests for quantizing notes to grid."""
 
     def test_quantize_snaps_to_grid(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)  # at 0.0
         # Manually offset the note
@@ -533,6 +579,7 @@ class TestQuantizeNotes:
 
     def test_quantize_rounds_down(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq._notes[0].time_beats = 0.2
@@ -541,6 +588,7 @@ class TestQuantizeNotes:
 
     def test_quantize_multiple_notes(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)  # at 0
         seq.add_note(64)  # at 1
@@ -552,6 +600,7 @@ class TestQuantizeNotes:
 
     def test_quantize_empty_indices_noop(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq.quantize_notes([], grid=1.0)
@@ -559,6 +608,7 @@ class TestQuantizeNotes:
 
     def test_quantize_undoable(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq._notes[0].time_beats = 0.3
@@ -570,11 +620,13 @@ class TestQuantizeNotes:
 
 # ── EditorSequence.set_notes_velocity ──────────────────────────
 
+
 class TestSetNotesVelocity:
     """Tests for velocity editing."""
 
     def test_set_velocity(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         assert seq.notes[0].velocity == 100
@@ -583,6 +635,7 @@ class TestSetNotesVelocity:
 
     def test_set_velocity_clamps_high(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq.set_notes_velocity([0], 200)
@@ -590,6 +643,7 @@ class TestSetNotesVelocity:
 
     def test_set_velocity_clamps_low(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq.set_notes_velocity([0], 0)
@@ -597,6 +651,7 @@ class TestSetNotesVelocity:
 
     def test_set_velocity_batch(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq.add_note(64)
@@ -606,6 +661,7 @@ class TestSetNotesVelocity:
 
     def test_set_velocity_undoable(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         seq.set_notes_velocity([0], 50)
@@ -614,6 +670,7 @@ class TestSetNotesVelocity:
 
     def test_set_velocity_empty_noop(self):
         from cyber_qin.core.beat_sequence import EditorSequence
+
         seq = EditorSequence()
         seq.add_note(60)
         undo_depth = len(seq._undo_stack)
@@ -622,6 +679,7 @@ class TestSetNotesVelocity:
 
 
 # ── NoteRoll pencil mode ──────────────────────────────────────
+
 
 class TestNoteRollPencilMode:
     """Tests for NoteRoll pencil/draw mode."""
@@ -632,6 +690,7 @@ class TestNoteRollPencilMode:
 
     def _make_roll(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)
         return roll
@@ -653,11 +712,13 @@ class TestNoteRollPencilMode:
 
         from PyQt6.QtCore import QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
+
         # Click on empty area (no notes)
         pos = QPointF(100.0, 100.0)
         event = QMouseEvent(
             QMouseEvent.Type.MouseButtonPress,
-            pos, Qt.MouseButton.LeftButton,
+            pos,
+            Qt.MouseButton.LeftButton,
             Qt.MouseButton.LeftButton,
             Qt.KeyboardModifier.NoModifier,
         )
@@ -674,10 +735,12 @@ class TestNoteRollPencilMode:
 
         from PyQt6.QtCore import QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
+
         pos = QPointF(100.0, 100.0)
         event = QMouseEvent(
             QMouseEvent.Type.MouseButtonPress,
-            pos, Qt.MouseButton.LeftButton,
+            pos,
+            Qt.MouseButton.LeftButton,
             Qt.MouseButton.LeftButton,
             Qt.KeyboardModifier.NoModifier,
         )
@@ -686,6 +749,7 @@ class TestNoteRollPencilMode:
 
 
 # ── NoteRoll context menu signal ─────────────────────────────
+
 
 class TestNoteRollContextMenu:
     """Tests for right-click context menu signal."""
@@ -696,6 +760,7 @@ class TestNoteRollContextMenu:
 
     def test_right_click_emits_context_menu(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)
 
@@ -704,10 +769,12 @@ class TestNoteRollContextMenu:
 
         from PyQt6.QtCore import QPointF, Qt
         from PyQt6.QtGui import QMouseEvent
+
         pos = QPointF(200.0, 100.0)
         event = QMouseEvent(
             QMouseEvent.Type.MouseButtonPress,
-            pos, Qt.MouseButton.RightButton,
+            pos,
+            Qt.MouseButton.RightButton,
             Qt.MouseButton.RightButton,
             Qt.KeyboardModifier.NoModifier,
         )
@@ -718,6 +785,7 @@ class TestNoteRollContextMenu:
 
 # ── NoteRoll auto-scroll ────────────────────────────────────
 
+
 class TestNoteRollAutoScroll:
     """Tests for auto-scroll during drag."""
 
@@ -727,6 +795,7 @@ class TestNoteRollAutoScroll:
 
     def test_auto_scroll_right_edge(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)
         roll._scroll_x = 0.0
@@ -738,6 +807,7 @@ class TestNoteRollAutoScroll:
 
     def test_auto_scroll_left_edge(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)
         roll._scroll_x = 100.0
@@ -748,6 +818,7 @@ class TestNoteRollAutoScroll:
 
     def test_auto_scroll_center_no_change(self):
         from cyber_qin.gui.widgets.note_roll import NoteRoll
+
         roll = NoteRoll()
         roll.resize(800, 200)
         roll._scroll_x = 50.0
@@ -758,6 +829,7 @@ class TestNoteRollAutoScroll:
 
 
 # ── EditorView Ctrl+Q quantize ───────────────────────────────
+
 
 class TestEditorViewQuantize:
     """Tests for Ctrl+Q quantize shortcut."""
@@ -784,7 +856,8 @@ class TestEditorViewQuantize:
         view._current_note_selection = [0]
 
         event = QKeyEvent(
-            QKeyEvent.Type.KeyPress, Qt.Key.Key_Q,
+            QKeyEvent.Type.KeyPress,
+            Qt.Key.Key_Q,
             Qt.KeyboardModifier.ControlModifier,
         )
         view.keyPressEvent(event)
@@ -794,6 +867,7 @@ class TestEditorViewQuantize:
 
 
 # ── EditorView pencil toggle ─────────────────────────────────
+
 
 class TestEditorViewPencilToggle:
     """Tests for pencil mode toggle via P key."""
@@ -812,8 +886,10 @@ class TestEditorViewPencilToggle:
         assert view._pencil_btn.isChecked() is False
 
         event = QKeyEvent(
-            QKeyEvent.Type.KeyPress, Qt.Key.Key_P,
-            Qt.KeyboardModifier.NoModifier, "p",
+            QKeyEvent.Type.KeyPress,
+            Qt.Key.Key_P,
+            Qt.KeyboardModifier.NoModifier,
+            "p",
         )
         view.keyPressEvent(event)
         assert view._pencil_btn.isChecked() is True
@@ -834,6 +910,7 @@ class TestEditorViewPencilToggle:
 
 # ── EditorView velocity spinbox ──────────────────────────────
 
+
 class TestEditorViewVelocity:
     """Tests for velocity editing via spinbox."""
 
@@ -843,11 +920,13 @@ class TestEditorViewVelocity:
 
     def test_velocity_spin_disabled_when_no_selection(self):
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
         assert view._velocity_spin.isEnabled() is False
 
     def test_velocity_spin_enabled_on_selection(self):
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
         view._sequence.add_note(60)
         view._update_ui_state()
@@ -857,6 +936,7 @@ class TestEditorViewVelocity:
 
     def test_velocity_spin_change_updates_notes(self):
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
         view._sequence.add_note(60)
         view._update_ui_state()

@@ -24,7 +24,8 @@ def set_thread_priority_realtime() -> bool:
     try:
         handle = ctypes.windll.kernel32.GetCurrentThread()
         result = ctypes.windll.kernel32.SetThreadPriority(
-            handle, _THREAD_PRIORITY_TIME_CRITICAL,
+            handle,
+            _THREAD_PRIORITY_TIME_CRITICAL,
         )
         if result:
             log.debug("Thread priority set to TIME_CRITICAL")

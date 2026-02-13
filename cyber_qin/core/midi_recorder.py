@@ -14,10 +14,10 @@ from dataclasses import dataclass
 class RecordedEvent:
     """A single recorded MIDI event with timestamp."""
 
-    timestamp: float       # seconds since recording start (perf_counter based)
-    event_type: str        # "note_on" or "note_off"
-    note: int              # MIDI note number (0-127)
-    velocity: int          # velocity (0-127)
+    timestamp: float  # seconds since recording start (perf_counter based)
+    event_type: str  # "note_on" or "note_off"
+    note: int  # MIDI note number (0-127)
+    velocity: int  # velocity (0-127)
 
 
 class MidiRecorder:
@@ -70,9 +70,11 @@ class MidiRecorder:
         if not self._recording:
             return
         timestamp = time.perf_counter() - self._start_time
-        self._events.append(RecordedEvent(
-            timestamp=timestamp,
-            event_type=event_type,
-            note=note,
-            velocity=velocity,
-        ))
+        self._events.append(
+            RecordedEvent(
+                timestamp=timestamp,
+                event_type=event_type,
+                note=note,
+                velocity=velocity,
+            )
+        )

@@ -5,6 +5,7 @@ from enum import IntEnum, auto
 
 class Modifier(IntEnum):
     """Modifier key type for game key combinations."""
+
     NONE = auto()
     SHIFT = auto()
     CTRL = auto()

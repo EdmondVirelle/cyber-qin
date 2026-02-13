@@ -125,7 +125,9 @@ class Sidebar(QWidget):
         layout.addWidget(self._vtuber)
         layout.addSpacing(2)
 
-        self._kofi = QLabel(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
+        self._kofi = QLabel(
+            f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>'
+        )
         self._kofi.setFont(QFont("Microsoft JhengHei", 8))
         self._kofi.setContentsMargins(12, 0, 12, 0)
         self._kofi.setStyleSheet("background: transparent;")
@@ -166,8 +168,11 @@ class Sidebar(QWidget):
         self._ff14.setText(translator.tr("sidebar.ff14"))
         self._wwm.setText(translator.tr("sidebar.wwm"))
         self._vtuber.setText(translator.tr("sidebar.vtuber"))
-        self._kofi.setText(f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>')
+        self._kofi.setText(
+            f'<a href="https://ko-fi.com/virelleedmond" style="color: #D4A853; text-decoration: none;">{translator.tr("sidebar.support")}</a>'
+        )
         from cyber_qin import __version__
+
         self._ver.setText(translator.tr("sidebar.version", version=__version__))
 
     def paintEvent(self, event) -> None:  # noqa: N802
@@ -207,7 +212,10 @@ class _BrandLogo(QWidget):
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
         painter.drawText(
-            54, 8, self.width() - 62, 28,
+            54,
+            8,
+            self.width() - 62,
+            28,
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
             "賽博琴仙",
         )
@@ -217,7 +225,10 @@ class _BrandLogo(QWidget):
         sub_font = QFont("Microsoft JhengHei", 9)
         painter.setFont(sub_font)
         painter.drawText(
-            54, 34, self.width() - 62, 18,
+            54,
+            34,
+            self.width() - 62,
+            18,
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
             "Cyber Qin Xian",
         )

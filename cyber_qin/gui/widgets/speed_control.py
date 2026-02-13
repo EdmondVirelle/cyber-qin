@@ -22,7 +22,9 @@ class SpeedControl(QWidget):
         layout.setSpacing(4)
 
         self._label = QLabel(translator.tr("player.speed"))
-        self._label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;")
+        self._label.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 11px; background: transparent;"
+        )
         layout.addWidget(self._label)
 
         self._combo = QComboBox()

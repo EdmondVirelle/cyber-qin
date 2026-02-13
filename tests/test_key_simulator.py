@@ -23,7 +23,9 @@ def sim():
 
 
 def _mapping(key: str, mod: Modifier = Modifier.NONE) -> KeyMapping:
-    label = key if mod == Modifier.NONE else f"{'Shift' if mod == Modifier.SHIFT else 'Ctrl'}+{key}"
+    label = (
+        key if mod == Modifier.NONE else f"{'Shift' if mod == Modifier.SHIFT else 'Ctrl'}+{key}"
+    )
     return KeyMapping(scan_code=SCAN[key], modifier=mod, label=label)
 
 

@@ -41,7 +41,9 @@ class TestWindowStateConfig:
         config = clean_config
 
         # Simulate Qt's saveGeometry().toBase64() output
-        geometry_b64 = QByteArray(b"\x01\xd9\xd0\xcb\x00\x03\x00\x00").toBase64().data().decode("ascii")
+        geometry_b64 = (
+            QByteArray(b"\x01\xd9\xd0\xcb\x00\x03\x00\x00").toBase64().data().decode("ascii")
+        )
 
         config.set("window.geometry", geometry_b64)
         assert config.get("window.geometry") == geometry_b64
@@ -88,7 +90,9 @@ class TestWindowStateConfig:
     def test_geometry_persistence(self, clean_config, tmp_path):
         """Window geometry should persist across ConfigManager instances."""
         config1 = clean_config
-        geometry_b64 = QByteArray(b"\x01\xd9\xd0\xcb\x00\x03\x00\x00").toBase64().data().decode("ascii")
+        geometry_b64 = (
+            QByteArray(b"\x01\xd9\xd0\xcb\x00\x03\x00\x00").toBase64().data().decode("ascii")
+        )
         config1.set("window.geometry", geometry_b64)
 
         # Create new instance with same directory

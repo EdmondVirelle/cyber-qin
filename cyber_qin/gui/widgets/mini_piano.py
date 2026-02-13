@@ -13,11 +13,11 @@ from ...core.constants import MIDI_NOTE_MAX, MIDI_NOTE_MIN
 _BLACK_SEMITONES = {1, 3, 6, 8, 10}
 
 # 賽博墨韻 colors
-_COLOR_OFF = QColor(0x2E, 0x3D, 0x50)          # 雲霧層
-_COLOR_OFF_BLACK = QColor(0x1A, 0x23, 0x32)     # 宣紙暗面
-_COLOR_ON = QColor(0x00, 0xF0, 0xFF)            # 賽博青
-_COLOR_ON_BRIGHT = QColor(0x40, 0xFF, 0xFF)      # 青光暈
-_GLOW_COLOR = QColor(0, 240, 255, 60)           # 青 glow
+_COLOR_OFF = QColor(0x2E, 0x3D, 0x50)  # 雲霧層
+_COLOR_OFF_BLACK = QColor(0x1A, 0x23, 0x32)  # 宣紙暗面
+_COLOR_ON = QColor(0x00, 0xF0, 0xFF)  # 賽博青
+_COLOR_ON_BRIGHT = QColor(0x40, 0xFF, 0xFF)  # 青光暈
+_GLOW_COLOR = QColor(0, 240, 255, 60)  # 青 glow
 _FADE_DURATION = 0.2  # seconds
 
 

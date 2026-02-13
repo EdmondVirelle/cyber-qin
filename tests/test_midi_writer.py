@@ -14,8 +14,17 @@ from cyber_qin.core.midi_writer import MidiWriter
 def _make_note(t: float, note: int = 60, vel: int = 100, track: int = 0, ch: int = 0):
     """Create a note_on + note_off pair."""
     return [
-        MidiFileEvent(time_seconds=t, event_type="note_on", note=note, velocity=vel, track=track, channel=ch),
-        MidiFileEvent(time_seconds=t + 0.5, event_type="note_off", note=note, velocity=0, track=track, channel=ch),
+        MidiFileEvent(
+            time_seconds=t, event_type="note_on", note=note, velocity=vel, track=track, channel=ch
+        ),
+        MidiFileEvent(
+            time_seconds=t + 0.5,
+            event_type="note_off",
+            note=note,
+            velocity=0,
+            track=track,
+            channel=ch,
+        ),
     ]
 
 
@@ -79,7 +88,8 @@ class TestSaveMultitrack:
         events = _make_note(0.0, note=60, track=0) + _make_note(0.0, note=72, track=1)
         path = tmp_path / "type1.mid"
         MidiWriter.save_multitrack(
-            events, str(path),
+            events,
+            str(path),
             tempo_bpm=90.0,
             track_names=["Melody", "Bass"],
             track_channels=[0, 1],

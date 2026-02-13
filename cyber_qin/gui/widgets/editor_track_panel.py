@@ -245,7 +245,8 @@ class EditorTrackPanel(QWidget):
             item.rename_requested.connect(self._on_rename_requested)
             item.remove_requested.connect(self.track_removed.emit)
             self._container_layout.insertWidget(
-                self._container_layout.count() - 1, item,
+                self._container_layout.count() - 1,
+                item,
             )
             self._track_items.append(item)
 
@@ -259,7 +260,10 @@ class EditorTrackPanel(QWidget):
         if 0 <= index < len(self._tracks):
             current_name = self._tracks[index].name
             text, ok = QInputDialog.getText(
-                self, "重新命名音軌", "名稱:", text=current_name,
+                self,
+                "重新命名音軌",
+                "名稱:",
+                text=current_name,
             )
             if ok and text:
                 self.track_renamed.emit(index, text)

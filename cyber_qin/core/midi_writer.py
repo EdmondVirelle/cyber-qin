@@ -43,18 +43,30 @@ class MidiWriter:
         prev_tick = 0
         for evt in sorted(events, key=lambda e: e.timestamp):
             abs_tick = mido.second2tick(
-                evt.timestamp, RECORDING_TICKS_PER_BEAT, tempo,
+                evt.timestamp,
+                RECORDING_TICKS_PER_BEAT,
+                tempo,
             )
             delta = max(0, int(abs_tick) - prev_tick)
 
             if evt.event_type == "note_on":
-                track.append(mido.Message(
-                    "note_on", note=evt.note, velocity=evt.velocity, time=delta,
-                ))
+                track.append(
+                    mido.Message(
+                        "note_on",
+                        note=evt.note,
+                        velocity=evt.velocity,
+                        time=delta,
+                    )
+                )
             elif evt.event_type == "note_off":
-                track.append(mido.Message(
-                    "note_off", note=evt.note, velocity=0, time=delta,
-                ))
+                track.append(
+                    mido.Message(
+                        "note_off",
+                        note=evt.note,
+                        velocity=0,
+                        time=delta,
+                    )
+                )
 
             prev_tick = int(abs_tick)
 
@@ -73,14 +85,16 @@ class MidiWriter:
 
         result: list[MidiFileEvent] = []
         for evt in events:
-            result.append(MidiFileEvent(
-                time_seconds=evt.timestamp,
-                event_type=evt.event_type,
-                note=evt.note,
-                velocity=evt.velocity,
-                track=0,
-                channel=0,
-            ))
+            result.append(
+                MidiFileEvent(
+                    time_seconds=evt.timestamp,
+                    event_type=evt.event_type,
+                    note=evt.note,
+                    velocity=evt.velocity,
+                    track=0,
+                    channel=0,
+                )
+            )
         result.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
         return result
 
@@ -111,7 +125,9 @@ class MidiWriter:
 
         # Group events by track index
         by_track: dict[int, list] = defaultdict(list)
-        for evt in sorted(events, key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1)):
+        for evt in sorted(
+            events, key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1)
+        ):
             by_track[getattr(evt, "track", 0)].append(evt)
 
         track_indices = sorted(by_track.keys())
@@ -123,8 +139,11 @@ class MidiWriter:
             mid.tracks.append(trk)
             trk.append(mido.MetaMessage("set_tempo", tempo=tempo, time=0))
 
-            name = (track_names[track_indices[0]] if track_names and track_indices
-                    and track_indices[0] < len(track_names) else "")
+            name = (
+                track_names[track_indices[0]]
+                if track_names and track_indices and track_indices[0] < len(track_names)
+                else ""
+            )
             if name:
                 trk.append(mido.MetaMessage("track_name", name=name, time=0))
 
@@ -134,9 +153,15 @@ class MidiWriter:
                 delta = max(0, abs_tick - prev_tick)
                 ch = getattr(evt, "channel", 0) & 0x0F
                 if evt.event_type == "note_on":
-                    trk.append(mido.Message("note_on", note=evt.note, velocity=evt.velocity, time=delta, channel=ch))
+                    trk.append(
+                        mido.Message(
+                            "note_on", note=evt.note, velocity=evt.velocity, time=delta, channel=ch
+                        )
+                    )
                 elif evt.event_type == "note_off":
-                    trk.append(mido.Message("note_off", note=evt.note, velocity=0, time=delta, channel=ch))
+                    trk.append(
+                        mido.Message("note_off", note=evt.note, velocity=0, time=delta, channel=ch)
+                    )
                 prev_tick = abs_tick
 
             trk.append(mido.MetaMessage("end_of_track", time=0))
@@ -169,13 +194,18 @@ class MidiWriter:
                 abs_tick = int(mido.second2tick(evt.time_seconds, tpb, tempo))
                 delta = max(0, abs_tick - prev_tick)
                 if evt.event_type == "note_on":
-                    trk.append(mido.Message("note_on", note=evt.note, velocity=evt.velocity, time=delta, channel=ch))
+                    trk.append(
+                        mido.Message(
+                            "note_on", note=evt.note, velocity=evt.velocity, time=delta, channel=ch
+                        )
+                    )
                 elif evt.event_type == "note_off":
-                    trk.append(mido.Message("note_off", note=evt.note, velocity=0, time=delta, channel=ch))
+                    trk.append(
+                        mido.Message("note_off", note=evt.note, velocity=0, time=delta, channel=ch)
+                    )
                 prev_tick = abs_tick
 
             trk.append(mido.MetaMessage("end_of_track", time=0))
 
         Path(file_path).parent.mkdir(parents=True, exist_ok=True)
         mid.save(file_path)
-

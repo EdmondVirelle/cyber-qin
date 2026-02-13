@@ -23,9 +23,9 @@ class ProgressBar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._value = 0.0       # 0.0 - 1.0
+        self._value = 0.0  # 0.0 - 1.0
         self._anim_value = 0.0  # Animated display value 0.0 - 1.0
-        self._duration = 0.0    # Total seconds
+        self._duration = 0.0  # Total seconds
         self._hover_pos: float | None = None
         self._bar_height = 4.0
         self.setFixedHeight(20)

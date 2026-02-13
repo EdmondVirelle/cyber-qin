@@ -58,7 +58,7 @@ def get_defined_keys(translator_path: Path) -> set[str]:
             for key in node.keys:
                 if isinstance(key, ast.Constant) and isinstance(key.value, str):
                     # Heuristic: keys usually don't have spaces and might have dots
-                     if "." in key.value or "_" in key.value:
+                    if "." in key.value or "_" in key.value:
                         keys.add(key.value)
             self.generic_visit(node)
 
@@ -77,6 +77,7 @@ def get_defined_keys(translator_path: Path) -> set[str]:
     found_keys.update(matches)
 
     return found_keys
+
 
 def scan_usages(root_dir: Path) -> list[tuple[Path, int, str]]:
     """Scan codebase for translator.tr("key") usages."""
@@ -102,6 +103,7 @@ def scan_usages(root_dir: Path) -> list[tuple[Path, int, str]]:
 
     return usages
 
+
 def main():
     root = Path(__file__).resolve().parent.parent
     translator_path = root / "cyber_qin" / "core" / "translator.py"
@@ -122,7 +124,9 @@ def main():
             # Maybe it's defined but my simple parser missed it?
             # Or maybe it's dynamic?
             # For now, let's report it.
-            missing.append(f"{file_path.relative_to(root)}:{line} uses '{key}' which was not found.")
+            missing.append(
+                f"{file_path.relative_to(root)}:{line} uses '{key}' which was not found."
+            )
 
     if missing:
         print("\nMissing Keys (or parser failed to find them):")
@@ -133,6 +137,7 @@ def main():
 
     print("\nAll translation keys verified!")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -44,20 +44,26 @@ class TestQuantizeToBeatGrid:
 
     def test_strength_partial(self):
         """Strength 0.5 should move halfway to grid."""
-        events = _make_events((0.12, 60),)
+        events = _make_events(
+            (0.12, 60),
+        )
         result = quantize_to_beat_grid(events, 120.0, QuantizeGrid.EIGHTH, 0.5)
         # Nearest grid to 0.12 at 0.25s grid = 0.0 (or 0.25)
         # 0.12 is closer to 0.0. new = 0.12 + (0.0 - 0.12) * 0.5 = 0.06
         assert abs(result[0].timestamp - 0.06) < 0.01
 
     def test_quarter_grid(self):
-        events = _make_events((0.3, 60),)
+        events = _make_events(
+            (0.3, 60),
+        )
         result = quantize_to_beat_grid(events, 120.0, QuantizeGrid.QUARTER, 1.0)
         # At 120 BPM, quarter = 0.5s. 0.3 snaps to 0.5.
         assert abs(result[0].timestamp - 0.5) < 0.01
 
     def test_sixteenth_grid(self):
-        events = _make_events((0.13, 60),)
+        events = _make_events(
+            (0.13, 60),
+        )
         result = quantize_to_beat_grid(events, 120.0, QuantizeGrid.SIXTEENTH, 1.0)
         # At 120 BPM, 16th = 0.125s. 0.13 snaps to 0.125.
         assert abs(result[0].timestamp - 0.125) < 0.01
@@ -75,7 +81,9 @@ class TestQuantizeToBeatGrid:
 
     def test_no_negative_timestamps(self):
         """Even with quantization, timestamps should never go negative."""
-        events = _make_events((0.01, 60),)
+        events = _make_events(
+            (0.01, 60),
+        )
         result = quantize_to_beat_grid(events, 120.0, QuantizeGrid.EIGHTH, 1.0)
         assert result[0].timestamp >= 0.0
 
@@ -88,12 +96,16 @@ class TestSnapToScale:
         assert result[1].note == 72
 
     def test_above_range_folds_down(self):
-        events = _make_events((0.0, 96),)  # C7 — well above range
+        events = _make_events(
+            (0.0, 96),
+        )  # C7 — well above range
         result = snap_to_scale(events, 48, 83)
         assert 48 <= result[0].note <= 83
 
     def test_below_range_folds_up(self):
-        events = _make_events((0.0, 24),)  # C1 — well below range
+        events = _make_events(
+            (0.0, 24),
+        )  # C1 — well below range
         result = snap_to_scale(events, 48, 83)
         assert 48 <= result[0].note <= 83
 
@@ -107,19 +119,25 @@ class TestAutoTune:
         assert len(result) == 2
 
     def test_no_quantize(self):
-        events = _make_events((0.12, 60),)
+        events = _make_events(
+            (0.12, 60),
+        )
         result, stats = auto_tune(events, do_quantize=False)
         assert abs(result[0].timestamp - 0.12) < 1e-6
         assert stats.quantized_count == 0
 
     def test_no_pitch_correct(self):
-        events = _make_events((0.0, 96),)
+        events = _make_events(
+            (0.0, 96),
+        )
         result, stats = auto_tune(events, do_pitch_correct=False)
         assert result[0].note == 96
         assert stats.pitch_corrected_count == 0
 
     def test_stats_counts(self):
-        events = _make_events((0.12, 96),)  # Off grid and out of range
+        events = _make_events(
+            (0.12, 96),
+        )  # Off grid and out of range
         _, stats = auto_tune(events, tempo_bpm=120.0, note_min=48, note_max=83)
         assert stats.quantized_count > 0
         assert stats.pitch_corrected_count > 0

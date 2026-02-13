@@ -16,10 +16,10 @@ from .midi_recorder import RecordedEvent
 class QuantizeGrid(Enum):
     """Musical grid divisions for quantization."""
 
-    QUARTER = 1.0         # 1/4 note
-    EIGHTH = 0.5          # 1/8 note
-    SIXTEENTH = 0.25      # 1/16 note
-    TRIPLET_8 = 1.0 / 3   # 1/8 triplet
+    QUARTER = 1.0  # 1/4 note
+    EIGHTH = 0.5  # 1/8 note
+    SIXTEENTH = 0.25  # 1/16 note
+    TRIPLET_8 = 1.0 / 3  # 1/8 triplet
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +27,7 @@ class AutoTuneStats:
     """Statistics from the auto-tune pipeline."""
 
     total_events: int
-    quantized_count: int       # events whose time was adjusted
+    quantized_count: int  # events whose time was adjusted
     pitch_corrected_count: int  # events whose pitch was adjusted
 
 
@@ -59,12 +59,14 @@ def quantize_to_beat_grid(
     for evt in events:
         nearest_grid = round(evt.timestamp / grid_sec) * grid_sec
         new_time = evt.timestamp + (nearest_grid - evt.timestamp) * strength
-        result.append(RecordedEvent(
-            timestamp=max(0.0, new_time),
-            event_type=evt.event_type,
-            note=evt.note,
-            velocity=evt.velocity,
-        ))
+        result.append(
+            RecordedEvent(
+                timestamp=max(0.0, new_time),
+                event_type=evt.event_type,
+                note=evt.note,
+                velocity=evt.velocity,
+            )
+        )
     return result
 
 

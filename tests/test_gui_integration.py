@@ -21,6 +21,7 @@ def clean_config_for_gui(tmp_path, monkeypatch):
 
     # Clear any existing global config
     from cyber_qin.core import config as config_module
+
     config_module._global_config = None
 
     # Create new config in test directory
@@ -291,6 +292,7 @@ class TestSettingsDialog:
 
         # Find the config path label (it's the second QLabel in the Advanced tab)
         from PyQt6.QtWidgets import QLabel
+
         labels = dialog._tabs.currentWidget().findChildren(QLabel)
         config_path_label = labels[1]  # Second label contains the path
 

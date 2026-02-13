@@ -45,8 +45,14 @@ def find_python() -> str:
             continue
         try:
             result = subprocess.run(
-                [path, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"],
-                capture_output=True, text=True, timeout=10,
+                [
+                    path,
+                    "-c",
+                    "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.stdout.strip() == f"{REQUIRED_MAJOR}.{REQUIRED_MINOR}":
                 return path
@@ -59,7 +65,9 @@ def find_python() -> str:
         try:
             result = subprocess.run(
                 [py, f"-{REQUIRED_MAJOR}.{REQUIRED_MINOR}", "-c", "print('ok')"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.stdout.strip() == "ok":
                 return f"{py} -{REQUIRED_MAJOR}.{REQUIRED_MINOR}"
@@ -71,9 +79,9 @@ def find_python() -> str:
 
 def run(cmd: list[str], desc: str) -> None:
     """Run a command with description, exit on failure."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {desc}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  $ {' '.join(cmd)}\n")
     result = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
     if result.returncode != 0:
@@ -130,7 +138,9 @@ Write-Host 'Signing complete.'
         cwd=str(PROJECT_ROOT),
     )
     if result.returncode != 0:
-        print("\nWARNING: Code signing failed. The exe will still work but may trigger AV warnings.")
+        print(
+            "\nWARNING: Code signing failed. The exe will still work but may trigger AV warnings."
+        )
         return False
     return True
 
@@ -182,9 +192,9 @@ def main() -> None:
 
     # 6. Code signing
     if not args.skip_sign and EXE_PATH.exists():
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("  Code signing")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         sign_executable()
 
     # Summary

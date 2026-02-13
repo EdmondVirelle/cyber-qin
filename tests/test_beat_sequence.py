@@ -651,9 +651,9 @@ class TestAllItems:
     def test_sorted_by_time(self):
         seq = EditorSequence()
         seq.set_step_duration("1/4")
-        seq.add_note(60)   # beat 0
-        seq.add_rest()     # beat 1
-        seq.add_note(64)   # beat 2
+        seq.add_note(60)  # beat 0
+        seq.add_rest()  # beat 1
+        seq.add_note(64)  # beat 2
         items = seq.all_items
         assert len(items) == 3
         assert items[0].time_beats < items[1].time_beats < items[2].time_beats
@@ -785,9 +785,9 @@ class TestRestRect:
     def test_basic(self):
         seq = EditorSequence()
         seq.set_step_duration("1/4")
-        seq.add_rest()   # beat 0
-        seq.add_rest()   # beat 1
-        seq.add_rest()   # beat 2
+        seq.add_rest()  # beat 0
+        seq.add_rest()  # beat 1
+        seq.add_rest()  # beat 2
         indices = seq.rest_indices_in_rect(0.0, 2.0)
         assert indices == [0, 1]
 
@@ -816,8 +816,8 @@ class TestCopyItems:
     def test_copy_items_normalizes_time(self):
         seq = EditorSequence()
         seq.set_step_duration("1/4")
-        seq.add_note(60)   # beat 0
-        seq.add_note(64)   # beat 1
+        seq.add_note(60)  # beat 0
+        seq.add_note(64)  # beat 1
         seq.copy_items([1], [])
         seq.cursor_beats = 0.0
         seq.paste_at_cursor()
@@ -856,9 +856,9 @@ class TestRestNotePlayback:
         """Events after rests should have correct time_seconds."""
         seq = EditorSequence(tempo_bpm=120.0)
         seq.set_step_duration("1/4")  # 1 beat = 0.5s at 120 BPM
-        seq.add_rest()   # beat 0–1 (rest)
-        seq.add_rest()   # beat 1–2 (rest)
-        seq.add_note(60) # beat 2–3 (note)
+        seq.add_rest()  # beat 0–1 (rest)
+        seq.add_rest()  # beat 1–2 (rest)
+        seq.add_note(60)  # beat 2–3 (note)
         events = seq.to_midi_file_events()
         # Should have 2 events: note_on, note_off
         assert len(events) == 2
@@ -872,7 +872,7 @@ class TestRestNotePlayback:
         seq = EditorSequence(tempo_bpm=120.0)
         seq.set_step_duration("1/4")
         seq.add_note(60)  # beat 0–1
-        seq.add_rest()    # beat 1–2
+        seq.add_rest()  # beat 1–2
         # duration should be 2 beats = 1.0s
         assert abs(seq.duration_seconds - 1.0) < 0.001
         # but MIDI events only go to beat 1 = 0.5s
@@ -889,4 +889,3 @@ class TestRestNotePlayback:
         assert len(events) == 0
         # But duration should still reflect the rests
         assert seq.duration_beats > 0
-

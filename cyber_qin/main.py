@@ -44,14 +44,17 @@ def main() -> None:
 
     # Request 1ms timer resolution for low-latency playback
     from .core.priority import begin_timer_period, end_timer_period
+
     begin_timer_period(1)
 
     # Migrate old QSettings to JSON config (one-time)
     from .core.config import ConfigManager
+
     ConfigManager.migrate_from_qsettings()
 
     # Apply 賽博墨韻 theme
     from .gui.theme import apply_theme
+
     apply_theme(app)
 
     # Import and launch the main shell
@@ -62,6 +65,7 @@ def main() -> None:
     # Enable Windows dark title bar
     if sys.platform == "win32":
         from .gui.theme import enable_dark_title_bar
+
         hwnd = int(window.winId())
         enable_dark_title_bar(hwnd)
 
@@ -70,6 +74,7 @@ def main() -> None:
     # Global exception handler
     def exception_hook(exctype, value, tb):
         import traceback
+
         traceback_str = "".join(traceback.format_exception(exctype, value, tb))
         logging.error("Unhandled exception:\n%s", traceback_str)
 

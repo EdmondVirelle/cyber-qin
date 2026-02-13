@@ -28,6 +28,7 @@ class TestSetThreadPriorityRealtime:
             with mock.patch("ctypes.windll") as windll:
                 windll.kernel32 = kernel32
                 from cyber_qin.core.priority import set_thread_priority_realtime
+
                 assert set_thread_priority_realtime() is True
                 kernel32.SetThreadPriority.assert_called_once_with(42, 15)
 
@@ -39,11 +40,13 @@ class TestSetThreadPriorityRealtime:
             with mock.patch("ctypes.windll") as windll:
                 windll.kernel32 = kernel32
                 from cyber_qin.core.priority import set_thread_priority_realtime
+
                 assert set_thread_priority_realtime() is False
 
     def test_non_windows(self):
         with mock.patch("sys.platform", "linux"):
             from cyber_qin.core.priority import set_thread_priority_realtime
+
             assert set_thread_priority_realtime() is False
 
     def test_exception(self):
@@ -51,6 +54,7 @@ class TestSetThreadPriorityRealtime:
             with mock.patch("ctypes.windll") as windll:
                 windll.kernel32.GetCurrentThread.side_effect = OSError("fail")
                 from cyber_qin.core.priority import set_thread_priority_realtime
+
                 assert set_thread_priority_realtime() is False
 
 
@@ -62,6 +66,7 @@ class TestBeginTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm = winmm
                 from cyber_qin.core.priority import begin_timer_period
+
                 assert begin_timer_period(1) is True
 
     def test_failure(self):
@@ -71,11 +76,13 @@ class TestBeginTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm = winmm
                 from cyber_qin.core.priority import begin_timer_period
+
                 assert begin_timer_period(1) is False
 
     def test_non_windows(self):
         with mock.patch("sys.platform", "linux"):
             from cyber_qin.core.priority import begin_timer_period
+
             assert begin_timer_period() is False
 
     def test_exception(self):
@@ -83,6 +90,7 @@ class TestBeginTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm.timeBeginPeriod.side_effect = OSError
                 from cyber_qin.core.priority import begin_timer_period
+
                 assert begin_timer_period() is False
 
 
@@ -94,6 +102,7 @@ class TestEndTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm = winmm
                 from cyber_qin.core.priority import end_timer_period
+
                 assert end_timer_period(1) is True
 
     def test_failure(self):
@@ -103,11 +112,13 @@ class TestEndTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm = winmm
                 from cyber_qin.core.priority import end_timer_period
+
                 assert end_timer_period(1) is False
 
     def test_non_windows(self):
         with mock.patch("sys.platform", "linux"):
             from cyber_qin.core.priority import end_timer_period
+
             assert end_timer_period() is False
 
     def test_exception(self):
@@ -115,4 +126,5 @@ class TestEndTimerPeriod:
             with mock.patch("ctypes.windll") as windll:
                 windll.winmm.timeEndPeriod.side_effect = OSError
                 from cyber_qin.core.priority import end_timer_period
+
                 assert end_timer_period() is False

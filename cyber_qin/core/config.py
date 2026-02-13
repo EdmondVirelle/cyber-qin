@@ -81,6 +81,7 @@ class ConfigManager:
 
     def _merge_defaults(self, loaded: dict) -> dict:
         """Recursively merge loaded config with defaults."""
+
         def deep_merge(base: dict, override: dict) -> dict:
             merged = copy.deepcopy(base)
             for key, value in override.items():

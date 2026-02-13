@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 # Pure Python (no Qt dependency)
 # ──────────────────────────────────────────────
 
+
 class PlaybackState(IntEnum):
     STOPPED = auto()
     PLAYING = auto()
@@ -35,6 +36,7 @@ class PlaybackState(IntEnum):
 @dataclass(frozen=True, slots=True)
 class MidiFileEvent:
     """A single timed note event from a MIDI file."""
+
     time_seconds: float
     event_type: str  # "note_on" or "note_off"
     note: int
@@ -46,9 +48,10 @@ class MidiFileEvent:
 @dataclass(frozen=True, slots=True)
 class MidiTrackInfo:
     """Metadata about a single MIDI track."""
+
     index: int
     name: str
-    channel: int        # primary channel (-1 if mixed/none)
+    channel: int  # primary channel (-1 if mixed/none)
     note_count: int
     is_percussion: bool  # True if channel == 9 (GM percussion)
 
@@ -56,6 +59,7 @@ class MidiTrackInfo:
 @dataclass(frozen=True, slots=True)
 class MidiFileInfo:
     """Metadata about a parsed MIDI file."""
+
     file_path: str
     name: str
     duration_seconds: float
@@ -131,28 +135,30 @@ class MidiFileParser:
                     track_name = msg.name
                 elif msg.type == "note_on" and msg.velocity > 0:
                     t = MidiFileParser._tick_to_sec(abs_tick, tempo_map, tpb)
-                    events.append(MidiFileEvent(
-                        time_seconds=t,
-                        event_type="note_on",
-                        note=msg.note,
-                        velocity=msg.velocity,
-                        track=track_idx,
-                        channel=msg.channel,
-                    ))
+                    events.append(
+                        MidiFileEvent(
+                            time_seconds=t,
+                            event_type="note_on",
+                            note=msg.note,
+                            velocity=msg.velocity,
+                            track=track_idx,
+                            channel=msg.channel,
+                        )
+                    )
                     track_note_count += 1
                     channels_seen.add(msg.channel)
-                elif msg.type == "note_off" or (
-                    msg.type == "note_on" and msg.velocity == 0
-                ):
+                elif msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0):
                     t = MidiFileParser._tick_to_sec(abs_tick, tempo_map, tpb)
-                    events.append(MidiFileEvent(
-                        time_seconds=t,
-                        event_type="note_off",
-                        note=msg.note,
-                        velocity=0,
-                        track=track_idx,
-                        channel=msg.channel,
-                    ))
+                    events.append(
+                        MidiFileEvent(
+                            time_seconds=t,
+                            event_type="note_off",
+                            note=msg.note,
+                            velocity=0,
+                            track=track_idx,
+                            channel=msg.channel,
+                        )
+                    )
                     channels_seen.add(msg.channel)
 
             # Determine primary channel for this track
@@ -161,17 +167,26 @@ class MidiFileParser:
                 primary_ch = next(iter(channels_seen))
             elif channels_seen:
                 # Most common channel (excluding None)
-                primary_ch = max(channels_seen, key=lambda c: sum(
-                    1 for e in events if e.track == track_idx and e.channel == c
-                )) if track_note_count > 0 else -1
+                primary_ch = (
+                    max(
+                        channels_seen,
+                        key=lambda c: sum(
+                            1 for e in events if e.track == track_idx and e.channel == c
+                        ),
+                    )
+                    if track_note_count > 0
+                    else -1
+                )
 
-            track_infos.append(MidiTrackInfo(
-                index=track_idx,
-                name=track_name or f"Track {track_idx}",
-                channel=primary_ch,
-                note_count=track_note_count,
-                is_percussion=(primary_ch == 9),
-            ))
+            track_infos.append(
+                MidiTrackInfo(
+                    index=track_idx,
+                    name=track_name or f"Track {track_idx}",
+                    channel=primary_ch,
+                    note_count=track_note_count,
+                    is_percussion=(primary_ch == 9),
+                )
+            )
 
         # Sort by time
         events.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
@@ -231,8 +246,8 @@ def _ensure_qt_classes():
 
         _COUNT_IN_BEATS = 4
         _COUNT_IN_INTERVAL = 1.0  # seconds between beats
-        _TICK_FREQ = 800          # Hz
-        _TICK_DURATION = 60       # ms
+        _TICK_FREQ = 800  # Hz
+        _TICK_DURATION = 60  # ms
 
         def __init__(self, mapper, simulator) -> None:
             super().__init__()
@@ -291,7 +306,9 @@ def _ensure_qt_classes():
             self.state_changed.emit(self._state)
             # Launch playback on a dedicated thread (non-blocking)
             self._playback_thread = threading.Thread(
-                target=self._run_playback, daemon=True, name="midi-playback",
+                target=self._run_playback,
+                daemon=True,
+                name="midi-playback",
             )
             self._playback_thread.start()
 
@@ -337,7 +354,8 @@ def _ensure_qt_classes():
             """Play a short metronome tick via winsound.Beep (Windows only)."""
             try:
                 import winsound
-                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)
+
+                winsound.Beep(self._TICK_FREQ, self._TICK_DURATION)  # type: ignore[attr-defined, unused-ignore]  # Windows-only
             except Exception:
                 pass  # Graceful fallback on non-Windows or error
 
@@ -381,6 +399,7 @@ def _ensure_qt_classes():
         def _run_playback(self) -> None:
             """Blocking playback loop — runs on a dedicated thread."""
             from .priority import set_thread_priority_realtime
+
             set_thread_priority_realtime()
 
             # Count-in: 4 beats of metronome before actual playback

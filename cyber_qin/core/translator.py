@@ -13,6 +13,7 @@ LANGUAGES = {
     "ko": "한국어",
 }
 
+
 class Translator(QObject):
     """Global translation manager singleton."""
 
@@ -36,7 +37,6 @@ class Translator(QObject):
                 "sidebar.vtuber": "VTuber: Edmond Virelle",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-
                 # Live Mode
                 "live.title": "Live Mode",
                 "live.desc": "Connect MIDI device and play in real-time.",
@@ -53,7 +53,6 @@ class Translator(QObject):
                 "live.log": "Event Log",
                 "live.status.connected": "Connected: {port}",
                 "live.status.disconnected": "Disconnected",
-
                 # Library
                 "lib.title": "Library",
                 "lib.desc": "Import MIDI files, double-click or press play to listen.",
@@ -64,7 +63,6 @@ class Translator(QObject):
                 "lib.col.duration": "Duration",
                 "lib.empty.title": "No MIDI files imported",
                 "lib.empty.sub": "Click '+ Import MIDI' to start",
-
                 # Editor
                 "editor.title": "Sequencer",
                 "editor.desc": "Compose via piano keys or drag on timeline.",
@@ -86,12 +84,10 @@ class Translator(QObject):
                 "editor.velocity": "Velocity",
                 "editor.shortcuts": "⌨ Shortcuts",
                 "editor.note_count": "{notes} Notes · {bars} Bars",
-
-                 # Now Playing
+                # Now Playing
                 "player.repeat.off": "Repeat Off",
                 "player.repeat.one": "Repeat One",
                 "player.repeat.all": "Repeat All",
-
                 # Scheme names & descriptions
                 "scheme.wwm_36.name": "Where Winds Meet 36-Key",
                 "scheme.wwm_36.desc": "3×12 layout: ZXC / ASD / QWE rows, Shift/Ctrl for accidentals",
@@ -103,17 +99,14 @@ class Translator(QObject):
                 "scheme.generic_48.desc": "4×12 layout: Number / ZXC / ASD / QWE, 4 octaves",
                 "scheme.generic_88.name": "Generic 88-Key",
                 "scheme.generic_88.desc": "8×11 layout: layered Shift/Ctrl combos, full piano range",
-
                 # Sort labels
                 "lib.sort.default": "Default",
                 "lib.sort.name": "Name",
                 "lib.sort.bpm": "BPM",
                 "lib.sort.notes": "Notes",
                 "lib.sort.duration": "Duration",
-
                 # Transpose suffix
                 "live.transpose.suffix": " Octave",
-
                 # Player bar
                 "player.no_track": "No Track Loaded",
                 "player.speed": "Speed",
@@ -127,7 +120,6 @@ class Translator(QObject):
                 "player.repeat.mode.off": "Repeat: Off",
                 "player.repeat.mode.all": "Repeat: All",
                 "player.repeat.mode.one": "Repeat: One",
-
                 # Settings Dialog
                 "settings.title": "Settings",
                 "settings.tab.midi": "MIDI",
@@ -136,18 +128,15 @@ class Translator(QObject):
                 "settings.tab.ui": "UI",
                 "settings.tab.advanced": "Advanced",
                 "settings.coming_soon": "(Coming Soon)",
-
                 # MIDI Tab
                 "settings.midi.connection": "Connection",
                 "settings.midi.auto_connect.label": "Auto-connect to last device on startup",
                 "settings.midi.auto_connect.tooltip": "Automatically connect to the last used MIDI device when the app starts",
-
                 # Playback Tab
                 "settings.playback.transpose": "Transpose",
                 "settings.playback.transpose.label": "Default Transpose",
                 "settings.playback.transpose.semitones": "semitones",
                 "settings.playback.transpose.tooltip": "Default transpose value for new MIDI files (in semitones, 12 = 1 octave)",
-
                 # Editor Tab
                 "settings.editor.snap": "Snap to Grid",
                 "settings.editor.snap.enabled": "Enable snap to grid",
@@ -158,7 +147,6 @@ class Translator(QObject):
                 "settings.editor.autosave.enabled": "Enable auto-save",
                 "settings.editor.autosave.interval": "Interval",
                 "settings.editor.seconds": "seconds",
-
                 # UI Tab
                 "settings.ui.language": "Language",
                 "settings.ui.language.label": "Interface Language",
@@ -167,7 +155,6 @@ class Translator(QObject):
                 "settings.ui.theme.label": "Color Theme",
                 "settings.ui.theme.dark": "Dark (賽博墨韻)",
                 "settings.ui.theme.light": "Light",
-
                 # Advanced Tab
                 "settings.advanced.config_location": "Configuration file location:",
             },
@@ -183,7 +170,6 @@ class Translator(QObject):
                 "sidebar.vtuber": "VTuber: Edmond Virelle",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-
                 "live.title": "演奏模式",
                 "live.desc": "連接 MIDI 裝置，即時演奏映射到遊戲按鍵。",
                 "live.midi_device": "MIDI 裝置",
@@ -199,7 +185,6 @@ class Translator(QObject):
                 "live.log": "事件紀錄",
                 "live.status.connected": "已連線: {port}",
                 "live.status.disconnected": "未連線",
-
                 "lib.title": "曲庫",
                 "lib.desc": "匯入 MIDI 檔案，雙擊或按播放鍵自動演奏。",
                 "lib.search": "搜尋曲目...",
@@ -209,7 +194,6 @@ class Translator(QObject):
                 "lib.col.duration": "時長",
                 "lib.empty.title": "尚未匯入任何 MIDI 檔案",
                 "lib.empty.sub": "點擊「+ 匯入 MIDI」開始",
-
                 "editor.title": "編曲器",
                 "editor.desc": "點擊琴鍵輸入音符，拖曳時間軸編輯旋律。",
                 "editor.record": "● 錄音",
@@ -230,11 +214,9 @@ class Translator(QObject):
                 "editor.velocity": "力度",
                 "editor.shortcuts": "⌨ 快捷鍵",
                 "editor.note_count": "{notes} 音符 · {bars} 小節",
-
                 "player.repeat.off": "關閉",
                 "player.repeat.one": "單曲重複",
                 "player.repeat.all": "全部循環",
-
                 "scheme.wwm_36.name": "燕雲十六聲 36鍵",
                 "scheme.wwm_36.desc": "3×12 佈局：ZXC / ASD / QWE 行，Shift/Ctrl 修飾升降號",
                 "scheme.ff14_37.name": "FF14 37鍵",
@@ -245,15 +227,12 @@ class Translator(QObject):
                 "scheme.generic_48.desc": "4×12 佈局：數字行 / ZXC / ASD / QWE，4 個八度",
                 "scheme.generic_88.name": "通用 88鍵",
                 "scheme.generic_88.desc": "8×11 佈局：多層 Shift/Ctrl 組合，完整鋼琴範圍",
-
                 "lib.sort.default": "預設順序",
                 "lib.sort.name": "名稱",
                 "lib.sort.bpm": "BPM",
                 "lib.sort.notes": "音符數",
                 "lib.sort.duration": "時長",
-
                 "live.transpose.suffix": " 八度",
-
                 "player.no_track": "未載入曲目",
                 "player.speed": "速度",
                 "player.countdown": "準備中... {n}",
@@ -266,7 +245,6 @@ class Translator(QObject):
                 "player.repeat.mode.off": "循環模式: 關閉",
                 "player.repeat.mode.all": "循環模式: 全部循環",
                 "player.repeat.mode.one": "循環模式: 單曲重複",
-
                 # Settings Dialog
                 "settings.title": "設定",
                 "settings.tab.midi": "MIDI",
@@ -275,18 +253,15 @@ class Translator(QObject):
                 "settings.tab.ui": "介面",
                 "settings.tab.advanced": "進階",
                 "settings.coming_soon": "(即將推出)",
-
                 # MIDI Tab
                 "settings.midi.connection": "連線",
                 "settings.midi.auto_connect.label": "啟動時自動連線到最後使用的裝置",
                 "settings.midi.auto_connect.tooltip": "應用程式啟動時自動連線到上次使用的 MIDI 裝置",
-
                 # Playback Tab
                 "settings.playback.transpose": "移調",
                 "settings.playback.transpose.label": "預設移調",
                 "settings.playback.transpose.semitones": "半音",
                 "settings.playback.transpose.tooltip": "新 MIDI 檔案的預設移調值 (以半音為單位，12 = 1 個八度)",
-
                 # Editor Tab
                 "settings.editor.snap": "對齊網格",
                 "settings.editor.snap.enabled": "啟用對齊網格",
@@ -297,7 +272,6 @@ class Translator(QObject):
                 "settings.editor.autosave.enabled": "啟用自動儲存",
                 "settings.editor.autosave.interval": "間隔",
                 "settings.editor.seconds": "秒",
-
                 # UI Tab
                 "settings.ui.language": "語言",
                 "settings.ui.language.label": "介面語言",
@@ -306,7 +280,6 @@ class Translator(QObject):
                 "settings.ui.theme.label": "色彩主題",
                 "settings.ui.theme.dark": "深色 (賽博墨韻)",
                 "settings.ui.theme.light": "淺色",
-
                 # Advanced Tab
                 "settings.advanced.config_location": "設定檔位置：",
             },
@@ -322,7 +295,6 @@ class Translator(QObject):
                 "sidebar.vtuber": "VTuber: Edmond Virelle",
                 "sidebar.support": "Support on Ko-fi",
                 "sidebar.version": "v{version}",
-
                 "live.title": "演奏模式",
                 "live.desc": "连接 MIDI 设备，即时演奏映射到游戏按键。",
                 "live.midi_device": "MIDI 设备",
@@ -338,7 +310,6 @@ class Translator(QObject):
                 "live.log": "事件记录",
                 "live.status.connected": "已连接: {port}",
                 "live.status.disconnected": "未连接",
-
                 "lib.title": "曲库",
                 "lib.desc": "导入 MIDI 文件，双击或按播放键自动演奏。",
                 "lib.search": "搜索曲目...",
@@ -348,7 +319,6 @@ class Translator(QObject):
                 "lib.col.duration": "时长",
                 "lib.empty.title": "尚未导入任何 MIDI 文件",
                 "lib.empty.sub": "点击“+ 导入 MIDI”开始",
-
                 "editor.title": "编曲器",
                 "editor.desc": "点击琴键输入音符，拖拽时间轴编辑旋律。",
                 "editor.record": "● 录音",
@@ -369,11 +339,9 @@ class Translator(QObject):
                 "editor.velocity": "力度",
                 "editor.shortcuts": "⌨ 快捷键",
                 "editor.note_count": "{notes} 音符 · {bars} 小节",
-
                 "player.repeat.off": "关闭",
                 "player.repeat.one": "单曲重复",
                 "player.repeat.all": "全部循环",
-
                 "scheme.wwm_36.name": "燕云十六声 36键",
                 "scheme.wwm_36.desc": "3×12 布局：ZXC / ASD / QWE 行，Shift/Ctrl 修饰升降号",
                 "scheme.ff14_37.name": "FF14 37键",
@@ -384,15 +352,12 @@ class Translator(QObject):
                 "scheme.generic_48.desc": "4×12 布局：数字行 / ZXC / ASD / QWE，4 个八度",
                 "scheme.generic_88.name": "通用 88键",
                 "scheme.generic_88.desc": "8×11 布局：多层 Shift/Ctrl 组合，完整钢琴范围",
-
                 "lib.sort.default": "默认顺序",
                 "lib.sort.name": "名称",
                 "lib.sort.bpm": "BPM",
                 "lib.sort.notes": "音符数",
                 "lib.sort.duration": "时长",
-
                 "live.transpose.suffix": " 八度",
-
                 "player.no_track": "未载入曲目",
                 "player.speed": "速度",
                 "player.countdown": "准备中... {n}",
@@ -405,7 +370,6 @@ class Translator(QObject):
                 "player.repeat.mode.off": "循环模式: 关闭",
                 "player.repeat.mode.all": "循环模式: 全部循环",
                 "player.repeat.mode.one": "循环模式: 单曲重复",
-
                 # Settings Dialog
                 "settings.title": "设置",
                 "settings.tab.midi": "MIDI",
@@ -414,18 +378,15 @@ class Translator(QObject):
                 "settings.tab.ui": "界面",
                 "settings.tab.advanced": "高级",
                 "settings.coming_soon": "(即将推出)",
-
                 # MIDI Tab
                 "settings.midi.connection": "连接",
                 "settings.midi.auto_connect.label": "启动时自动连接到最后使用的设备",
                 "settings.midi.auto_connect.tooltip": "应用程序启动时自动连接到上次使用的 MIDI 设备",
-
                 # Playback Tab
                 "settings.playback.transpose": "移调",
                 "settings.playback.transpose.label": "默认移调",
                 "settings.playback.transpose.semitones": "半音",
                 "settings.playback.transpose.tooltip": "新 MIDI 文件的默认移调值 (以半音为单位，12 = 1 个八度)",
-
                 # Editor Tab
                 "settings.editor.snap": "对齐网格",
                 "settings.editor.snap.enabled": "启用对齐网格",
@@ -436,7 +397,6 @@ class Translator(QObject):
                 "settings.editor.autosave.enabled": "启用自动保存",
                 "settings.editor.autosave.interval": "间隔",
                 "settings.editor.seconds": "秒",
-
                 # UI Tab
                 "settings.ui.language": "语言",
                 "settings.ui.language.label": "界面语言",
@@ -445,11 +405,10 @@ class Translator(QObject):
                 "settings.ui.theme.label": "颜色主题",
                 "settings.ui.theme.dark": "深色 (赛博墨韵)",
                 "settings.ui.theme.light": "浅色",
-
                 # Advanced Tab
                 "settings.advanced.config_location": "配置文件位置：",
             },
-             "ja": {
+            "ja": {
                 "app.title": "サイバー琴仙",
                 "app.subtitle": "Cyber Qin Xian",
                 "nav.live": "演奏モード",
@@ -461,7 +420,6 @@ class Translator(QObject):
                 "sidebar.vtuber": "VTuber: Edmond Virelle",
                 "sidebar.support": "Ko-fiでサポート",
                 "sidebar.version": "v{version}",
-
                 "live.title": "演奏モード",
                 "live.desc": "MIDIデバイスを接続して、リアルタイムで演奏します。",
                 "live.midi_device": "MIDIデバイス",
@@ -477,7 +435,6 @@ class Translator(QObject):
                 "live.log": "イベントログ",
                 "live.status.connected": "接続済み: {port}",
                 "live.status.disconnected": "未接続",
-
                 "lib.title": "ライブラリ",
                 "lib.desc": "MIDIファイルをインポートし、ダブルクリックまたは再生ボタンで演奏します。",
                 "lib.search": "検索...",
@@ -487,7 +444,6 @@ class Translator(QObject):
                 "lib.col.duration": "時間",
                 "lib.empty.title": "MIDIファイルがありません",
                 "lib.empty.sub": "「+ MIDIインポート」をクリックして開始",
-
                 "editor.title": "シーケンサー",
                 "editor.desc": "鍵盤をクリックして音符を入力、タイムラインで編集。",
                 "editor.record": "● 録音",
@@ -508,11 +464,9 @@ class Translator(QObject):
                 "editor.velocity": "ベロシティ",
                 "editor.shortcuts": "⌨ ショートカット",
                 "editor.note_count": "{notes} 音符 · {bars} 小節",
-
                 "player.repeat.off": "リピートオフ",
                 "player.repeat.one": "1曲リピート",
                 "player.repeat.all": "全曲リピート",
-
                 "scheme.wwm_36.name": "燕雲十六声 36鍵",
                 "scheme.wwm_36.desc": "3×12 配列：ZXC / ASD / QWE 行、Shift/Ctrl で変化記号",
                 "scheme.ff14_37.name": "FF14 37鍵",
@@ -523,15 +477,12 @@ class Translator(QObject):
                 "scheme.generic_48.desc": "4×12 配列：数字行 / ZXC / ASD / QWE、4 オクターブ",
                 "scheme.generic_88.name": "汎用 88鍵",
                 "scheme.generic_88.desc": "8×11 配列：Shift/Ctrl 多層組合、フルピアノ範囲",
-
                 "lib.sort.default": "デフォルト",
                 "lib.sort.name": "名前",
                 "lib.sort.bpm": "BPM",
                 "lib.sort.notes": "音符数",
                 "lib.sort.duration": "時間",
-
                 "live.transpose.suffix": " オクターブ",
-
                 "player.no_track": "トラック未読み込み",
                 "player.speed": "速度",
                 "player.countdown": "準備中... {n}",
@@ -557,7 +508,6 @@ class Translator(QObject):
                 "sidebar.vtuber": "VTuber: Edmond Virelle",
                 "sidebar.support": "Ko-fi 후원하기",
                 "sidebar.version": "v{version}",
-
                 "live.title": "연주 모드",
                 "live.desc": "MIDI 장치를 연결하고 실시간으로 연주하세요.",
                 "live.midi_device": "MIDI 장치",
@@ -573,7 +523,6 @@ class Translator(QObject):
                 "live.log": "이벤트 로그",
                 "live.status.connected": "연결됨: {port}",
                 "live.status.disconnected": "연결 안 됨",
-
                 "lib.title": "라이브러리",
                 "lib.desc": "MIDI 파일을 가져오고 더블 클릭하거나 재생 버튼을 누르세요.",
                 "lib.search": "검색...",
@@ -583,7 +532,6 @@ class Translator(QObject):
                 "lib.col.duration": "시간",
                 "lib.empty.title": "가져온 MIDI 파일 없음",
                 "lib.empty.sub": "시작하려면 '+ MIDI 가져오기'를 클릭하세요",
-
                 "editor.title": "시퀀서",
                 "editor.desc": "피아노 건반을 클릭하여 음표 입력, 타임라인에서 편집.",
                 "editor.record": "● 녹음",
@@ -604,11 +552,9 @@ class Translator(QObject):
                 "editor.velocity": "벨로시티",
                 "editor.shortcuts": "⌨ 단축키",
                 "editor.note_count": "{notes} 음표 · {bars} 마디",
-
                 "player.repeat.off": "반복 끔",
                 "player.repeat.one": "한 곡 반복",
                 "player.repeat.all": "전체 반복",
-
                 "scheme.wwm_36.name": "연운십육성 36키",
                 "scheme.wwm_36.desc": "3×12 배열: ZXC / ASD / QWE 행, Shift/Ctrl 로 변화표",
                 "scheme.ff14_37.name": "FF14 37키",
@@ -619,15 +565,12 @@ class Translator(QObject):
                 "scheme.generic_48.desc": "4×12 배열: 숫자행 / ZXC / ASD / QWE, 4 옥타브",
                 "scheme.generic_88.name": "범용 88키",
                 "scheme.generic_88.desc": "8×11 배열: Shift/Ctrl 다층 조합, 풀 피아노 범위",
-
                 "lib.sort.default": "기본 순서",
                 "lib.sort.name": "이름",
                 "lib.sort.bpm": "BPM",
                 "lib.sort.notes": "음표 수",
                 "lib.sort.duration": "시간",
-
                 "live.transpose.suffix": " 옥타브",
-
                 "player.no_track": "트랙 미로드",
                 "player.speed": "속도",
                 "player.countdown": "준비 중... {n}",
@@ -640,7 +583,7 @@ class Translator(QObject):
                 "player.repeat.mode.off": "반복: 끔",
                 "player.repeat.mode.all": "반복: 전체",
                 "player.repeat.mode.one": "반복: 한 곡",
-            }
+            },
         }
 
     @property
@@ -666,6 +609,7 @@ class Translator(QObject):
             return text.format(**kwargs)
         except (KeyError, ValueError):
             return text
+
 
 # Global singleton instance
 translator: Translator = Translator()

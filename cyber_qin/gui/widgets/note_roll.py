@@ -33,13 +33,13 @@ from ..theme import (
 )
 
 # Visual constants
-_PIXELS_PER_BEAT = 80.0    # default zoom (pixels per beat)
+_PIXELS_PER_BEAT = 80.0  # default zoom (pixels per beat)
 _MIN_ZOOM = 20.0
 _MAX_ZOOM = 400.0
 _NOTE_RADIUS = 2.5
 _CURSOR_WIDTH = 2.0
-_HEADER_HEIGHT = 22        # bar number header
-_RESIZE_THRESHOLD = 6      # pixels from right edge to trigger resize
+_HEADER_HEIGHT = 22  # bar number header
+_RESIZE_THRESHOLD = 6  # pixels from right edge to trigger resize
 
 # Grid line colors
 _BAR_LINE_COLOR = "#3A4050"
@@ -47,7 +47,7 @@ _BEAT_LINE_COLOR = "#2A3040"
 _SUB_LINE_COLOR = "#1E2530"
 
 # Rest color
-_REST_COLOR = QColor(0xFF, 0x44, 0x44, 64)   # red 25% alpha
+_REST_COLOR = QColor(0xFF, 0x44, 0x44, 64)  # red 25% alpha
 _REST_SELECTED_COLOR = QColor(0xFF, 0x66, 0x66, 128)  # red 50% alpha
 
 # Selection marquee
@@ -61,8 +61,8 @@ _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 class NoteRoll(QWidget):
     """Beat-based horizontal timeline showing notes, rests, and cursor."""
 
-    note_selected = pyqtSignal(int)   # note index
-    note_deleted = pyqtSignal(int)    # note index
+    note_selected = pyqtSignal(int)  # note index
+    note_deleted = pyqtSignal(int)  # note index
     note_moved = pyqtSignal(int, float, int)  # index, time_delta_beats, pitch_delta
     cursor_moved = pyqtSignal(float)  # time in beats
     note_right_clicked = pyqtSignal(int)  # note index
@@ -80,9 +80,9 @@ class NoteRoll(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._notes: list = []          # list of BeatNote
-        self._rests: list = []          # list of BeatRest
-        self._ghost_notes: list = []    # notes from other tracks (BeatNote with .color)
+        self._notes: list = []  # list of BeatNote
+        self._rests: list = []  # list of BeatRest
+        self._ghost_notes: list = []  # notes from other tracks (BeatNote with .color)
         self._cursor_beats: float = 0.0
         self._playback_beats: float = -1.0  # playback cursor, -1 = hidden
         self._scroll_x: float = 0.0
@@ -99,7 +99,6 @@ class NoteRoll(QWidget):
 
         # Active notes (for playback feedback)
         self._active_notes: set[int] = set()  # set of MIDI pitch values
-
 
         # Snap
         self._snap_enabled: bool = True
@@ -129,8 +128,8 @@ class NoteRoll(QWidget):
 
         # Range-select state (drag on empty space)
         self._range_select_active: bool = False
-        self._range_select_origin: float = 0.0    # beat of initial click
-        self._range_select_end: float = 0.0       # beat of current drag
+        self._range_select_origin: float = 0.0  # beat of initial click
+        self._range_select_end: float = 0.0  # beat of current drag
         self._empty_press_pos: QPointF = QPointF()
 
         # Pencil (draw) mode
@@ -481,9 +480,13 @@ class NoteRoll(QWidget):
                 return
 
         # Range select (drag on empty space)
-        if (not self._dragging and not self._resizing and not self._marquee_active
-                and self._drag_index < 0
-                and event.buttons() & Qt.MouseButton.LeftButton):
+        if (
+            not self._dragging
+            and not self._resizing
+            and not self._marquee_active
+            and self._drag_index < 0
+            and event.buttons() & Qt.MouseButton.LeftButton
+        ):
             dx = abs(pos.x() - self._empty_press_pos.x())
             if dx > 6:
                 self._range_select_active = True
@@ -556,7 +559,9 @@ class NoteRoll(QWidget):
                     if len(self._selected_note_indices) > 1:
                         # Batch drag
                         self.notes_moved.emit(
-                            sorted(self._selected_note_indices), time_delta, pitch_delta,
+                            sorted(self._selected_note_indices),
+                            time_delta,
+                            pitch_delta,
                         )
                     else:
                         self.note_moved.emit(self._drag_index, time_delta, pitch_delta)
@@ -662,7 +667,10 @@ class NoteRoll(QWidget):
                 painter.setPen(QColor(TEXT_SECONDARY))
                 bar_num = int(beat_num / bpb) + 1
                 painter.drawText(
-                    int(x + 3), 2, 40, _HEADER_HEIGHT - 2,
+                    int(x + 3),
+                    2,
+                    40,
+                    _HEADER_HEIGHT - 2,
                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                     str(bar_num),
                 )
@@ -712,7 +720,7 @@ class NoteRoll(QWidget):
             ghost_rect = QRectF(gx, gy, gw, nh)
             ghost_path = QPainterPath()
             ghost_path.addRoundedRect(ghost_rect, _NOTE_RADIUS, _NOTE_RADIUS)
-            gc = QColor(getattr(gn, '_ghost_color', '#888888'))
+            gc = QColor(getattr(gn, "_ghost_color", "#888888"))
             gc.setAlphaF(0.2)
             painter.fillPath(ghost_path, gc)
 
@@ -751,8 +759,8 @@ class NoteRoll(QWidget):
         for i in range(start_idx, end_idx):
             note = self._notes[i]
             is_dragged = self._dragging and (
-                i == self._drag_index or
-                (len(self._selected_note_indices) > 1 and i in self._selected_note_indices)
+                i == self._drag_index
+                or (len(self._selected_note_indices) > 1 and i in self._selected_note_indices)
             )
             if is_dragged:
                 # Compute preview offset from drag anchor
@@ -795,7 +803,9 @@ class NoteRoll(QWidget):
 
             if is_dragged:
                 # Apply zone-based coloring to dragged notes too
-                if self._is_note_playable(note.note + pitch_offset if i == self._drag_index else note.note):
+                if self._is_note_playable(
+                    note.note + pitch_offset if i == self._drag_index else note.note
+                ):
                     drag_c = QColor(track_color)
                 else:
                     drag_c = QColor(TEXT_SECONDARY)
@@ -809,7 +819,9 @@ class NoteRoll(QWidget):
 
                 # Outer glow
                 glow_path = QPainterPath()
-                glow_path.addRoundedRect(note_rect.adjusted(-2, -2, 2, 2), _NOTE_RADIUS+2, _NOTE_RADIUS+2)
+                glow_path.addRoundedRect(
+                    note_rect.adjusted(-2, -2, 2, 2), _NOTE_RADIUS + 2, _NOTE_RADIUS + 2
+                )
                 painter.fillPath(glow_path, QColor(ACCENT_GLOW))
             elif is_flash:
                 painter.fillPath(path, QColor(ACCENT_GLOW))

@@ -46,7 +46,7 @@ class MidiProcessor(QObject):
     """
 
     note_event = pyqtSignal(str, int, int)  # event_type, note, velocity
-    latency_report = pyqtSignal(float)       # ms
+    latency_report = pyqtSignal(float)  # ms
 
     def __init__(
         self,
@@ -164,7 +164,9 @@ class AppShell(QMainWindow):
 
         # View 0: Live Mode
         self._live_view = LiveModeView(
-            self._mapper, self._simulator, self._listener,
+            self._mapper,
+            self._simulator,
+            self._listener,
         )
 
         # View 1: Library
@@ -256,14 +258,11 @@ class AppShell(QMainWindow):
         if self._live_view.auto_tune_enabled:
             events, stats = auto_tune(events)
             self._live_view.log_viewer.log(
-                f"  自動校正: {stats.quantized_count} 量化, "
-                f"{stats.pitch_corrected_count} 修正"
+                f"  自動校正: {stats.quantized_count} 量化, {stats.pitch_corrected_count} 修正"
             )
 
         # Save to file
-        data_dir = QStandardPaths.writableLocation(
-            QStandardPaths.StandardLocation.AppDataLocation
-        )
+        data_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
         rec_dir = Path(data_dir) / "CyberQin" / "recordings"
         rec_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -303,8 +302,7 @@ class AppShell(QMainWindow):
         if self._editor_view.auto_tune_enabled:
             events, stats = auto_tune(events)
             self._live_view.log_viewer.log(
-                f"  自動校正: {stats.quantized_count} 量化, "
-                f"{stats.pitch_corrected_count} 修正"
+                f"  自動校正: {stats.quantized_count} 量化, {stats.pitch_corrected_count} 修正"
             )
 
         # Convert RecordedEvents → MidiFileEvents for set_recorded_events
@@ -321,9 +319,7 @@ class AppShell(QMainWindow):
         ]
         note_count = sum(1 for e in events if e.event_type == "note_on")
         self._editor_view.set_recorded_events(file_events)
-        self._live_view.log_viewer.log(
-            f"  編曲器錄音完成: {note_count} 音符已合併"
-        )
+        self._live_view.log_viewer.log(f"  編曲器錄音完成: {note_count} 音符已合併")
 
     def _on_edit_file(self, file_path: str) -> None:
         """Open a file in the editor view."""
@@ -351,9 +347,7 @@ class AppShell(QMainWindow):
         self._player.worker.load(events, info)
         self._now_playing.set_track_info(info.name, info.duration_seconds)
         self._player.play()
-        self._live_view.log_viewer.log(
-            f"  編曲器播放: {note_count} 音符, {duration:.1f}s"
-        )
+        self._live_view.log_viewer.log(f"  編曲器播放: {note_count} 音符, {duration:.1f}s")
 
     def _on_scheme_changed(self, scheme_id: str) -> None:
         """Update mini piano range and preprocessor when scheme changes."""
@@ -395,8 +389,7 @@ class AppShell(QMainWindow):
                 )
             if stats.notes_shifted > 0:
                 self._live_view.log_viewer.log(
-                    f"  八度摺疊: {stats.notes_shifted}/{stats.total_notes} 音符"
-                    f"收納至可演奏範圍"
+                    f"  八度摺疊: {stats.notes_shifted}/{stats.total_notes} 音符收納至可演奏範圍"
                 )
             if stats.duplicates_removed > 0:
                 self._live_view.log_viewer.log(

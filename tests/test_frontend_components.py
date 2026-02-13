@@ -10,6 +10,7 @@ from PyQt6.QtGui import QMouseEvent
 
 # ── PianoDisplay Tests ───────────────────────────────────────
 
+
 class TestPianoDisplay:
     """Tests for PianoDisplay widget logic."""
 
@@ -19,6 +20,7 @@ class TestPianoDisplay:
 
     def test_set_active_notes(self):
         from cyber_qin.gui.widgets.piano_display import PianoDisplay
+
         piano = PianoDisplay()
         notes = {60, 64, 67}
         piano.set_active_notes(notes)
@@ -26,6 +28,7 @@ class TestPianoDisplay:
 
     def test_note_on_off_updates_state(self):
         from cyber_qin.gui.widgets.piano_display import PianoDisplay
+
         piano = PianoDisplay()
         piano.note_on(60)
         assert 60 in piano._active_notes
@@ -37,12 +40,13 @@ class TestPianoDisplay:
 
     def test_scheme_change_clears_state(self):
         from cyber_qin.gui.widgets.piano_display import PianoDisplay
+
         piano = PianoDisplay()
         piano.note_on(60)
 
         # Mock mapper
         mock_mapper = MagicMock()
-        mock_mapper.scheme = None # default
+        mock_mapper.scheme = None  # default
         piano._mapper = mock_mapper
 
         piano.on_scheme_changed()
@@ -53,6 +57,7 @@ class TestPianoDisplay:
 
 # ── ClickablePiano Tests ─────────────────────────────────────
 
+
 class TestClickablePiano:
     """Tests for ClickablePiano interaction and feedback."""
 
@@ -62,8 +67,9 @@ class TestClickablePiano:
 
     def test_click_emits_signals(self):
         from cyber_qin.gui.widgets.clickable_piano import ClickablePiano
+
         piano = ClickablePiano(midi_min=0, midi_max=127)
-        piano.resize(1280, 100) # 10px per key approx
+        piano.resize(1280, 100)  # 10px per key approx
 
         pressed_signals = []
         clicked_signals = []
@@ -89,6 +95,7 @@ class TestClickablePiano:
     def test_visual_feedback_methods(self):
         """Verify note_on/off methods ported from PianoDisplay work."""
         from cyber_qin.gui.widgets.clickable_piano import ClickablePiano
+
         piano = ClickablePiano()
 
         # Should not crash and should update state
@@ -103,6 +110,7 @@ class TestClickablePiano:
 
 # ── EditorView Integration Tests ─────────────────────────────
 
+
 class TestEditorViewIntegration:
     """Tests for EditorView wiring, specifically playback feedback."""
 
@@ -113,6 +121,7 @@ class TestEditorViewIntegration:
     def test_preview_note_fired_updates_widgets(self):
         """Verify the fix for AttributeError: _on_preview_note_fired calls _piano.note_on."""
         from cyber_qin.gui.views.editor_view import EditorView
+
         view = EditorView()
 
         # Mock the child widgets to verify calls

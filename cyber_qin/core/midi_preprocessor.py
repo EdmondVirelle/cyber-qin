@@ -32,19 +32,21 @@ class PreprocessStats:
     total_notes: int
     notes_shifted: int
     original_range: tuple[int, int]  # (lowest, highest) MIDI note before shift
-    global_transpose: int = 0        # semitones applied globally (multiple of 12)
-    duplicates_removed: int = 0      # collisions removed after octave folding
-    percussion_removed: int = 0      # percussion channel events removed
-    tracks_removed: int = 0          # events removed by track filter
-    octave_deduped: int = 0          # octave-duplicate events removed
-    polyphony_limited: int = 0       # events removed by polyphony limiter
+    global_transpose: int = 0  # semitones applied globally (multiple of 12)
+    duplicates_removed: int = 0  # collisions removed after octave folding
+    percussion_removed: int = 0  # percussion channel events removed
+    tracks_removed: int = 0  # events removed by track filter
+    octave_deduped: int = 0  # octave-duplicate events removed
+    polyphony_limited: int = 0  # events removed by polyphony limiter
 
 
 # ── Stage 1: Percussion Filter ─────────────────────────────
 
 
 def filter_percussion(
-    events: list, *, percussion_channel: int = _GM_PERCUSSION_CHANNEL,
+    events: list,
+    *,
+    percussion_channel: int = _GM_PERCUSSION_CHANNEL,
 ) -> tuple[list, int]:
     """Remove events on the GM percussion channel (default: channel 10 / 0-indexed 9).
 
@@ -64,7 +66,9 @@ def filter_percussion(
 
 
 def filter_tracks(
-    events: list, *, include_tracks: set[int] | None = None,
+    events: list,
+    *,
+    include_tracks: set[int] | None = None,
 ) -> tuple[list, int]:
     """Keep only events from the specified track indices.
 
@@ -137,7 +141,10 @@ def deduplicate_octaves(events: list) -> tuple[list, int]:
 
 
 def compute_optimal_transpose(
-    events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: int = MIDI_NOTE_MAX,
+    events: list,
+    *,
+    note_min: int = MIDI_NOTE_MIN,
+    note_max: int = MIDI_NOTE_MAX,
 ) -> int:
     """Find the best global transpose (multiple of 12) to maximize in-range notes.
 
@@ -182,7 +189,8 @@ def apply_global_transpose(events: list, *, semitones: int) -> list:
             track=evt.track,
             channel=evt.channel,
         )
-        if evt.event_type in ("note_on", "note_off") else evt
+        if evt.event_type in ("note_on", "note_off")
+        else evt
         for evt in events
     ]
 
@@ -190,7 +198,9 @@ def apply_global_transpose(events: list, *, semitones: int) -> list:
 # ── Stage 5: Octave Fold ──────────────────────────────────
 
 
-def normalize_octave(events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: int = MIDI_NOTE_MAX) -> list:
+def normalize_octave(
+    events: list, *, note_min: int = MIDI_NOTE_MIN, note_max: int = MIDI_NOTE_MAX
+) -> list:
     """Shift notes into the playable range by octave transposition.
 
     Notes above max are lowered by octaves; notes below min are raised.
@@ -609,8 +619,7 @@ def preprocess(
 
     # Count out-of-range after transpose
     out_of_range = sum(
-        1 for e in events
-        if e.event_type == "note_on" and (e.note < note_min or e.note > note_max)
+        1 for e in events if e.event_type == "note_on" and (e.note < note_min or e.note > note_max)
     )
 
     # 5. Octave fold — clamp notes into playable range

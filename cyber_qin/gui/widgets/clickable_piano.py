@@ -40,9 +40,9 @@ _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 class ClickablePiano(QWidget):
     """Interactive piano keyboard for note input."""
 
-    note_clicked = pyqtSignal(int)    # midi_note
-    note_pressed = pyqtSignal(int)    # midi_note (mouse down)
-    note_released = pyqtSignal(int)   # midi_note (mouse up)
+    note_clicked = pyqtSignal(int)  # midi_note
+    note_pressed = pyqtSignal(int)  # midi_note (mouse down)
+    note_released = pyqtSignal(int)  # midi_note (mouse up)
 
     def __init__(
         self,
@@ -254,8 +254,12 @@ class ClickablePiano(QWidget):
             label = f"{name}{octave}"
 
             painter.drawText(
-                int(x), int(kh * 0.55), int(kw), int(kh * 0.4),
-                Qt.AlignmentFlag.AlignCenter, label,
+                int(x),
+                int(kh * 0.55),
+                int(kw),
+                int(kh * 0.4),
+                Qt.AlignmentFlag.AlignCenter,
+                label,
             )
 
         painter.end()

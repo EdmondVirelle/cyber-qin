@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True, slots=True)
 class KeyMapping:
     """A single game key action: base scan code + optional modifier."""
+
     scan_code: int
     modifier: Modifier
     label: str  # Human-readable label, e.g. "Shift+Z"
@@ -37,44 +38,44 @@ def _km(key: str, modifier: Modifier = Modifier.NONE) -> KeyMapping:
 # High octave (C5-B5): Q W E R T Y U row
 _BASE_MAP: dict[int, KeyMapping] = {
     # --- Low octave (MIDI 48-59) ---
-    48: _km("Z"),                        # C3
-    49: _km("Z", Modifier.SHIFT),        # C#3
-    50: _km("X"),                        # D3
-    51: _km("C", Modifier.CTRL),         # Eb3
-    52: _km("C"),                        # E3
-    53: _km("V"),                        # F3
-    54: _km("V", Modifier.SHIFT),        # F#3
-    55: _km("B"),                        # G3
-    56: _km("B", Modifier.SHIFT),        # G#3
-    57: _km("N"),                        # A3
-    58: _km("M", Modifier.CTRL),         # Bb3
-    59: _km("M"),                        # B3
+    48: _km("Z"),  # C3
+    49: _km("Z", Modifier.SHIFT),  # C#3
+    50: _km("X"),  # D3
+    51: _km("C", Modifier.CTRL),  # Eb3
+    52: _km("C"),  # E3
+    53: _km("V"),  # F3
+    54: _km("V", Modifier.SHIFT),  # F#3
+    55: _km("B"),  # G3
+    56: _km("B", Modifier.SHIFT),  # G#3
+    57: _km("N"),  # A3
+    58: _km("M", Modifier.CTRL),  # Bb3
+    59: _km("M"),  # B3
     # --- Mid octave (MIDI 60-71) ---
-    60: _km("A"),                        # C4
-    61: _km("A", Modifier.SHIFT),        # C#4
-    62: _km("S"),                        # D4
-    63: _km("D", Modifier.CTRL),         # Eb4
-    64: _km("D"),                        # E4
-    65: _km("F"),                        # F4
-    66: _km("F", Modifier.SHIFT),        # F#4
-    67: _km("G"),                        # G4
-    68: _km("G", Modifier.SHIFT),        # G#4
-    69: _km("H"),                        # A4
-    70: _km("J", Modifier.CTRL),         # Bb4
-    71: _km("J"),                        # B4
+    60: _km("A"),  # C4
+    61: _km("A", Modifier.SHIFT),  # C#4
+    62: _km("S"),  # D4
+    63: _km("D", Modifier.CTRL),  # Eb4
+    64: _km("D"),  # E4
+    65: _km("F"),  # F4
+    66: _km("F", Modifier.SHIFT),  # F#4
+    67: _km("G"),  # G4
+    68: _km("G", Modifier.SHIFT),  # G#4
+    69: _km("H"),  # A4
+    70: _km("J", Modifier.CTRL),  # Bb4
+    71: _km("J"),  # B4
     # --- High octave (MIDI 72-83) ---
-    72: _km("Q"),                        # C5
-    73: _km("Q", Modifier.SHIFT),        # C#5
-    74: _km("W"),                        # D5
-    75: _km("E", Modifier.CTRL),         # Eb5
-    76: _km("E"),                        # E5
-    77: _km("R"),                        # F5
-    78: _km("R", Modifier.SHIFT),        # F#5
-    79: _km("T"),                        # G5
-    80: _km("T", Modifier.SHIFT),        # G#5
-    81: _km("Y"),                        # A5
-    82: _km("U", Modifier.CTRL),         # Bb5
-    83: _km("U"),                        # B5
+    72: _km("Q"),  # C5
+    73: _km("Q", Modifier.SHIFT),  # C#5
+    74: _km("W"),  # D5
+    75: _km("E", Modifier.CTRL),  # Eb5
+    76: _km("E"),  # E5
+    77: _km("R"),  # F5
+    78: _km("R", Modifier.SHIFT),  # F#5
+    79: _km("T"),  # G5
+    80: _km("T", Modifier.SHIFT),  # G#5
+    81: _km("Y"),  # A5
+    82: _km("U", Modifier.CTRL),  # Bb5
+    83: _km("U"),  # B5
 }
 
 

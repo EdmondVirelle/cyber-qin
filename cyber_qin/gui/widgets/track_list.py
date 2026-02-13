@@ -81,7 +81,7 @@ class _PlayingIndicator(QWidget):
 class TrackCard(QWidget):
     """Single track entry in the list with hover-reveal buttons."""
 
-    play_clicked = pyqtSignal(int)    # index
+    play_clicked = pyqtSignal(int)  # index
     remove_clicked = pyqtSignal(int)  # index
 
     def __init__(self, index: int, info: MidiFileInfo, parent: QWidget | None = None) -> None:
@@ -110,7 +110,9 @@ class TrackCard(QWidget):
         self._index_label = QLabel(f"{index + 1}")
         self._index_label.setFixedWidth(24)
         self._index_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._index_label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 13px; background: transparent;")
+        self._index_label.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 13px; background: transparent;"
+        )
         layout.addWidget(self._index_label)
 
         self._playing_indicator = _PlayingIndicator()
@@ -138,7 +140,9 @@ class TrackCard(QWidget):
         mins = int(info.duration_seconds) // 60
         secs = int(info.duration_seconds) % 60
         dur_label = QLabel(f"{mins}:{secs:02d}")
-        dur_label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 12px; background: transparent;")
+        dur_label.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 12px; background: transparent;"
+        )
         layout.addWidget(dur_label)
 
         # Action buttons (hidden until hover)
@@ -169,9 +173,13 @@ class TrackCard(QWidget):
         self._index_label.setVisible(not playing)
         self._playing_indicator.setVisible(playing)
         if playing:
-            self._index_label.setStyleSheet(f"color: {ACCENT}; font-size: 14px; background: transparent;")
+            self._index_label.setStyleSheet(
+                f"color: {ACCENT}; font-size: 14px; background: transparent;"
+            )
         else:
-            self._index_label.setStyleSheet(f"color: {TEXT_SECONDARY}; font-size: 13px; background: transparent;")
+            self._index_label.setStyleSheet(
+                f"color: {TEXT_SECONDARY}; font-size: 13px; background: transparent;"
+            )
 
     def mouseDoubleClickEvent(self, event) -> None:  # noqa: N802
         self.play_clicked.emit(self._index)
@@ -180,7 +188,7 @@ class TrackCard(QWidget):
 class TrackList(QWidget):
     """Scrollable list of MIDI track cards with search and sort."""
 
-    play_requested = pyqtSignal(int)    # track index (in _all_cards)
+    play_requested = pyqtSignal(int)  # track index (in _all_cards)
     remove_requested = pyqtSignal(int)  # track index (in _all_cards)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -318,8 +326,7 @@ class TrackList(QWidget):
 
         # Filter
         filtered = [
-            card for card in self._all_cards
-            if not query or query in card._info.name.lower()
+            card for card in self._all_cards if not query or query in card._info.name.lower()
         ]
 
         # Sort

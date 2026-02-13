@@ -20,9 +20,10 @@ from .speed_control import SpeedControl
 
 class RepeatMode(IntEnum):
     """Playback repeat modes."""
+
     OFF = auto()
-    REPEAT_ALL = auto()    # 循環播放 — loop through playlist
-    REPEAT_ONE = auto()    # 重複播放 — repeat current track
+    REPEAT_ALL = auto()  # 循環播放 — loop through playlist
+    REPEAT_ONE = auto()  # 重複播放 — repeat current track
 
 
 class NowPlayingBar(QWidget):
@@ -196,9 +197,7 @@ class NowPlayingBar(QWidget):
             saved = getattr(self, "_saved_title", None)
             if saved:
                 self._title_label.setText(saved)
-                self._time_label.setText(
-                    getattr(self, "_saved_time", None) or "0:00 / 0:00"
-                )
+                self._time_label.setText(getattr(self, "_saved_time", None) or "0:00 / 0:00")
                 self._saved_title = None
                 self._saved_time = None
 

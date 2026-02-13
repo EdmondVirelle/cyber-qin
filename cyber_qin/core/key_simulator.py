@@ -65,7 +65,7 @@ class INPUT(ctypes.Structure):
     ]
 
 
-_SendInput = ctypes.windll.user32.SendInput
+_SendInput = ctypes.windll.user32.SendInput  # type: ignore[attr-defined, unused-ignore]  # Windows-only
 _SendInput.argtypes = [ctypes.c_uint, ctypes.POINTER(INPUT), ctypes.c_int]
 _SendInput.restype = ctypes.c_uint
 
@@ -152,10 +152,7 @@ class KeySimulator:
         Returns list of MIDI notes that were force-released.
         """
         now = time.monotonic()
-        stuck = [
-            note for note, (_, t) in self._active.items()
-            if now - t > STUCK_KEY_TIMEOUT
-        ]
+        stuck = [note for note, (_, t) in self._active.items() if now - t > STUCK_KEY_TIMEOUT]
         for note in stuck:
             self.release(note)
         return stuck

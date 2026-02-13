@@ -49,8 +49,8 @@ class _GradientHeader(QWidget):
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(0, 240, 255, 40))   # 賽博青半透明
-        gradient.setColorAt(1, QColor(10, 14, 20, 0))      # 透明
+        gradient.setColorAt(0, QColor(0, 240, 255, 40))  # 賽博青半透明
+        gradient.setColorAt(1, QColor(10, 14, 20, 0))  # 透明
         painter.fillRect(QRectF(0, 0, self.width(), self.height()), gradient)
         painter.end()
 
@@ -275,15 +275,17 @@ class LiveModeView(QWidget):
         # We should update it here respecting current state if possible, or just update the "Connect" / "Disconnect" strings.
         # But _connect_btn text is stateful. Let's handle it carefully.
         if self._listener.connected:
-             self._connect_btn.setText(translator.tr("live.disconnect"))
+            self._connect_btn.setText(translator.tr("live.disconnect"))
         else:
-             self._connect_btn.setText(translator.tr("live.connect"))
+            self._connect_btn.setText(translator.tr("live.connect"))
 
         self._transpose_lbl.setText(translator.tr("live.transpose") + ":")
         self._scheme_lbl.setText(translator.tr("live.mapping") + ":")
 
         # Record button stateful
-        if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr("live.record", language="en"): # Check generic
+        if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr(
+            "live.record", language="en"
+        ):  # Check generic
             # Just relying on internal flags might be safer if we had them easily accessible here except button text
             pass
         # Better: use self._record_btn.property or just re-eval based on recording signal?
@@ -322,14 +324,14 @@ class LiveModeView(QWidget):
             self._connect_btn.setText(translator.tr("live.connect"))
 
         if self._is_recording:
-             self._record_btn.setText(translator.tr("live.stop_record"))
-             self._recording_status.setText(translator.tr("live.recording"))
+            self._record_btn.setText(translator.tr("live.stop_record"))
+            self._recording_status.setText(translator.tr("live.recording"))
         else:
-             self._record_btn.setText(translator.tr("live.record"))
+            self._record_btn.setText(translator.tr("live.record"))
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        if hasattr(self, '_gradient_header'):
+        if hasattr(self, "_gradient_header"):
             for child in self._gradient_header.children():
                 if isinstance(child, QWidget):
                     child.setGeometry(0, 0, self.width(), 100)
@@ -543,6 +545,7 @@ class LiveModeView(QWidget):
     def on_recording_saved(self, file_path: str) -> None:
         """Called after recording is saved successfully."""
         from pathlib import Path
+
         name = Path(file_path).stem
         self._log.log(f"  錄音已儲存: {name}")
 

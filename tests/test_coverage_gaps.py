@@ -44,6 +44,7 @@ class TestNoteSequenceEdgeCases:
     def test_from_midi_orphaned_note_on(self):
         """note_on without matching note_off should get default duration."""
         from cyber_qin.core.midi_file_player import MidiFileEvent
+
         events = [
             MidiFileEvent(time_seconds=0.0, event_type="note_on", note=60, velocity=100),
             # No matching note_off for note 60
@@ -54,8 +55,6 @@ class TestNoteSequenceEdgeCases:
 
 
 # ── mapping_schemes.py edge cases ───────────────────────────
-
-
 
 
 class TestMappingSchemeEdgeCases:
@@ -74,8 +73,6 @@ class TestMappingSchemeEdgeCases:
 # ── project_file.py error path ──────────────────────────────
 
 
-
-
 class TestProjectFileEdgeCases:
     def test_load_autosave_corrupt_file(self, tmp_path):
         """load_autosave should return None if file is corrupt."""
@@ -89,17 +86,17 @@ class TestProjectFileEdgeCases:
 # ── midi_preprocessor.py missing lines ──────────────────────
 
 
-
-
 class TestMidiPreprocessorEdgeCases:
     def test_flowing_fold_empty_candidates(self):
         """When pitch has no valid candidate in range, fallback fold is used."""
         # Use a very narrow range that no pitch class can fit into
         events = [
-            MidiFileEvent(time_seconds=0.0, event_type="note_on",
-                          note=130, velocity=100, track=0, channel=0),
-            MidiFileEvent(time_seconds=0.5, event_type="note_off",
-                          note=130, velocity=0, track=0, channel=0),
+            MidiFileEvent(
+                time_seconds=0.0, event_type="note_on", note=130, velocity=100, track=0, channel=0
+            ),
+            MidiFileEvent(
+                time_seconds=0.5, event_type="note_off", note=130, velocity=0, track=0, channel=0
+            ),
         ]
         # Range 48-83 — note 130 has no valid octave position via _get_octave_candidates
         # if we constrain range to, say, note_min=60, note_max=60 (only one note)
@@ -111,8 +108,9 @@ class TestMidiPreprocessorEdgeCases:
     def test_flowing_fold_note_off_no_pair(self):
         """note_off without matching note_on should use simple fold."""
         events = [
-            MidiFileEvent(time_seconds=0.0, event_type="note_off",
-                          note=96, velocity=0, track=0, channel=0),
+            MidiFileEvent(
+                time_seconds=0.0, event_type="note_off", note=96, velocity=0, track=0, channel=0
+            ),
         ]
         result = normalize_octave_flowing(events, note_min=48, note_max=83)
         assert len(result) == 1
@@ -127,8 +125,9 @@ class TestMidiPreprocessorEdgeCases:
     def test_preprocess_no_note_ons(self):
         """Events without note_on should handle gracefully."""
         events = [
-            MidiFileEvent(time_seconds=0.0, event_type="note_off",
-                          note=60, velocity=0, track=0, channel=0),
+            MidiFileEvent(
+                time_seconds=0.0, event_type="note_off", note=60, velocity=0, track=0, channel=0
+            ),
         ]
         result, stats = preprocess(events, remove_percussion=False)
         assert stats.total_notes == 0
@@ -137,4 +136,3 @@ class TestMidiPreprocessorEdgeCases:
 # Note: MidiOutputPlayer uses a lazy Qt class pattern (_ensure_qt_class)
 # and cannot be tested without a running QApplication. Those lines (81% → ~90%)
 # would require integration tests with Qt event loop.
-

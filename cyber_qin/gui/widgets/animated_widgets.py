@@ -373,7 +373,10 @@ class AnimatedNavButton(QAbstractButton):
 
         text_x = 48
         painter.drawText(
-            int(text_x), 0, int(w - text_x - 8), h,
+            int(text_x),
+            0,
+            int(w - text_x - 8),
+            h,
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
             self._text,
         )

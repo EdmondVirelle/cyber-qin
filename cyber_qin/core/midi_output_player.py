@@ -43,10 +43,10 @@ def _ensure_qt_class():
         background thread with accurate timing.
         """
 
-        progress_updated = pyqtSignal(float, float)   # current_sec, total_sec
-        state_changed = pyqtSignal(int)                # PlaybackState value
+        progress_updated = pyqtSignal(float, float)  # current_sec, total_sec
+        state_changed = pyqtSignal(int)  # PlaybackState value
         playback_finished = pyqtSignal()
-        note_fired = pyqtSignal(str, int, int)        # event_type, note, velocity
+        note_fired = pyqtSignal(str, int, int)  # event_type, note, velocity
 
         def __init__(self, parent=None) -> None:
             super().__init__(parent)
@@ -72,6 +72,7 @@ def _ensure_qt_class():
             """Try to open the first available MIDI output port."""
             try:
                 import rtmidi
+
                 out = rtmidi.MidiOut()
                 ports = out.get_ports()
                 if not ports:
@@ -92,7 +93,10 @@ def _ensure_qt_class():
                 log.warning("Failed to open MIDI output port", exc_info=True)
 
         def preview_note(
-            self, midi_note: int, velocity: int = 100, duration_ms: int = 200,
+            self,
+            midi_note: int,
+            velocity: int = 100,
+            duration_ms: int = 200,
         ) -> None:
             """Play a short preview of a single note."""
             if self._midi_out is None:
@@ -133,7 +137,9 @@ def _ensure_qt_class():
             self._state = PlaybackState.PLAYING
             self.state_changed.emit(self._state)
             self._thread = threading.Thread(
-                target=self._run, daemon=True, name="midi-output-preview",
+                target=self._run,
+                daemon=True,
+                name="midi-output-preview",
             )
             self._thread.start()
 

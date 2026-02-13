@@ -20,7 +20,7 @@ class BeatNote:
 
     time_beats: float
     duration_beats: float
-    note: int           # MIDI 0-127
+    note: int  # MIDI 0-127
     velocity: int = 100
     track: int = 0
 
@@ -134,11 +134,13 @@ class EditorSequence:
         self._tracks: list[Track] = []
         for i in range(min(num_tracks, _MAX_TRACKS)):
             color = DEFAULT_TRACK_COLORS[i % len(DEFAULT_TRACK_COLORS)]
-            self._tracks.append(Track(
-                name=f"Track {i + 1}",
-                color=color,
-                channel=i,
-            ))
+            self._tracks.append(
+                Track(
+                    name=f"Track {i + 1}",
+                    color=color,
+                    channel=i,
+                )
+            )
 
         self._undo_stack: list[_Snapshot] = []
         self._redo_stack: list[_Snapshot] = []
@@ -161,6 +163,7 @@ class EditorSequence:
         if self._cache_notes_by_track is None or self._cache_rests_by_track is None:
             # Should not happen due to initial checks, but strict mypy needs this
             from collections import defaultdict
+
             self._cache_notes_by_track = defaultdict(list)
             self._cache_rests_by_track = defaultdict(list)
             for n in self._notes:
@@ -252,6 +255,7 @@ class EditorSequence:
         if bpb <= 0:
             return 0
         import math
+
         return math.ceil(max_beat / bpb)
 
     @property
@@ -391,14 +395,20 @@ class EditorSequence:
         self._tracks.pop(index)
         # Remove notes/rests on that track, shift higher indices
         self._notes = [
-            BeatNote(n.time_beats, n.duration_beats, n.note, n.velocity,
-                     n.track - 1 if n.track > index else n.track)
-            for n in self._notes if n.track != index
+            BeatNote(
+                n.time_beats,
+                n.duration_beats,
+                n.note,
+                n.velocity,
+                n.track - 1 if n.track > index else n.track,
+            )
+            for n in self._notes
+            if n.track != index
         ]
         self._rests = [
-            BeatRest(r.time_beats, r.duration_beats,
-                     r.track - 1 if r.track > index else r.track)
-            for r in self._rests if r.track != index
+            BeatRest(r.time_beats, r.duration_beats, r.track - 1 if r.track > index else r.track)
+            for r in self._rests
+            if r.track != index
         ]
         if self._active_track >= len(self._tracks):
             self._active_track = len(self._tracks) - 1
@@ -461,7 +471,10 @@ class EditorSequence:
         self._invalidate_cache()
 
     def move_note(
-        self, index: int, time_delta: float = 0.0, pitch_delta: int = 0,
+        self,
+        index: int,
+        time_delta: float = 0.0,
+        pitch_delta: int = 0,
     ) -> None:
         if not (0 <= index < len(self._notes)):
             return
@@ -473,7 +486,10 @@ class EditorSequence:
         self._invalidate_cache()
 
     def move_notes(
-        self, indices: list[int], time_delta: float = 0.0, pitch_delta: int = 0,
+        self,
+        indices: list[int],
+        time_delta: float = 0.0,
+        pitch_delta: int = 0,
     ) -> None:
         if not indices:
             return
@@ -503,7 +519,10 @@ class EditorSequence:
                 n.duration_beats = max(0.25, n.duration_beats + delta_beats)
 
     def add_note_at(
-        self, time_beats: float, midi_note: int, velocity: int = 100,
+        self,
+        time_beats: float,
+        midi_note: int,
+        velocity: int = 100,
     ) -> None:
         """Add a note at a specific time position (for pencil tool)."""
         self._push_undo()
@@ -541,7 +560,9 @@ class EditorSequence:
                 self._notes[i].velocity = vel
 
     def delete_items(
-        self, note_indices: list[int], rest_indices: list[int],
+        self,
+        note_indices: list[int],
+        rest_indices: list[int],
     ) -> None:
         """Delete notes and rests in one undo step."""
         if not note_indices and not rest_indices:
@@ -574,7 +595,11 @@ class EditorSequence:
         return self._cache_rests_by_track.get(track, []) if self._cache_rests_by_track else []
 
     def note_indices_in_rect(
-        self, t0: float, t1: float, n0: int, n1: int,
+        self,
+        t0: float,
+        t1: float,
+        n0: int,
+        n1: int,
     ) -> list[int]:
         """Return indices of notes within the given time and pitch rectangle."""
         result = []
@@ -592,7 +617,9 @@ class EditorSequence:
         return result
 
     def copy_items(
-        self, note_indices: list[int], rest_indices: list[int],
+        self,
+        note_indices: list[int],
+        rest_indices: list[int],
     ) -> None:
         """Copy mixed notes + rests to clipboard."""
         items: list[BeatItem] = []
@@ -666,22 +693,26 @@ class EditorSequence:
             t = self._beats_to_seconds(n.time_beats)
             dur = self._beats_to_seconds(n.duration_beats)
             ch = self._tracks[n.track].channel if n.track < len(self._tracks) else 0
-            result.append(MidiFileEvent(
-                time_seconds=t,
-                event_type="note_on",
-                note=n.note,
-                velocity=n.velocity,
-                track=n.track,
-                channel=ch,
-            ))
-            result.append(MidiFileEvent(
-                time_seconds=t + dur,
-                event_type="note_off",
-                note=n.note,
-                velocity=0,
-                track=n.track,
-                channel=ch,
-            ))
+            result.append(
+                MidiFileEvent(
+                    time_seconds=t,
+                    event_type="note_on",
+                    note=n.note,
+                    velocity=n.velocity,
+                    track=n.track,
+                    channel=ch,
+                )
+            )
+            result.append(
+                MidiFileEvent(
+                    time_seconds=t + dur,
+                    event_type="note_off",
+                    note=n.note,
+                    velocity=0,
+                    track=n.track,
+                    channel=ch,
+                )
+            )
         result.sort(key=lambda e: (e.time_seconds, 0 if e.event_type == "note_off" else 1))
         return result
 
@@ -705,18 +736,22 @@ class EditorSequence:
                 continue
             t = self._beats_to_seconds(n.time_beats)
             dur = self._beats_to_seconds(n.duration_beats)
-            result.append(RecordedEvent(
-                timestamp=t,
-                event_type="note_on",
-                note=n.note,
-                velocity=n.velocity,
-            ))
-            result.append(RecordedEvent(
-                timestamp=t + dur,
-                event_type="note_off",
-                note=n.note,
-                velocity=0,
-            ))
+            result.append(
+                RecordedEvent(
+                    timestamp=t,
+                    event_type="note_on",
+                    note=n.note,
+                    velocity=n.velocity,
+                )
+            )
+            result.append(
+                RecordedEvent(
+                    timestamp=t + dur,
+                    event_type="note_off",
+                    note=n.note,
+                    velocity=0,
+                )
+            )
         result.sort(key=lambda e: e.timestamp)
         return result
 
@@ -743,23 +778,27 @@ class EditorSequence:
                 if key in pending:
                     on_time, vel, track = pending.pop(key)
                     dur_sec = max(0.01, evt.time_seconds - on_time)
-                    seq._notes.append(BeatNote(
-                        time_beats=on_time / sec_per_beat,
-                        duration_beats=dur_sec / sec_per_beat,
-                        note=evt.note,
-                        velocity=vel,
-                        track=min(track, len(seq._tracks) - 1),
-                    ))
+                    seq._notes.append(
+                        BeatNote(
+                            time_beats=on_time / sec_per_beat,
+                            duration_beats=dur_sec / sec_per_beat,
+                            note=evt.note,
+                            velocity=vel,
+                            track=min(track, len(seq._tracks) - 1),
+                        )
+                    )
 
         # Remaining unpaired note_on → default duration
         for (note, track), (t, vel, trk) in pending.items():
-            seq._notes.append(BeatNote(
-                time_beats=t / sec_per_beat,
-                duration_beats=0.5,
-                note=note,
-                velocity=vel,
-                track=min(trk, len(seq._tracks) - 1),
-            ))
+            seq._notes.append(
+                BeatNote(
+                    time_beats=t / sec_per_beat,
+                    duration_beats=0.5,
+                    note=note,
+                    velocity=vel,
+                    track=min(trk, len(seq._tracks) - 1),
+                )
+            )
 
         seq._notes.sort(key=lambda n: n.time_beats)
         seq._invalidate_cache()
@@ -815,13 +854,15 @@ class EditorSequence:
             num_tracks=0,
         )
         for td in tracks_data:
-            seq._tracks.append(Track(
-                name=td.get("name", ""),
-                color=td.get("color", "#00F0FF"),
-                channel=td.get("channel", 0),
-                muted=td.get("muted", False),
-                solo=td.get("solo", False),
-            ))
+            seq._tracks.append(
+                Track(
+                    name=td.get("name", ""),
+                    color=td.get("color", "#00F0FF"),
+                    channel=td.get("channel", 0),
+                    muted=td.get("muted", False),
+                    solo=td.get("solo", False),
+                )
+            )
         if not seq._tracks:
             seq._tracks.append(Track(name="Track 1"))
 
@@ -831,19 +872,23 @@ class EditorSequence:
         seq.set_step_duration(label)
 
         for nd in data.get("notes", []):
-            seq._notes.append(BeatNote(
-                time_beats=nd["time"],
-                duration_beats=nd["duration"],
-                note=nd["note"],
-                velocity=nd.get("velocity", 100),
-                track=nd.get("track", 0),
-            ))
+            seq._notes.append(
+                BeatNote(
+                    time_beats=nd["time"],
+                    duration_beats=nd["duration"],
+                    note=nd["note"],
+                    velocity=nd.get("velocity", 100),
+                    track=nd.get("track", 0),
+                )
+            )
         for rd in data.get("rests", []):
-            seq._rests.append(BeatRest(
-                time_beats=rd["time"],
-                duration_beats=rd["duration"],
-                track=rd.get("track", 0),
-            ))
+            seq._rests.append(
+                BeatRest(
+                    time_beats=rd["time"],
+                    duration_beats=rd["duration"],
+                    track=rd.get("track", 0),
+                )
+            )
 
         seq._notes.sort(key=lambda n: n.time_beats)
         seq._rests.sort(key=lambda r: r.time_beats)

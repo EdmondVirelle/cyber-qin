@@ -66,7 +66,7 @@ class _EditorGradientHeader(QWidget):
         painter = QPainter(self)
         gradient = QLinearGradient(0, 0, 0, self.height())
         gradient.setColorAt(0, QColor(160, 100, 220, 35))  # 紫霧半透明
-        gradient.setColorAt(1, QColor(10, 14, 20, 0))       # 透明
+        gradient.setColorAt(1, QColor(10, 14, 20, 0))  # 透明
         painter.fillRect(QRectF(0, 0, self.width(), self.height()), gradient)
         painter.end()
 
@@ -97,7 +97,7 @@ class _VSeparator(QWidget):
 class EditorView(QWidget):
     """Virtual keyboard editor — compose music by clicking piano keys."""
 
-    play_requested = pyqtSignal(list)       # list of MidiFileEvent
+    play_requested = pyqtSignal(list)  # list of MidiFileEvent
     recording_started = pyqtSignal()
     recording_stopped = pyqtSignal()
 
@@ -138,6 +138,7 @@ class EditorView(QWidget):
 
     def _on_playback_state_changed(self, state: int) -> None:
         from ...core.midi_file_player import PlaybackState
+
         if state == PlaybackState.STOPPED:
             self._note_roll.set_playback_beats(-1)
 
@@ -399,12 +400,14 @@ class EditorView(QWidget):
 
         # Stateful record button
         if self._is_recording:
-             self._record_btn.setText(translator.tr("live.stop_record")) # Use generic stop or editor specific?
-             # Editor doesn't have specific stop_record key, reuse live? Or create generic `stop`?
-             # live.stop_record is "Stop Rec".
-             self._record_btn.setText("■ " + translator.tr("live.stop_record"))
+            self._record_btn.setText(
+                translator.tr("live.stop_record")
+            )  # Use generic stop or editor specific?
+            # Editor doesn't have specific stop_record key, reuse live? Or create generic `stop`?
+            # live.stop_record is "Stop Rec".
+            self._record_btn.setText("■ " + translator.tr("live.stop_record"))
         else:
-             self._record_btn.setText(translator.tr("editor.record"))
+            self._record_btn.setText(translator.tr("editor.record"))
 
         # Update note count label format
         self._update_ui_state()
@@ -451,7 +454,7 @@ class EditorView(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        if hasattr(self, '_gradient_header'):
+        if hasattr(self, "_gradient_header"):
             for child in self._gradient_header.children():
                 if isinstance(child, QWidget):
                     child.setGeometry(0, 0, self.width(), 100)
@@ -600,7 +603,6 @@ class EditorView(QWidget):
         """Map a track-local rest index to a global index in sequence._rests."""
         return self._ensure_rest_index_map().get(track_local_idx, -1)
 
-
     # ── Note events ──────────────────────────────────────────
 
     def _on_note_clicked(self, midi_note: int) -> None:
@@ -622,7 +624,7 @@ class EditorView(QWidget):
 
     def _on_velocity_changed(self, value: int) -> None:
         """Update velocity of all selected notes."""
-        note_sel = getattr(self, '_current_note_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
         if not note_sel:
             return
         global_indices = [self._map_to_global_note_index(i) for i in note_sel]
@@ -660,7 +662,7 @@ class EditorView(QWidget):
 
     def _quantize_selection(self) -> None:
         """Quantize selected notes to the current step grid."""
-        note_sel = getattr(self, '_current_note_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
         if not note_sel:
             return
         global_indices = [self._map_to_global_note_index(i) for i in note_sel]
@@ -672,8 +674,10 @@ class EditorView(QWidget):
     def _on_context_menu(self, x: float, y: float) -> None:
         """Show context menu at NoteRoll position."""
         menu = QMenu(self)
-        has_sel = bool(getattr(self, '_current_note_selection', [])
-                       or getattr(self, '_current_rest_selection', []))
+        has_sel = bool(
+            getattr(self, "_current_note_selection", [])
+            or getattr(self, "_current_rest_selection", [])
+        )
         has_clip = not self._sequence.clipboard_empty
 
         act_select_all = menu.addAction("全選\tCtrl+A")
@@ -718,12 +722,15 @@ class EditorView(QWidget):
             act_pencil.triggered.connect(self._pencil_btn.setChecked)
 
         from PyQt6.QtCore import QPoint
+
         screen_pos = self._note_roll.mapToGlobal(QPoint(int(x), int(y)))
         menu.exec(screen_pos)
 
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "載入 MIDI 檔案", "",
+            self,
+            "載入 MIDI 檔案",
+            "",
             "MIDI Files (*.mid *.midi);;CQP Projects (*.cqp);;All Files (*)",
         )
         if not path:
@@ -738,7 +745,8 @@ class EditorView(QWidget):
         try:
             events, info = MidiFileParser.parse(file_path)
             self._sequence = EditorSequence.from_midi_file_events(
-                events, tempo_bpm=info.tempo_bpm,
+                events,
+                tempo_bpm=info.tempo_bpm,
             )
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
             self._project_path = None
@@ -761,7 +769,9 @@ class EditorView(QWidget):
             return
 
         path, _ = QFileDialog.getSaveFileName(
-            self, "匯出 MIDI 檔案", "",
+            self,
+            "匯出 MIDI 檔案",
+            "",
             "MIDI Files (*.mid);;All Files (*)",
         )
         if not path:
@@ -775,7 +785,8 @@ class EditorView(QWidget):
             track_names = [t.name for t in tracks]
             track_channels = [t.channel for t in tracks]
             MidiWriter.save_multitrack(
-                midi_events, path,
+                midi_events,
+                path,
                 tempo_bpm=self._sequence.tempo_bpm,
                 track_names=track_names,
                 track_channels=track_channels,
@@ -796,7 +807,9 @@ class EditorView(QWidget):
     def _on_save_as(self) -> None:
         """Save project to a new path (Ctrl+Shift+S)."""
         path, _ = QFileDialog.getSaveFileName(
-            self, "儲存專案", "",
+            self,
+            "儲存專案",
+            "",
             "CQP Projects (*.cqp);;All Files (*)",
         )
         if not path:
@@ -825,6 +838,7 @@ class EditorView(QWidget):
         if recovered is None or (recovered.note_count == 0 and recovered.rest_count == 0):
             return
         from PyQt6.QtWidgets import QMessageBox
+
         reply = QMessageBox.question(
             self,
             "恢復自動存檔",
@@ -846,7 +860,7 @@ class EditorView(QWidget):
                 "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
                 "QPushButton:hover { background-color: #882222; }"
             )
-            self._update_text() # Enforce correct text
+            self._update_text()  # Enforce correct text
             self.recording_stopped.emit()
         else:
             self._is_recording = True
@@ -857,7 +871,7 @@ class EditorView(QWidget):
                 "font-weight: 700; }"
                 "QPushButton:hover { background-color: #ff6666; }"
             )
-            self._update_text() # Enforce text
+            self._update_text()  # Enforce text
             self.recording_started.emit()
 
     def _on_note_moved(self, index: int, time_delta: float, pitch_delta: int) -> None:
@@ -875,7 +889,8 @@ class EditorView(QWidget):
     def set_recorded_events(self, events: list) -> None:
         """Merge recorded events into the current sequence."""
         recorded_seq = EditorSequence.from_midi_file_events(
-            events, tempo_bpm=self._sequence.tempo_bpm,
+            events,
+            tempo_bpm=self._sequence.tempo_bpm,
         )
         self._sequence._push_undo()
         self._sequence._notes.extend(recorded_seq._notes)
@@ -888,6 +903,7 @@ class EditorView(QWidget):
             return self._preview_player
         try:
             from ...core.midi_output_player import create_midi_output_player
+
             player = create_midi_output_player(self)
             if player is not None:
                 player.progress_updated.connect(self._on_preview_progress)
@@ -907,6 +923,7 @@ class EditorView(QWidget):
 
     def _on_preview_state_changed(self, state: int) -> None:
         from ...core.midi_file_player import PlaybackState
+
         if state == PlaybackState.STOPPED:
             self._note_roll.set_playback_beats(-1)
             self._play_btn.setText("▶ 播放")
@@ -941,6 +958,7 @@ class EditorView(QWidget):
         player = self._ensure_preview_player()
         if player is not None:
             from ...core.midi_file_player import PlaybackState
+
             if player.state == PlaybackState.PLAYING:
                 player.stop()
                 return
@@ -977,9 +995,7 @@ class EditorView(QWidget):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet(
-            f"QScrollArea {{ background-color: {BG_PAPER}; border: none; }}"
-        )
+        scroll.setStyleSheet(f"QScrollArea {{ background-color: {BG_PAPER}; border: none; }}")
 
         content = QLabel()
         content.setWordWrap(True)
@@ -997,7 +1013,6 @@ class EditorView(QWidget):
 
         html = (
             "<h2 style='color:#E8E0D0;'>編曲器操作指南</h2>"
-
             "<h3 style='color:#00F0FF;'>一、基本輸入</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>點擊底部琴鍵</td>"
@@ -1009,7 +1024,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>← → 方向鍵</td>"
             "<td>移動游標</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>二、鉛筆工具</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>P 鍵 或 工具列「✎鉛筆」</td>"
@@ -1017,7 +1031,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>鉛筆模式下點擊音符捲軸空白處</td>"
             "<td>直接放置音符</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>三、選取與編輯</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>點擊音符</td>"
@@ -1039,7 +1052,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>Shift+左右</td>"
             "<td>游標範圍選取</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>四、剪貼簿</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>Ctrl+C</td>"
@@ -1051,7 +1063,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>Ctrl+D</td>"
             "<td>複製音符到游標位置</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>五、編輯操作</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>Ctrl+Z</td>"
@@ -1067,7 +1078,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>Ctrl+E</td>"
             "<td>匯出為 MIDI (.mid)</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>六、音軌操作</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>點擊音軌</td>"
@@ -1083,7 +1093,6 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>其他音軌的音符</td>"
             "<td>以半透明「鬼影」顯示</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>七、播放</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>Space</td>"
@@ -1091,13 +1100,11 @@ class EditorView(QWidget):
             "<tr><td style='color:#E8E0D0;'>需要 MIDI 輸出裝置</td>"
             "<td>（如 Microsoft GS Wavetable）</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>八、右鍵選單</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>在音符捲軸上右鍵</td>"
             "<td>全選、複製、剪下、貼上、刪除、量化對齊、鉛筆模式</td></tr>"
             "</table>"
-
             "<h3 style='color:#00F0FF;'>九、其他</h3>"
             "<table cellpadding='4'>"
             "<tr><td style='color:#E8E0D0;'>滾輪</td>"
@@ -1150,8 +1157,8 @@ class EditorView(QWidget):
     def _on_note_deleted(self, index: int) -> None:
         if index == -1:
             # Delete entire selection (triggered by marquee-selected Delete)
-            note_sel = getattr(self, '_current_note_selection', [])
-            rest_sel = getattr(self, '_current_rest_selection', [])
+            note_sel = getattr(self, "_current_note_selection", [])
+            rest_sel = getattr(self, "_current_rest_selection", [])
             global_notes = [self._map_to_global_note_index(i) for i in note_sel]
             global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
             global_notes = [gi for gi in global_notes if gi >= 0]
@@ -1171,8 +1178,8 @@ class EditorView(QWidget):
     # ── Copy / Paste / Duplicate ─────────────────────────────
 
     def _copy_selection(self) -> None:
-        note_sel = getattr(self, '_current_note_selection', [])
-        rest_sel = getattr(self, '_current_rest_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
+        rest_sel = getattr(self, "_current_rest_selection", [])
         global_notes = [self._map_to_global_note_index(i) for i in note_sel]
         global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
         global_notes = [gi for gi in global_notes if gi >= 0]
@@ -1194,8 +1201,8 @@ class EditorView(QWidget):
         self._paste()
 
     def _delete_selection(self) -> None:
-        note_sel = getattr(self, '_current_note_selection', [])
-        rest_sel = getattr(self, '_current_rest_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
+        rest_sel = getattr(self, "_current_rest_selection", [])
         global_notes = [self._map_to_global_note_index(i) for i in note_sel]
         global_rests = [self._map_to_global_rest_index(i) for i in rest_sel]
         global_notes = [gi for gi in global_notes if gi >= 0]
@@ -1206,7 +1213,7 @@ class EditorView(QWidget):
 
     def _move_selection(self, time_delta: float = 0.0, pitch_delta: int = 0) -> None:
         """Move selected notes by delta."""
-        note_sel = getattr(self, '_current_note_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
         if not note_sel:
             return
         global_indices = [self._map_to_global_note_index(i) for i in note_sel]
@@ -1217,7 +1224,7 @@ class EditorView(QWidget):
 
     def _resize_selection(self, delta_beats: float) -> None:
         """Resize selected notes."""
-        note_sel = getattr(self, '_current_note_selection', [])
+        note_sel = getattr(self, "_current_note_selection", [])
         if not note_sel:
             return
         global_indices = [self._map_to_global_note_index(i) for i in note_sel]

@@ -1,7 +1,7 @@
-
 try:
     from cyber_qin import main
     from cyber_qin.gui.views import library_view
+
     _ = (main, library_view)
     print("Imports successful")
 except ImportError as e:

@@ -144,7 +144,9 @@ class SettingsDialog(QDialog):
         self._auto_save_interval.setMinimum(10)
         self._auto_save_interval.setMaximum(600)
         self._auto_save_interval.setSuffix(" " + translator.tr("settings.editor.seconds"))
-        autosave_layout.addRow(translator.tr("settings.editor.autosave.interval"), self._auto_save_interval)
+        autosave_layout.addRow(
+            translator.tr("settings.editor.autosave.interval"), self._auto_save_interval
+        )
 
         autosave_group.setLayout(autosave_layout)
         layout.addWidget(autosave_group)
@@ -178,7 +180,10 @@ class SettingsDialog(QDialog):
 
         self._theme = QComboBox()
         self._theme.addItem(translator.tr("settings.ui.theme.dark"), "dark")
-        self._theme.addItem(translator.tr("settings.ui.theme.light") + " " + translator.tr("settings.coming_soon"), "light")
+        self._theme.addItem(
+            translator.tr("settings.ui.theme.light") + " " + translator.tr("settings.coming_soon"),
+            "light",
+        )
         self._theme.setEnabled(False)  # Not implemented yet
         theme_layout.addRow(translator.tr("settings.ui.theme.label"), self._theme)
 
@@ -203,7 +208,9 @@ class SettingsDialog(QDialog):
         config_path = QLabel(str(self._config.config_file))
         config_path.setWordWrap(True)
         config_path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        config_path.setStyleSheet(f"color: {TEXT_PRIMARY}; padding: 8px; background: {BG_INK}; border-radius: 4px;")
+        config_path.setStyleSheet(
+            f"color: {TEXT_PRIMARY}; padding: 8px; background: {BG_INK}; border-radius: 4px;"
+        )
         layout.addWidget(config_path)
 
         layout.addStretch()
