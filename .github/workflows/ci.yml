@@ -54,7 +54,9 @@ jobs:
 
       - name: Run tests with coverage (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum pytest tests/ --cov=cyber_qin --cov-report=xml --cov-report=term-missing --tb=short -v
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest tests/ --cov=cyber_qin --cov-report=xml --cov-report=term-missing --tb=short -v
 
       - name: Run tests with coverage (Windows/macOS)
         if: runner.os != 'Linux'
