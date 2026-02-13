@@ -51,23 +51,11 @@ jobs:
 
       - name: Run tests with coverage (Linux)
         if: runner.os == 'Linux'
-        run: |
-          xvfb-run --auto-servernum pytest tests/ \
-            --cov=cyber_qin \
-            --cov-report=xml \
-            --cov-report=term-missing \
-            --tb=short \
-            -v
+        run: xvfb-run --auto-servernum pytest tests/ --cov=cyber_qin --cov-report=xml --cov-report=term-missing --tb=short -v
 
       - name: Run tests with coverage (Windows/macOS)
         if: runner.os != 'Linux'
-        run: |
-          pytest tests/ \
-            --cov=cyber_qin \
-            --cov-report=xml \
-            --cov-report=term-missing \
-            --tb=short \
-            -v
+        run: pytest tests/ --cov=cyber_qin --cov-report=xml --cov-report=term-missing --tb=short -v
 
       - name: Check coverage threshold (45% overall, core modules at 75%+)
         run: |
