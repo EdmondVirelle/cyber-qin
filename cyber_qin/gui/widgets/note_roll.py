@@ -10,6 +10,8 @@ note resize (right-edge drag), note labels, and snap-to-grid.
 
 from __future__ import annotations
 
+import bisect
+
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QWheelEvent
 from PyQt6.QtWidgets import QWidget
@@ -718,7 +720,23 @@ class NoteRoll(QWidget):
         track_color = QColor(self._active_track_color)
         label_font = QFont("Microsoft JhengHei", max(7, int(nh * 0.5)))
 
-        for i, note in enumerate(self._notes):
+        # Binary search optimization: only render visible notes (O(log n + k) instead of O(n))
+        # Calculate visible time range with buffer for note widths
+        visible_start_beat = self._x_to_beat(0.0) - 2.0  # Buffer for wide notes
+        visible_end_beat = self._x_to_beat(w) + 2.0
+
+        # Find indices of first and last potentially visible notes
+        if self._notes:
+            note_times = [n.time_beats for n in self._notes]
+            start_idx = bisect.bisect_left(note_times, visible_start_beat)
+            end_idx = bisect.bisect_right(note_times, visible_end_beat)
+        else:
+            start_idx = 0
+            end_idx = 0
+
+        # Iterate only through visible notes (preserving original indices for selection tracking)
+        for i in range(start_idx, end_idx):
+            note = self._notes[i]
             is_dragged = self._dragging and (
                 i == self._drag_index or
                 (len(self._selected_note_indices) > 1 and i in self._selected_note_indices)
