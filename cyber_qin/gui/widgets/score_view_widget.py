@@ -12,6 +12,7 @@ from ...core.beat_sequence import BeatNote
 from ...core.notation_renderer import (
     NotationData,
     NoteHeadType,
+    StemDirection,
     render_notation,
 )
 from ..theme import BG_INK, DIVIDER, TEXT_PRIMARY, TEXT_SECONDARY
@@ -137,16 +138,16 @@ class ScoreViewWidget(QWidget):
         px_per_beat = _BAR_WIDTH / beats_per_bar if beats_per_bar > 0 else _BAR_WIDTH / 4
 
         for rn in self._notation.notes:
-            x = _LEFT_MARGIN + _CLEF_WIDTH + rn.time_beats * px_per_beat - self._scroll_x
+            x = _LEFT_MARGIN + _CLEF_WIDTH + rn.x_beats * px_per_beat - self._scroll_x
             if x + 20 < 0 or x - 20 > width:
                 continue
 
-            y = self._staff_y(rn.staff_position)
+            y = self._staff_y(rn.staff_pos.line)
 
             # Ledger lines
-            if rn.staff_position < 0:
+            if rn.staff_pos.line < 0:
                 painter.setPen(QPen(QColor(TEXT_SECONDARY), 1.0))
-                for ll in range(0, int(rn.staff_position) - 1, -2):
+                for ll in range(0, int(rn.staff_pos.line) - 1, -2):
                     ly = self._staff_y(ll)
                     painter.drawLine(
                         int(x - _NOTE_HEAD_RX - _LEDGER_EXTENSION),
@@ -154,9 +155,9 @@ class ScoreViewWidget(QWidget):
                         int(x + _NOTE_HEAD_RX + _LEDGER_EXTENSION),
                         int(ly),
                     )
-            elif rn.staff_position > 8:
+            elif rn.staff_pos.line > 8:
                 painter.setPen(QPen(QColor(TEXT_SECONDARY), 1.0))
-                for ll in range(10, int(rn.staff_position) + 2, 2):
+                for ll in range(10, int(rn.staff_pos.line) + 2, 2):
                     ly = self._staff_y(ll)
                     painter.drawLine(
                         int(x - _NOTE_HEAD_RX - _LEDGER_EXTENSION),
@@ -166,7 +167,7 @@ class ScoreViewWidget(QWidget):
                     )
 
             # Middle C ledger line
-            if rn.staff_position == -2:
+            if rn.staff_pos.line == -2:
                 painter.setPen(QPen(QColor(TEXT_SECONDARY), 1.0))
                 ly = self._staff_y(-2)
                 painter.drawLine(
@@ -189,13 +190,13 @@ class ScoreViewWidget(QWidget):
             painter.drawPath(head_path)
 
             # Dot for dotted notes
-            if rn.dotted:
+            if rn.dot:
                 painter.setBrush(QColor(TEXT_PRIMARY))
                 painter.drawEllipse(QPointF(x + _NOTE_HEAD_RX + 4, y), 1.5, 1.5)
 
             # Stem (not for whole notes)
             if rn.head_type != NoteHeadType.WHOLE:
-                stem_up = rn.stem_up
+                stem_up = (rn.stem_dir == StemDirection.UP)
                 if stem_up:
                     sx = x + _NOTE_HEAD_RX - 0.5
                     painter.drawLine(int(sx), int(y), int(sx), int(y - _STEM_HEIGHT))
@@ -204,16 +205,19 @@ class ScoreViewWidget(QWidget):
                     painter.drawLine(int(sx), int(y), int(sx), int(y + _STEM_HEIGHT))
 
             # Flag for eighth/sixteenth notes (simplified)
-            if rn.head_type == NoteHeadType.EIGHTH and not rn.beam_group:
-                self._draw_flag(painter, x, y, rn.stem_up, 1)
-            elif rn.head_type == NoteHeadType.SIXTEENTH and not rn.beam_group:
-                self._draw_flag(painter, x, y, rn.stem_up, 2)
+            if rn.head_type == NoteHeadType.EIGHTH and rn.beam_group < 0:
+                self._draw_flag(painter, x, y, (rn.stem_dir == StemDirection.UP), 1)
+            elif rn.head_type == NoteHeadType.SIXTEENTH and rn.beam_group < 0:
+                self._draw_flag(painter, x, y, (rn.stem_dir == StemDirection.UP), 2)
 
             # Accidental
-            if rn.accidental:
+            if rn.staff_pos.accidental:
                 painter.setPen(QColor(TEXT_PRIMARY))
                 painter.setFont(QFont("Times New Roman", 12))
-                acc_symbol = {"sharp": "#", "flat": "b", "natural": "\u266E"}.get(rn.accidental, "")
+                from ...core.notation_renderer import Accidental
+
+                acc_map = {Accidental.SHARP: "#", Accidental.FLAT: "b", Accidental.NATURAL: "\u266E"}
+                acc_symbol = acc_map.get(rn.staff_pos.accidental, "")
                 painter.drawText(int(x - _NOTE_HEAD_RX - 12), int(y + 4), acc_symbol)
 
     def _draw_flag(self, painter: QPainter, x: float, y: float, stem_up: bool, count: int) -> None:
