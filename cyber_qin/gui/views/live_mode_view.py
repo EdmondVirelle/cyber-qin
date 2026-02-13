@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QRectF, QSettings, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ...core.config import get_config
 from ...core.constants import (
     RECONNECT_INTERVAL,
     TRANSPOSE_MAX,
@@ -86,7 +87,7 @@ class LiveModeView(QWidget):
         self._mapper = mapper
         self._simulator = simulator
         self._listener = listener
-        self._settings = QSettings("CyberQin", "CyberQin")
+        self._config = get_config()
         self._reconnect_port: str | None = None
         self._is_recording: bool = False
 
@@ -342,12 +343,12 @@ class LiveModeView(QWidget):
         self._reconnect_timer.timeout.connect(self._try_reconnect)
 
     def _restore_settings(self) -> None:
-        transpose = self._settings.value("transpose", 0, type=int)
+        transpose = self._config.get("playback.transpose", 0)
         self._transpose_spin.setValue(transpose)
         self._mapper.transpose = transpose * TRANSPOSE_STEP
 
         # Restore scheme selection
-        saved_scheme = self._settings.value("scheme_id", "", type=str)
+        saved_scheme = self._config.get("playback.scheme_id", "")
         if saved_scheme:
             for i in range(self._scheme_combo.count()):
                 if self._scheme_combo.itemData(i) == saved_scheme:
@@ -357,7 +358,7 @@ class LiveModeView(QWidget):
         # Update description for initial selection
         self._update_scheme_description()
 
-        last_port = self._settings.value("last_port", "", type=str)
+        last_port = self._config.get("midi.last_port", "")
         self._refresh_ports()
         if last_port:
             idx = self._port_combo.findText(last_port)
@@ -387,7 +388,7 @@ class LiveModeView(QWidget):
             return
         self._mapper.set_scheme(scheme)
         self._piano.on_scheme_changed()
-        self._settings.setValue("scheme_id", scheme_id)
+        self._config.set("playback.scheme_id", scheme_id)
         self._update_scheme_description()
         self.scheme_changed.emit(scheme_id)
         self._log.log(f"映射方案: {scheme.name} ({scheme.key_count} 鍵)")
@@ -437,7 +438,7 @@ class LiveModeView(QWidget):
             )
             self._update_stateful_text()
             self._status.set_connected(port_name)
-            self._settings.setValue("last_port", port_name)
+            self._config.set("midi.last_port", port_name)
             self._reconnect_port = port_name
             self._reconnect_timer.stop()
             self._log.log(f"已連線: {port_name}")
@@ -480,7 +481,7 @@ class LiveModeView(QWidget):
 
     def _on_transpose_changed(self, value: int) -> None:
         self._mapper.transpose = value * TRANSPOSE_STEP
-        self._settings.setValue("transpose", value)
+        self._config.set("playback.transpose", value)
         self._log.log(f"移調: {value:+d} 八度 (MIDI offset {value * TRANSPOSE_STEP:+d})")
 
     # --- Event handlers called from AppShell ---

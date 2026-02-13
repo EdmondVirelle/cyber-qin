@@ -46,6 +46,10 @@ def main() -> None:
     from .core.priority import begin_timer_period, end_timer_period
     begin_timer_period(1)
 
+    # Migrate old QSettings to JSON config (one-time)
+    from .core.config import ConfigManager
+    ConfigManager.migrate_from_qsettings()
+
     # Apply 賽博墨韻 theme
     from .gui.theme import apply_theme
     apply_theme(app)
