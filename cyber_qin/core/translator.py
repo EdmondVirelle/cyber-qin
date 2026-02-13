@@ -127,6 +127,49 @@ class Translator(QObject):
                 "player.repeat.mode.off": "Repeat: Off",
                 "player.repeat.mode.all": "Repeat: All",
                 "player.repeat.mode.one": "Repeat: One",
+
+                # Settings Dialog
+                "settings.title": "Settings",
+                "settings.tab.midi": "MIDI",
+                "settings.tab.playback": "Playback",
+                "settings.tab.editor": "Editor",
+                "settings.tab.ui": "UI",
+                "settings.tab.advanced": "Advanced",
+                "settings.coming_soon": "(Coming Soon)",
+
+                # MIDI Tab
+                "settings.midi.connection": "Connection",
+                "settings.midi.auto_connect.label": "Auto-connect to last device on startup",
+                "settings.midi.auto_connect.tooltip": "Automatically connect to the last used MIDI device when the app starts",
+
+                # Playback Tab
+                "settings.playback.transpose": "Transpose",
+                "settings.playback.transpose.label": "Default Transpose",
+                "settings.playback.transpose.semitones": "semitones",
+                "settings.playback.transpose.tooltip": "Default transpose value for new MIDI files (in semitones, 12 = 1 octave)",
+
+                # Editor Tab
+                "settings.editor.snap": "Snap to Grid",
+                "settings.editor.snap.enabled": "Enable snap to grid",
+                "settings.editor.snap.tooltip": "Snap note placement and movement to grid lines",
+                "settings.editor.grid": "Grid Subdivision",
+                "settings.editor.note": "note",
+                "settings.editor.autosave": "Auto-Save",
+                "settings.editor.autosave.enabled": "Enable auto-save",
+                "settings.editor.autosave.interval": "Interval",
+                "settings.editor.seconds": "seconds",
+
+                # UI Tab
+                "settings.ui.language": "Language",
+                "settings.ui.language.label": "Interface Language",
+                "settings.ui.language.auto": "Auto (System)",
+                "settings.ui.theme": "Theme",
+                "settings.ui.theme.label": "Color Theme",
+                "settings.ui.theme.dark": "Dark (賽博墨韻)",
+                "settings.ui.theme.light": "Light",
+
+                # Advanced Tab
+                "settings.advanced.config_location": "Configuration file location:",
             },
             "zh_tw": {
                 "app.title": "賽博琴仙",
@@ -223,6 +266,49 @@ class Translator(QObject):
                 "player.repeat.mode.off": "循環模式: 關閉",
                 "player.repeat.mode.all": "循環模式: 全部循環",
                 "player.repeat.mode.one": "循環模式: 單曲重複",
+
+                # Settings Dialog
+                "settings.title": "設定",
+                "settings.tab.midi": "MIDI",
+                "settings.tab.playback": "播放",
+                "settings.tab.editor": "編輯器",
+                "settings.tab.ui": "介面",
+                "settings.tab.advanced": "進階",
+                "settings.coming_soon": "(即將推出)",
+
+                # MIDI Tab
+                "settings.midi.connection": "連線",
+                "settings.midi.auto_connect.label": "啟動時自動連線到最後使用的裝置",
+                "settings.midi.auto_connect.tooltip": "應用程式啟動時自動連線到上次使用的 MIDI 裝置",
+
+                # Playback Tab
+                "settings.playback.transpose": "移調",
+                "settings.playback.transpose.label": "預設移調",
+                "settings.playback.transpose.semitones": "半音",
+                "settings.playback.transpose.tooltip": "新 MIDI 檔案的預設移調值 (以半音為單位，12 = 1 個八度)",
+
+                # Editor Tab
+                "settings.editor.snap": "對齊網格",
+                "settings.editor.snap.enabled": "啟用對齊網格",
+                "settings.editor.snap.tooltip": "將音符放置和移動對齊到網格線",
+                "settings.editor.grid": "網格細分",
+                "settings.editor.note": "音符",
+                "settings.editor.autosave": "自動儲存",
+                "settings.editor.autosave.enabled": "啟用自動儲存",
+                "settings.editor.autosave.interval": "間隔",
+                "settings.editor.seconds": "秒",
+
+                # UI Tab
+                "settings.ui.language": "語言",
+                "settings.ui.language.label": "介面語言",
+                "settings.ui.language.auto": "自動 (系統)",
+                "settings.ui.theme": "主題",
+                "settings.ui.theme.label": "色彩主題",
+                "settings.ui.theme.dark": "深色 (賽博墨韻)",
+                "settings.ui.theme.light": "淺色",
+
+                # Advanced Tab
+                "settings.advanced.config_location": "設定檔位置：",
             },
             "zh_cn": {
                 "app.title": "赛博琴仙",
@@ -319,6 +405,49 @@ class Translator(QObject):
                 "player.repeat.mode.off": "循环模式: 关闭",
                 "player.repeat.mode.all": "循环模式: 全部循环",
                 "player.repeat.mode.one": "循环模式: 单曲重复",
+
+                # Settings Dialog
+                "settings.title": "设置",
+                "settings.tab.midi": "MIDI",
+                "settings.tab.playback": "播放",
+                "settings.tab.editor": "编辑器",
+                "settings.tab.ui": "界面",
+                "settings.tab.advanced": "高级",
+                "settings.coming_soon": "(即将推出)",
+
+                # MIDI Tab
+                "settings.midi.connection": "连接",
+                "settings.midi.auto_connect.label": "启动时自动连接到最后使用的设备",
+                "settings.midi.auto_connect.tooltip": "应用程序启动时自动连接到上次使用的 MIDI 设备",
+
+                # Playback Tab
+                "settings.playback.transpose": "移调",
+                "settings.playback.transpose.label": "默认移调",
+                "settings.playback.transpose.semitones": "半音",
+                "settings.playback.transpose.tooltip": "新 MIDI 文件的默认移调值 (以半音为单位，12 = 1 个八度)",
+
+                # Editor Tab
+                "settings.editor.snap": "对齐网格",
+                "settings.editor.snap.enabled": "启用对齐网格",
+                "settings.editor.snap.tooltip": "将音符放置和移动对齐到网格线",
+                "settings.editor.grid": "网格细分",
+                "settings.editor.note": "音符",
+                "settings.editor.autosave": "自动保存",
+                "settings.editor.autosave.enabled": "启用自动保存",
+                "settings.editor.autosave.interval": "间隔",
+                "settings.editor.seconds": "秒",
+
+                # UI Tab
+                "settings.ui.language": "语言",
+                "settings.ui.language.label": "界面语言",
+                "settings.ui.language.auto": "自动 (系统)",
+                "settings.ui.theme": "主题",
+                "settings.ui.theme.label": "颜色主题",
+                "settings.ui.theme.dark": "深色 (赛博墨韵)",
+                "settings.ui.theme.light": "浅色",
+
+                # Advanced Tab
+                "settings.advanced.config_location": "配置文件位置：",
             },
              "ja": {
                 "app.title": "サイバー琴仙",

@@ -28,6 +28,7 @@ from ..core.midi_recorder import MidiRecorder
 from ..core.midi_writer import MidiWriter
 from ..core.priority import set_thread_priority_realtime
 from ..core.translator import translator
+from .dialogs import SettingsDialog
 from .views.editor_view import EditorView
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
@@ -489,6 +490,9 @@ class AppShell(QMainWindow):
         QShortcut(QKeySequence("Ctrl+Left"), self).activated.connect(
             self._on_prev_track,
         )
+        QShortcut(QKeySequence("Ctrl+,"), self).activated.connect(
+            self._on_open_settings,
+        )
 
     def _on_space_key(self) -> None:
         """Handle Space: let EditorView handle it when active, else play/pause."""
@@ -510,6 +514,11 @@ class AppShell(QMainWindow):
             file_path = self._library_view.play_last()
         if file_path:
             self._on_play_file(file_path)
+
+    def _on_open_settings(self) -> None:
+        """Open settings dialog (Ctrl+,)."""
+        dialog = SettingsDialog(self)
+        dialog.exec()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         # Save window state to config (geometry as base64 string for JSON compatibility)
