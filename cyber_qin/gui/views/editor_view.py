@@ -279,9 +279,7 @@ class EditorView(QWidget):
         self._load_btn.setMinimumWidth(70)
         self._load_btn.setMinimumHeight(36)
         self._load_btn.setToolTip(
-            "載入 MIDI 檔案到編曲器\n"
-            "支援標準 MIDI 格式 (.mid)\n"
-            "Load MIDI file into the editor"
+            "載入 MIDI 檔案到編曲器\n支援標準 MIDI 格式 (.mid)\nLoad MIDI file into the editor"
         )
         self._load_btn.setStyleSheet(
             "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
@@ -333,9 +331,7 @@ class EditorView(QWidget):
 
         self._ts_combo = QComboBox()
         self._ts_combo.setToolTip(
-            "拍號：每小節的拍數與拍值\n"
-            "影響小節線與網格顯示\n"
-            "Time Signature: Beats per measure"
+            "拍號：每小節的拍數與拍值\n影響小節線與網格顯示\nTime Signature: Beats per measure"
         )
         for num, denom in TIME_SIGNATURES:
             self._ts_combo.addItem(f"{num}/{denom}")
@@ -351,9 +347,7 @@ class EditorView(QWidget):
         self._tempo_spin.setRange(40, 300)
         self._tempo_spin.setValue(120)
         self._tempo_spin.setToolTip(
-            "速度：每分鐘節拍數 (BPM)\n"
-            "影響播放與匯出的速度\n"
-            "Tempo: Beats Per Minute (40-300)"
+            "速度：每分鐘節拍數 (BPM)\n影響播放與匯出的速度\nTempo: Beats Per Minute (40-300)"
         )
         row2.addWidget(self._tempo_spin)
 
@@ -885,6 +879,8 @@ class EditorView(QWidget):
     def _load_musicxml(self, path: str) -> None:
         """Load a MusicXML file (.xml or .musicxml)."""
         try:
+            from cyber_qin.core.beat_sequence import BeatNote
+
             notes, tempo_bpm, time_signature = import_musicxml(path)
 
             # Convert MusicXML notes to EditorSequence
@@ -892,15 +888,20 @@ class EditorView(QWidget):
             self._sequence.tempo_bpm = tempo_bpm
             self._sequence.time_signature = time_signature
 
-            # Add all notes to the first track
+            # Add all notes directly to the internal list (no public API for custom duration)
             for xml_note in notes:
-                self._sequence.add_note(
-                    note=xml_note.pitch,
+                beat_note = BeatNote(
                     time_beats=xml_note.start_time,
                     duration_beats=xml_note.duration,
+                    note=xml_note.pitch,
                     velocity=xml_note.velocity,
                     track=0,
                 )
+                self._sequence._notes.append(beat_note)
+
+            # Sort notes by time and invalidate cache
+            self._sequence._notes.sort(key=lambda n: n.time_beats)
+            self._sequence._invalidate_cache()
 
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
             self._project_path = None
