@@ -43,6 +43,7 @@ from ...core.beat_sequence import (
 )
 from ...core.midi_file_player import MidiFileParser
 from ...core.midi_writer import MidiWriter
+from ...core.musicxml_parser import import_musicxml
 from ...core.translator import translator
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
@@ -192,15 +193,34 @@ class EditorView(QWidget):
         # Transport group
         self._record_btn = QPushButton()
         self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._record_btn.setMinimumWidth(85)
+        self._record_btn.setMinimumHeight(36)
+        self._record_btn.setToolTip(
+            "錄音模式：即時錄製 MIDI 輸入\n"
+            "開啟後，彈奏 MIDI 鍵盤會自動記錄音符到編曲器\n"
+            "Recording Mode: Real-time MIDI input recording"
+        )
         self._record_btn.setStyleSheet(
-            "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; }"
+            "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; "
+            "padding: 6px 12px; border-radius: 4px; }"
             "QPushButton:hover { background-color: #882222; }"
+            "QPushButton:pressed { background-color: #AA3333; }"
         )
         row1.addWidget(self._record_btn)
 
         self._play_btn = QPushButton()
         self._play_btn.setProperty("class", "accent")
         self._play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._play_btn.setMinimumWidth(75)
+        self._play_btn.setMinimumHeight(36)
+        self._play_btn.setToolTip(
+            "播放/暫停：預覽編曲器中的音符\n"
+            "空格鍵也可以控制播放\n"
+            "Play/Pause: Preview notes in the editor"
+        )
+        self._play_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+        )
         row1.addWidget(self._play_btn)
 
         row1.addWidget(_VSeparator())
@@ -225,9 +245,18 @@ class EditorView(QWidget):
         self._pencil_btn = QPushButton()
         self._pencil_btn.setCheckable(True)
         self._pencil_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._pencil_btn.setMinimumWidth(75)
+        self._pencil_btn.setMinimumHeight(36)
+        self._pencil_btn.setToolTip(
+            "繪圖模式：用滑鼠點擊編曲器新增音符\n"
+            "啟用後可以直接在鋼琴卷軸上畫音符\n"
+            "Drawing Mode: Click to add notes on the piano roll"
+        )
         self._pencil_btn.setStyleSheet(
-            "QPushButton { padding: 4px 8px; }"
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
             "QPushButton:checked { background-color: #00F0FF; color: #0A0E14; font-weight: 700; }"
+            "QPushButton:checked:hover { background-color: #33F3FF; }"
         )
         row1.addWidget(self._pencil_btn)
 
@@ -236,16 +265,39 @@ class EditorView(QWidget):
         # File group
         self._save_btn = QPushButton()
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._save_btn.setMinimumWidth(70)
+        self._save_btn.setMinimumHeight(36)
         self._save_btn.setToolTip("Ctrl+S")
+        self._save_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
         row1.addWidget(self._save_btn)
 
         self._load_btn = QPushButton()
         self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._load_btn.setMinimumWidth(70)
+        self._load_btn.setMinimumHeight(36)
+        self._load_btn.setToolTip(
+            "載入 MIDI 檔案到編曲器\n"
+            "支援標準 MIDI 格式 (.mid)\n"
+            "Load MIDI file into the editor"
+        )
+        self._load_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
         row1.addWidget(self._load_btn)
 
         self._export_btn = QPushButton()
         self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._export_btn.setMinimumWidth(70)
+        self._export_btn.setMinimumHeight(36)
         self._export_btn.setToolTip("Ctrl+E")
+        self._export_btn.setStyleSheet(
+            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
         row1.addWidget(self._export_btn)
 
         row1.addWidget(_VSeparator())
@@ -264,6 +316,11 @@ class EditorView(QWidget):
         row2.addWidget(self._dur_lbl)
 
         self._duration_combo = QComboBox()
+        self._duration_combo.setToolTip(
+            "預設音符時值：新增音符時的長度\n"
+            "繪圖模式下會使用此時值\n"
+            "Default Note Duration: Length of new notes"
+        )
         for label in DURATION_PRESETS:
             self._duration_combo.addItem(label)
         self._duration_combo.setCurrentText("1/4")
@@ -275,6 +332,11 @@ class EditorView(QWidget):
         row2.addWidget(self._ts_lbl)
 
         self._ts_combo = QComboBox()
+        self._ts_combo.setToolTip(
+            "拍號：每小節的拍數與拍值\n"
+            "影響小節線與網格顯示\n"
+            "Time Signature: Beats per measure"
+        )
         for num, denom in TIME_SIGNATURES:
             self._ts_combo.addItem(f"{num}/{denom}")
         self._ts_combo.setCurrentText("4/4")
@@ -288,16 +350,47 @@ class EditorView(QWidget):
         self._tempo_spin = QSpinBox()
         self._tempo_spin.setRange(40, 300)
         self._tempo_spin.setValue(120)
+        self._tempo_spin.setToolTip(
+            "速度：每分鐘節拍數 (BPM)\n"
+            "影響播放與匯出的速度\n"
+            "Tempo: Beats Per Minute (40-300)"
+        )
         row2.addWidget(self._tempo_spin)
 
         row2.addSpacing(8)
 
         self._snap_cb = QCheckBox("Snap")
         self._snap_cb.setChecked(True)
+        self._snap_cb.setToolTip(
+            "網格對齊：移動音符時自動對齊到網格\n"
+            "關閉後可以自由移動音符位置\n"
+            "Grid Snap: Auto-align notes to grid when moving"
+        )
         self._snap_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._snap_cb)
 
+        # Grid precision selector
+        self._grid_precision_combo = QComboBox()
+        self._grid_precision_combo.addItem("1/4", 4)
+        self._grid_precision_combo.addItem("1/8", 8)
+        self._grid_precision_combo.addItem("1/16", 16)
+        self._grid_precision_combo.addItem("1/32", 32)
+        self._grid_precision_combo.setCurrentIndex(3)  # Default to 1/32
+        self._grid_precision_combo.setToolTip(
+            "網格精度：對齊到指定的音符時值\n"
+            "1/32 = 最精細，1/4 = 最粗糙\n"
+            "Grid Precision: Snap to specified note value"
+        )
+        self._grid_precision_combo.setFixedWidth(70)
+        self._grid_precision_combo.currentIndexChanged.connect(self._on_grid_precision_changed)
+        row2.addWidget(self._grid_precision_combo)
+
         self._auto_tune_cb = QCheckBox()
+        self._auto_tune_cb.setToolTip(
+            "自動音高校正：將音符對齊到黃色可用區域\n"
+            "確保所有音符都在遊戲可彈奏範圍內\n"
+            "Auto-Tune: Align notes to playable range"
+        )
         self._auto_tune_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._auto_tune_cb)
 
@@ -317,6 +410,11 @@ class EditorView(QWidget):
         row2.addSpacing(8)
 
         self._speed_ctrl = SpeedControl()
+        self._speed_ctrl.setToolTip(
+            "播放速度：調整預覽播放的速度\n"
+            "0.5x = 慢速, 1.0x = 正常, 2.0x = 快速\n"
+            "Playback Speed: Adjust preview playback rate"
+        )
         row2.addWidget(self._speed_ctrl)
 
         row2.addSpacing(8)
@@ -325,6 +423,11 @@ class EditorView(QWidget):
 
         self._shortcuts_cb = QCheckBox()
         self._shortcuts_cb.setChecked(True)
+        self._shortcuts_cb.setToolTip(
+            "鍵盤快捷鍵：啟用編曲器快捷鍵操作\n"
+            "空格=播放, Delete=刪除音符, Ctrl+Z/Y=復原/重做\n"
+            "Keyboard Shortcuts: Enable editor keyboard shortcuts"
+        )
         self._shortcuts_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._shortcuts_cb)
 
@@ -560,6 +663,12 @@ class EditorView(QWidget):
             self._sequence.move_notes(global_indices, time_delta, pitch_delta)
         self._update_ui_state()
 
+    def _on_grid_precision_changed(self, index: int) -> None:
+        """Handle grid precision selection change."""
+        precision = self._grid_precision_combo.itemData(index)
+        if precision:
+            self._note_roll.set_grid_precision(precision)
+
     # ── Index mapping helpers ────────────────────────────────
 
     def _invalidate_index_cache(self) -> None:
@@ -729,9 +838,13 @@ class EditorView(QWidget):
     def _on_load(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "載入 MIDI 檔案",
+            "載入檔案",
             "",
-            "MIDI Files (*.mid *.midi);;CQP Projects (*.cqp);;All Files (*)",
+            "All Supported Files (*.mid *.midi *.xml *.musicxml *.cqp);;"
+            "MIDI Files (*.mid *.midi);;"
+            "MusicXML Files (*.xml *.musicxml);;"
+            "CQP Projects (*.cqp);;"
+            "All Files (*)",
         )
         if not path:
             return
@@ -741,16 +854,21 @@ class EditorView(QWidget):
             self.load_file(path)
 
     def load_file(self, file_path: str) -> None:
-        """Load a MIDI file into the editor."""
+        """Load a MIDI or MusicXML file into the editor."""
         try:
-            events, info = MidiFileParser.parse(file_path)
-            self._sequence = EditorSequence.from_midi_file_events(
-                events,
-                tempo_bpm=info.tempo_bpm,
-            )
-            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
-            self._project_path = None
-            self._update_ui_state()
+            # Check file extension to determine format
+            if file_path.endswith((".xml", ".musicxml")):
+                self._load_musicxml(file_path)
+            else:
+                # Load as MIDI
+                events, info = MidiFileParser.parse(file_path)
+                self._sequence = EditorSequence.from_midi_file_events(
+                    events,
+                    tempo_bpm=info.tempo_bpm,
+                )
+                self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+                self._project_path = None
+                self._update_ui_state()
         except Exception:
             log.exception("Failed to load %s", file_path)
 
@@ -763,6 +881,32 @@ class EditorView(QWidget):
             self._update_ui_state()
         except Exception:
             log.exception("Failed to load project %s", path)
+
+    def _load_musicxml(self, path: str) -> None:
+        """Load a MusicXML file (.xml or .musicxml)."""
+        try:
+            notes, tempo_bpm, time_signature = import_musicxml(path)
+
+            # Convert MusicXML notes to EditorSequence
+            self._sequence = EditorSequence()
+            self._sequence.tempo_bpm = tempo_bpm
+            self._sequence.time_signature = time_signature
+
+            # Add all notes to the first track
+            for xml_note in notes:
+                self._sequence.add_note(
+                    note=xml_note.pitch,
+                    time_beats=xml_note.start_time,
+                    duration_beats=xml_note.duration,
+                    velocity=xml_note.velocity,
+                    track=0,
+                )
+
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._project_path = None
+            self._update_ui_state()
+        except Exception:
+            log.exception("Failed to load MusicXML %s", path)
 
     def _on_export(self) -> None:
         if self._sequence.note_count == 0:

@@ -105,8 +105,9 @@ class AppShell(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(translator.tr("app.title") + " — " + translator.tr("app.subtitle"))
-        self.setMinimumSize(900, 600)
-        self.resize(1100, 700)
+        # Larger window size for better 88-key editor visibility
+        self.setMinimumSize(1200, 800)
+        self.resize(1400, 900)
 
         # --- Core objects (shared) ---
         self._mapper = KeyMapper()

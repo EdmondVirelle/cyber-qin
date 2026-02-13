@@ -50,9 +50,9 @@ _SUB_LINE_COLOR = "#1E2530"
 _REST_COLOR = QColor(0xFF, 0x44, 0x44, 64)  # red 25% alpha
 _REST_SELECTED_COLOR = QColor(0xFF, 0x66, 0x66, 128)  # red 50% alpha
 
-# Selection marquee
-_MARQUEE_COLOR = QColor(0x00, 0xF0, 0xFF, 40)
-_MARQUEE_BORDER = QColor(0x00, 0xF0, 0xFF, 180)
+# Selection marquee (Gold accent)
+_MARQUEE_COLOR = QColor(0xD4, 0xAF, 0x37, 40)  # Gold 15% alpha
+_MARQUEE_BORDER = QColor(0xD4, 0xAF, 0x37, 180)  # Gold 70% alpha
 
 # Note names for labels
 _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -91,7 +91,7 @@ class NoteRoll(QWidget):
         self._midi_max: int = EDITOR_MIDI_MAX  # 108 (C8)
         self._tempo_bpm: float = 120.0
         self._beats_per_bar: float = 4.0
-        self._active_track_color: str = "#00F0FF"
+        self._active_track_color: str = "#D4AF37"  # Qin Gold (Cyber Ink theme)
 
         # Multi-select state
         self._selected_note_indices: set[int] = set()
@@ -102,6 +102,7 @@ class NoteRoll(QWidget):
 
         # Snap
         self._snap_enabled: bool = True
+        self._grid_precision: int = 32  # 1/32 note precision (4, 8, 16, or 32)
 
         # Flash state
         self._flash_beat: float = -1.0
@@ -144,6 +145,17 @@ class NoteRoll(QWidget):
         self.setMinimumHeight(120)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # Tooltip for playable zone
+        self.setToolTip(
+            "黃色區域：燕雲十六聲 36 鍵可用範圍 (C4-B5)\n"
+            "在此範圍內的音符可以在遊戲中彈奏\n"
+            "Yellow Zone: WWM 36-key playable range (C4-B5)\n\n"
+            "操作：\n"
+            "- 左鍵拖曳：選取音符\n"
+            "- 鉛筆模式：點擊新增音符\n"
+            "- Delete：刪除選取的音符\n"
+            "- 滾輪：垂直捲動 / Shift+滾輪：水平捲動"
+        )
 
     # ── Data setters ────────────────────────────────────────
 
@@ -195,6 +207,12 @@ class NoteRoll(QWidget):
 
     def set_snap_enabled(self, enabled: bool) -> None:
         self._snap_enabled = enabled
+
+    def set_grid_precision(self, precision: int) -> None:
+        """Set grid precision: 4=1/4 note, 8=1/8, 16=1/16, 32=1/32."""
+        if precision in (4, 8, 16, 32):
+            self._grid_precision = precision
+            self.update()
 
     def _is_note_playable(self, midi_note: int) -> bool:
         """Check if note is in the playable game zone (60-83)."""
@@ -319,20 +337,13 @@ class NoteRoll(QWidget):
         """Snap beat to grid if snap is enabled."""
         if not self._snap_enabled:
             return beat
-        # Snap to nearest sub-beat based on zoom level.
-        # Grid resolution increases as the user zooms in:
-        #   zoom >= 200  → 1/32 (0.125 beats)
-        #   zoom >= 80   → 1/16 (0.25 beats)  — default zoom
-        #   zoom >= 40   → 1/8  (0.5 beats)
-        #   zoom <  40   → 1/4  (1.0 beat)
-        if self._zoom >= 200:
-            grid = 0.125
-        elif self._zoom >= 80:
-            grid = 0.25
-        elif self._zoom >= 40:
-            grid = 0.5
-        else:
-            grid = 1.0
+        # Snap to nearest sub-beat based on user-selected precision.
+        # Grid precision is fixed and does not change with zoom level.
+        #   precision=4  → 1/4 note   (1.0 beats)
+        #   precision=8  → 1/8 note   (0.5 beats)
+        #   precision=16 → 1/16 note  (0.25 beats)
+        #   precision=32 → 1/32 note  (0.125 beats)
+        grid = 4.0 / self._grid_precision  # Convert precision to beat fraction
         return round(beat / grid) * grid
 
     def _note_index_at(self, x: float, y: float) -> int:

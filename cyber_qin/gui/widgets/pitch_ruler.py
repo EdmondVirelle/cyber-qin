@@ -35,6 +35,13 @@ class PitchRuler(QWidget):
         self._midi_max = midi_max
         self.setFixedWidth(_RULER_WIDTH)
         self.setMinimumHeight(120)
+        self.setMouseTracking(True)
+        # Set tooltip for playable zone
+        self.setToolTip(
+            "黃色區域：燕雲十六聲 36 鍵可用範圍 (C4-B5)\n"
+            "在此範圍內的音符可以在遊戲中彈奏\n"
+            "Yellow Zone: WWM 36-key playable range (C4-B5)"
+        )
 
     def set_midi_range(self, midi_min: int, midi_max: int) -> None:
         self._midi_min = midi_min
@@ -103,5 +110,27 @@ class PitchRuler(QWidget):
         # Right border line
         painter.setPen(QColor(0x1E, 0x2D, 0x3D))
         painter.drawLine(w - 1, _HEADER_HEIGHT, w - 1, h)
+
+        # Draw playable zone label at the top of the yellow area
+        playable_top_idx = self._midi_max - PLAYABLE_MIDI_MAX
+        playable_bottom_idx = self._midi_max - PLAYABLE_MIDI_MIN
+        if 0 <= playable_top_idx < range_size:
+            playable_y_top = _HEADER_HEIGHT + playable_top_idx * note_h
+            playable_y_bottom = _HEADER_HEIGHT + (playable_bottom_idx + 1) * note_h
+            playable_zone_height = playable_y_bottom - playable_y_top
+
+            # Only draw label if zone is tall enough
+            if playable_zone_height > 40:
+                label_font = QFont("Microsoft JhengHei", 7, QFont.Weight.Bold)
+                painter.setFont(label_font)
+                painter.setPen(QColor(ACCENT_GOLD))
+
+                # Draw rotated text in the middle of the playable zone
+                painter.save()
+                label_y = playable_y_top + playable_zone_height / 2
+                painter.translate(w - 6, label_y)
+                painter.rotate(-90)
+                painter.drawText(0, 0, "燕雲 36 鍵")
+                painter.restore()
 
         painter.end()
