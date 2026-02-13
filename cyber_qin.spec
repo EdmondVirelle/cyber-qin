@@ -16,7 +16,7 @@ a = Analysis(
     ["launcher.py"],
     pathex=[],
     binaries=_vcrt,
-    datas=[('RELEASE.txt', '.')],
+    datas=[('docs/RELEASE_v2.0.0.md', '.')],
     hiddenimports=[
         # ── mido backend (dynamically loaded) ──
         "mido.backends.rtmidi",
@@ -63,6 +63,26 @@ a = Analysis(
         "cyber_qin.gui.widgets.speed_control",
         "cyber_qin.gui.widgets.status_bar",
         "cyber_qin.gui.widgets.track_list",
+        # ── v2.0.0 core modules ──
+        "cyber_qin.core.smart_arrangement",
+        "cyber_qin.core.midi_fx",
+        "cyber_qin.core.melody_generator",
+        "cyber_qin.core.automation",
+        "cyber_qin.core.practice_engine",
+        "cyber_qin.core.notation_renderer",
+        "cyber_qin.core.abc_parser",
+        "cyber_qin.core.lilypond_parser",
+        "cyber_qin.core.audio_exporter",
+        "cyber_qin.core.library_metadata",
+        # ── v2.0.0 gui modules ──
+        "cyber_qin.gui.views.practice_view",
+        "cyber_qin.gui.widgets.practice_display",
+        "cyber_qin.gui.widgets.live_visualizer",
+        "cyber_qin.gui.widgets.score_view_widget",
+        "cyber_qin.gui.widgets.automation_lane_widget",
+        "cyber_qin.gui.dialogs.fx_dialog",
+        "cyber_qin.gui.dialogs.melody_dialog",
+        "cyber_qin.gui.dialogs.metadata_dialog",
         # ── utils ──
         "cyber_qin.utils.admin",
         "cyber_qin.utils.ime",
