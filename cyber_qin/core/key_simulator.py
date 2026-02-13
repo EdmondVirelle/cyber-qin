@@ -94,7 +94,7 @@ def _send(*inputs: INPUT) -> None:
     if sys.platform != "win32":
         return  # No-op on non-Windows platforms
     arr = (INPUT * len(inputs))(*inputs)
-    _SendInput(len(inputs), arr, ctypes.sizeof(INPUT))  # type: ignore[misc]
+    _SendInput(len(inputs), arr, ctypes.sizeof(INPUT))
 
 
 def _modifier_scan(mod: Modifier) -> int | None:
