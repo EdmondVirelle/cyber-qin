@@ -20,6 +20,7 @@ def _reset_module():
 
 
 class TestSetThreadPriorityRealtime:
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_success(self):
         with mock.patch("sys.platform", "win32"):
             kernel32 = mock.MagicMock()
@@ -32,6 +33,7 @@ class TestSetThreadPriorityRealtime:
                 assert set_thread_priority_realtime() is True
                 kernel32.SetThreadPriority.assert_called_once_with(42, 15)
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_failure(self):
         with mock.patch("sys.platform", "win32"):
             kernel32 = mock.MagicMock()
@@ -49,6 +51,7 @@ class TestSetThreadPriorityRealtime:
 
             assert set_thread_priority_realtime() is False
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_exception(self):
         with mock.patch("sys.platform", "win32"):
             with mock.patch("ctypes.windll") as windll:
@@ -59,6 +62,7 @@ class TestSetThreadPriorityRealtime:
 
 
 class TestBeginTimerPeriod:
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_success(self):
         with mock.patch("sys.platform", "win32"):
             winmm = mock.MagicMock()
@@ -69,6 +73,7 @@ class TestBeginTimerPeriod:
 
                 assert begin_timer_period(1) is True
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_failure(self):
         with mock.patch("sys.platform", "win32"):
             winmm = mock.MagicMock()
@@ -85,6 +90,7 @@ class TestBeginTimerPeriod:
 
             assert begin_timer_period() is False
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_exception(self):
         with mock.patch("sys.platform", "win32"):
             with mock.patch("ctypes.windll") as windll:
@@ -95,6 +101,7 @@ class TestBeginTimerPeriod:
 
 
 class TestEndTimerPeriod:
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_success(self):
         with mock.patch("sys.platform", "win32"):
             winmm = mock.MagicMock()
@@ -105,6 +112,7 @@ class TestEndTimerPeriod:
 
                 assert end_timer_period(1) is True
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_failure(self):
         with mock.patch("sys.platform", "win32"):
             winmm = mock.MagicMock()
@@ -121,6 +129,7 @@ class TestEndTimerPeriod:
 
             assert end_timer_period() is False
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only test")
     def test_exception(self):
         with mock.patch("sys.platform", "win32"):
             with mock.patch("ctypes.windll") as windll:

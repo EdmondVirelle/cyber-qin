@@ -13,8 +13,8 @@ if sys.platform == "win32":
     _imm32 = ctypes.windll.imm32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
     _user32 = ctypes.windll.user32  # type: ignore[attr-defined, unused-ignore]  # Windows-only
 else:
-    _imm32 = None  # type: ignore[assignment]  # Placeholder for non-Windows
-    _user32 = None  # type: ignore[assignment]  # Placeholder for non-Windows
+    _imm32 = None
+    _user32 = None
 
 
 def is_ime_active() -> bool:
@@ -23,15 +23,17 @@ def is_ime_active() -> bool:
     Returns True if an IME conversion mode is enabled on the foreground window,
     which could intercept keystrokes before they reach the game.
     """
+    if sys.platform != "win32":
+        return False
     try:
-        hwnd = _user32.GetForegroundWindow()
-        himc = _imm32.ImmGetContext(hwnd)
+        hwnd = _user32.GetForegroundWindow()  # type: ignore[union-attr]
+        himc = _imm32.ImmGetContext(hwnd)  # type: ignore[union-attr]
         if not himc:
             return False
         try:
             conversion = ctypes.wintypes.DWORD()
             sentence = ctypes.wintypes.DWORD()
-            result = _imm32.ImmGetConversionStatus(
+            result = _imm32.ImmGetConversionStatus(  # type: ignore[union-attr]
                 himc,
                 ctypes.byref(conversion),
                 ctypes.byref(sentence),
@@ -41,7 +43,7 @@ def is_ime_active() -> bool:
             # IME_CMODE_NATIVE (0x1) means the IME is in native (non-English) mode
             return bool(conversion.value & 0x1)
         finally:
-            _imm32.ImmReleaseContext(hwnd, himc)
+            _imm32.ImmReleaseContext(hwnd, himc)  # type: ignore[union-attr]
     except Exception:
         log.exception("Failed to check IME status")
         return False

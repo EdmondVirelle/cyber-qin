@@ -71,7 +71,7 @@ if sys.platform == "win32":
     _SendInput.argtypes = [ctypes.c_uint, ctypes.POINTER(INPUT), ctypes.c_int]
     _SendInput.restype = ctypes.c_uint
 else:
-    _SendInput = None  # type: ignore[assignment]  # Placeholder for non-Windows
+    _SendInput = None
 
 
 def _make_input(scan_code: int, key_up: bool = False) -> INPUT:
@@ -92,7 +92,7 @@ def _make_input(scan_code: int, key_up: bool = False) -> INPUT:
 def _send(*inputs: INPUT) -> None:
     """Send an array of INPUT events via SendInput."""
     arr = (INPUT * len(inputs))(*inputs)
-    _SendInput(len(inputs), arr, ctypes.sizeof(INPUT))
+    _SendInput(len(inputs), arr, ctypes.sizeof(INPUT))  # type: ignore[misc]
 
 
 def _modifier_scan(mod: Modifier) -> int | None:
