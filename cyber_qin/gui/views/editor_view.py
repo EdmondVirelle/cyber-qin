@@ -212,7 +212,7 @@ class EditorView(QWidget):
         self._play_btn = QPushButton()
         self._play_btn.setProperty("class", "accent")
         self._play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._play_btn.setMinimumWidth(75)
+        self._play_btn.setMinimumWidth(70)
         self._play_btn.setMinimumHeight(36)
         self._play_btn.setToolTip(
             "播放/暫停：預覽編曲器中的音符\n"
@@ -241,12 +241,10 @@ class EditorView(QWidget):
 
         row1.addWidget(_VSeparator())
 
-        row1.addWidget(_VSeparator())
-
         self._pencil_btn = QPushButton()
         self._pencil_btn.setCheckable(True)
         self._pencil_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._pencil_btn.setMinimumWidth(75)
+        self._pencil_btn.setMinimumWidth(70)
         self._pencil_btn.setMinimumHeight(36)
         self._pencil_btn.setToolTip(
             "繪圖模式：用滑鼠點擊編曲器新增音符\n"
@@ -254,7 +252,7 @@ class EditorView(QWidget):
             "Drawing Mode: Click to add notes on the piano roll"
         )
         self._pencil_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
             "QPushButton:checked { background-color: #00F0FF; color: #0A0E14; font-weight: 700; }"
             "QPushButton:checked:hover { background-color: #33F3FF; }"
@@ -278,31 +276,31 @@ class EditorView(QWidget):
         # File group
         self._save_btn = QPushButton()
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._save_btn.setMinimumWidth(70)
+        self._save_btn.setMinimumWidth(65)
         self._save_btn.setMinimumHeight(36)
         self._save_btn.setToolTip("Ctrl+S")
         self._save_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._save_btn)
 
         self._load_btn = QPushButton()
         self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._load_btn.setMinimumWidth(70)
+        self._load_btn.setMinimumWidth(65)
         self._load_btn.setMinimumHeight(36)
         self._load_btn.setToolTip(
             "載入 MIDI 檔案到編曲器\n支援標準 MIDI 格式 (.mid)\nLoad MIDI file into the editor"
         )
         self._load_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._load_btn)
 
         self._export_btn = QPushButton()
         self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._export_btn.setMinimumWidth(70)
+        self._export_btn.setMinimumWidth(65)
         self._export_btn.setMinimumHeight(36)
         self._export_btn.setToolTip("Ctrl+E")
         self._export_btn.setStyleSheet(
