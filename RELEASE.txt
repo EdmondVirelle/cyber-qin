@@ -4,10 +4,12 @@
 版本歷程 (繁體中文)
 ================================================================================
 
-v0.9.2 — 穩定性強化 + 跨平台支援
+v0.9.2 — 穩定性強化 + 開發工具鏈改進
     • 新增全局異常處理與健全的日誌記錄系統。
-    • 完整支援 Windows/Linux/macOS 跨平台測試 (CI/CD)。
+    • CI/CD 測試流程支援跨平台執行 (Windows/Linux/macOS)。
     • 修復多項 MyPy strict mode 類型錯誤。
+
+    ⚠️ 注意：按鍵模擬功能僅限 Windows 平台 (使用 SendInput API)。
 
 v0.9.0 — 文檔國際化 + 社群擴展
     • 側邊欄 Credits 擴展至 WWM/FF14/VTuber 社群。
@@ -35,10 +37,12 @@ v0.7.0 — 編輯器核心重構
 Version History (English)
 ================================================================================
 
-v0.9.2 — Stability & Cross-Platform Support
+v0.9.2 — Stability & Developer Toolchain Improvements
     • Added global exception handling with robust logging system.
-    • Full Windows/Linux/macOS cross-platform CI/CD support.
+    • CI/CD testing pipeline now runs on Windows/Linux/macOS.
     • Fixed multiple MyPy strict mode type errors.
+
+    ⚠️ Note: Key simulation feature is Windows-only (uses SendInput API).
 
 v0.9.0 — Documentation I18N & Community Expansion
     • Expanded sidebar credits to WWM/FF14/VTuber communities.
