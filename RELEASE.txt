@@ -1,0 +1,19 @@
+賽博琴仙 (Cyber Qin Xian) v0.9.2
+
+MIDI-to-Keyboard mapper for 燕雲十六聲 (Where Winds Meet) 36-key mode.
+
+## What's New in v0.9.2
+- Fixed: Global exception handling and robust logging for library crash
+- Fixed: Platform-specific code compatibility for Windows/Linux/macOS
+- Improved: CI/CD pipeline with multi-platform testing
+
+## System Requirements
+- Windows 10/11 (64-bit)
+- MIDI input device (keyboard, controller, etc.)
+- 燕雲十六聲 (Where Winds Meet) game
+
+## Installation
+Extract the archive and run 賽博琴仙.exe
+
+## Support
+GitHub: https://github.com/EdmondVirelle/cyber-qin
