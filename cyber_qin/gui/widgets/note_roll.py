@@ -1333,7 +1333,9 @@ class NoteRoll(QWidget):
         lane_top = h - _VELOCITY_LANE_HEIGHT
 
         # Calculate start and end velocities from Y positions
-        start_vel = int(127 * (1 - (self._velocity_batch_start_y - lane_top) / _VELOCITY_LANE_HEIGHT))
+        start_vel = int(
+            127 * (1 - (self._velocity_batch_start_y - lane_top) / _VELOCITY_LANE_HEIGHT)
+        )
         end_vel = int(127 * (1 - (self._velocity_batch_end_y - lane_top) / _VELOCITY_LANE_HEIGHT))
         start_vel = max(1, min(127, start_vel))
         end_vel = max(1, min(127, end_vel))

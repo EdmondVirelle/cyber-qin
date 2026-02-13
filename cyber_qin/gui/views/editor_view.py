@@ -247,11 +247,7 @@ class EditorView(QWidget):
         self._loop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._loop_btn.setMinimumWidth(40)
         self._loop_btn.setMinimumHeight(36)
-        self._loop_btn.setToolTip(
-            translator.tr("editor.loop.tooltip")
-            + "\n"
-            + "Shortcut: L"
-        )
+        self._loop_btn.setToolTip(translator.tr("editor.loop.tooltip") + "\n" + "Shortcut: L")
         self._loop_btn.setStyleSheet(
             "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"
             "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
@@ -266,9 +262,7 @@ class EditorView(QWidget):
         self._metronome_btn.setMinimumWidth(40)
         self._metronome_btn.setMinimumHeight(36)
         self._metronome_btn.setToolTip(
-            translator.tr("editor.metronome.tooltip")
-            + "\n"
-            + "Shortcut: M"
+            translator.tr("editor.metronome.tooltip") + "\n" + "Shortcut: M"
         )
         self._metronome_btn.setStyleSheet(
             "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"

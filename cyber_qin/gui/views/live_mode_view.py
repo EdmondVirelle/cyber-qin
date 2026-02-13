@@ -459,7 +459,8 @@ class LiveModeView(QWidget):
 
             # Only update if the device list changed
             current_ports = [
-                self._port_combo.itemText(i) for i in range(self._port_combo.count())
+                self._port_combo.itemText(i)
+                for i in range(self._port_combo.count())
                 if not self._port_combo.itemText(i).startswith("(")
             ]
 

@@ -80,9 +80,7 @@ class SettingsDialog(QDialog):
         self._midi_device = QComboBox()
         self._midi_device.setToolTip(translator.tr("settings.midi.device.tooltip"))
         self._refresh_midi_devices()
-        device_layout.addRow(
-            translator.tr("settings.midi.device.label"), self._midi_device
-        )
+        device_layout.addRow(translator.tr("settings.midi.device.label"), self._midi_device)
 
         device_group.setLayout(device_layout)
         layout.addWidget(device_group)

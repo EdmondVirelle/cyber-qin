@@ -48,7 +48,9 @@ class KeyMappingViewer(QDialog):
 
         header.addStretch()
 
-        key_count_label = QLabel(f"{self._scheme.key_count} {translator.tr('mapping_viewer.keys')}")
+        key_count_label = QLabel(
+            f"{self._scheme.key_count} {translator.tr('mapping_viewer.keys')}"
+        )
         key_count_label.setStyleSheet(f"font-size: 14px; color: {TEXT_SECONDARY};")
         header.addWidget(key_count_label)
 
@@ -63,12 +65,14 @@ class KeyMappingViewer(QDialog):
         # Mapping table
         self._table = QTableWidget()
         self._table.setColumnCount(4)
-        self._table.setHorizontalHeaderLabels([
-            translator.tr("mapping_viewer.midi_note"),
-            translator.tr("mapping_viewer.note_name"),
-            translator.tr("mapping_viewer.keyboard_key"),
-            translator.tr("mapping_viewer.modifier"),
-        ])
+        self._table.setHorizontalHeaderLabels(
+            [
+                translator.tr("mapping_viewer.midi_note"),
+                translator.tr("mapping_viewer.note_name"),
+                translator.tr("mapping_viewer.keyboard_key"),
+                translator.tr("mapping_viewer.modifier"),
+            ]
+        )
 
         # Configure table appearance
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
