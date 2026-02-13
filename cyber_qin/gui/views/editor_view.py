@@ -48,10 +48,12 @@ from ...core.musicxml_parser import import_musicxml
 from ...core.translator import translator
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
 from ..widgets.animated_widgets import IconButton
+from ..widgets.automation_lane_widget import AutomationLaneWidget
 from ..widgets.clickable_piano import ClickablePiano
 from ..widgets.editor_track_panel import EditorTrackPanel
 from ..widgets.note_roll import FollowMode, NoteRoll
 from ..widgets.pitch_ruler import PitchRuler
+from ..widgets.score_view_widget import ScoreViewWidget
 from ..widgets.speed_control import SpeedControl
 
 log = logging.getLogger(__name__)
@@ -112,6 +114,7 @@ class EditorView(QWidget):
         self._preview_player = None  # lazy MidiOutputPlayer
         self._selection_anchor: float | None = None
         self._playback_speed: float = 1.0
+        self._arrangement_ghost_notes: list = []
 
         self._build_ui()
         self._connect_signals()
@@ -307,6 +310,48 @@ class EditorView(QWidget):
 
         row1.addWidget(_VSeparator())
 
+        # Smart tools group
+        self._arrange_btn = QPushButton("🎼 Arrange")
+        self._arrange_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._arrange_btn.setMinimumHeight(36)
+        self._arrange_btn.setToolTip(
+            "智能編排：自動移調與折疊音符到可演奏範圍\n"
+            "Smart Arrangement: Auto-transpose and fold notes"
+        )
+        self._arrange_btn.setStyleSheet(
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
+        row1.addWidget(self._arrange_btn)
+
+        self._fx_btn = QPushButton("✨ FX")
+        self._fx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._fx_btn.setMinimumHeight(36)
+        self._fx_btn.setToolTip(
+            "MIDI 效果：琶音器、人性化、量化、和弦生成\n"
+            "MIDI FX: Arpeggiator, Humanize, Quantize, Chords"
+        )
+        self._fx_btn.setStyleSheet(
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
+        row1.addWidget(self._fx_btn)
+
+        self._generate_btn = QPushButton("🎲 Generate")
+        self._generate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._generate_btn.setMinimumHeight(36)
+        self._generate_btn.setToolTip(
+            "AI 作曲：自動生成旋律與低音線\n"
+            "AI Compose: Generate melody and bass lines"
+        )
+        self._generate_btn.setStyleSheet(
+            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
+        row1.addWidget(self._generate_btn)
+
+        row1.addWidget(_VSeparator())
+
         # Sidebar toggle
         self._sidebar_toggle_btn = IconButton("menu", size=32)
         self._sidebar_toggle_btn.setToolTip(
@@ -403,6 +448,7 @@ class EditorView(QWidget):
         self._tempo_spin = QSpinBox()
         self._tempo_spin.setRange(40, 300)
         self._tempo_spin.setValue(120)
+        self._tempo_spin.setMinimumWidth(80)
         self._tempo_spin.setToolTip(
             "速度：每分鐘節拍數 (BPM)\n影響播放與匯出的速度\nTempo: Beats Per Minute (40-300)"
         )
@@ -477,7 +523,7 @@ class EditorView(QWidget):
         self._velocity_spin.setRange(1, 127)
         self._velocity_spin.setValue(100)
         self._velocity_spin.setToolTip("選取音符的力度 (1-127)")
-        self._velocity_spin.setFixedWidth(60)
+        self._velocity_spin.setMinimumWidth(80)
         self._velocity_spin.setEnabled(False)
         row2.addWidget(self._velocity_spin)
 
@@ -529,6 +575,67 @@ class EditorView(QWidget):
         self._shortcuts_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._shortcuts_cb)
 
+        row2.addSpacing(8)
+
+        # Ghost notes toggle
+        self._ghost_btn = QPushButton("👻 Ghost")
+        self._ghost_btn.setCheckable(True)
+        self._ghost_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._ghost_btn.setMinimumHeight(28)
+        self._ghost_btn.setToolTip(
+            "幽靈音符：顯示編排前的原始位置\n"
+            "Ghost Notes: Show pre-arrangement positions"
+        )
+        self._ghost_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
+            "QPushButton:checked { background-color: #A06BFF; color: #0A0E14; }"
+        )
+        row2.addWidget(self._ghost_btn)
+
+        # Ghost opacity slider
+        self._ghost_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._ghost_opacity_slider.setRange(10, 80)
+        self._ghost_opacity_slider.setValue(40)
+        self._ghost_opacity_slider.setFixedWidth(60)
+        self._ghost_opacity_slider.setToolTip("Ghost note opacity")
+        self._ghost_opacity_slider.setVisible(False)
+        self._ghost_opacity_slider.valueChanged.connect(self._on_ghost_opacity_changed)
+        row2.addWidget(self._ghost_opacity_slider)
+
+        row2.addSpacing(4)
+
+        # Automation toggle
+        self._automation_btn = QPushButton("📈 Auto")
+        self._automation_btn.setCheckable(True)
+        self._automation_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._automation_btn.setMinimumHeight(28)
+        self._automation_btn.setToolTip(
+            "自動化曲線：調整力度/速度隨時間變化\n"
+            "Automation Lane: Time-varying velocity/tempo curves"
+        )
+        self._automation_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
+            "QPushButton:checked { background-color: #4ECDC4; color: #0A0E14; }"
+        )
+        row2.addWidget(self._automation_btn)
+
+        row2.addSpacing(4)
+
+        # Score view toggle
+        self._score_btn = QPushButton("🎵 Score")
+        self._score_btn.setCheckable(True)
+        self._score_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._score_btn.setMinimumHeight(28)
+        self._score_btn.setToolTip(
+            "樂譜顯示：標準五線譜視圖\n"
+            "Score View: Standard music notation"
+        )
+        self._score_btn.setStyleSheet(
+            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
+            "QPushButton:checked { background-color: #D4A853; color: #0A0E14; }"
+        )
+        row2.addWidget(self._score_btn)
+
         row2.addStretch()
 
         self._note_count_lbl = QLabel("0 音符")
@@ -555,6 +662,17 @@ class EditorView(QWidget):
         editor_area.addWidget(self._note_roll, 1)
 
         content.addLayout(editor_area, 1)
+
+        # Automation lane widget (hidden by default)
+        self._automation_widget = AutomationLaneWidget()
+        self._automation_widget.setVisible(False)
+        content.addWidget(self._automation_widget)
+
+        # Score view widget (hidden by default)
+        self._score_widget = ScoreViewWidget()
+        self._score_widget.setVisible(False)
+        self._score_widget.setFixedHeight(180)
+        content.addWidget(self._score_widget)
 
         # ── Piano row: [spacer | ClickablePiano] ──
         piano_row = QHBoxLayout()
@@ -590,6 +708,13 @@ class EditorView(QWidget):
         self._load_btn.setText(translator.tr("editor.import"))
         self._export_btn.setText(translator.tr("editor.export"))
         self._help_btn.setToolTip(translator.tr("editor.help"))
+
+        self._arrange_btn.setText(translator.tr("editor.arrange"))
+        self._fx_btn.setText(translator.tr("editor.fx"))
+        self._generate_btn.setText(translator.tr("editor.generate"))
+        self._ghost_btn.setText(translator.tr("editor.ghost"))
+        self._automation_btn.setText(translator.tr("editor.automation"))
+        self._score_btn.setText(translator.tr("editor.score"))
 
         self._dur_lbl.setText(translator.tr("editor.duration"))
         self._ts_lbl.setText(translator.tr("editor.time_sig"))
@@ -631,6 +756,12 @@ class EditorView(QWidget):
         self._pencil_btn.toggled.connect(self._on_pencil_toggled)
         self._help_btn.clicked.connect(self._on_help)
         self._sidebar_toggle_btn.toggled.connect(self._on_sidebar_toggled)
+        self._arrange_btn.clicked.connect(self._on_arrange)
+        self._fx_btn.clicked.connect(self._on_fx)
+        self._generate_btn.clicked.connect(self._on_generate)
+        self._ghost_btn.toggled.connect(self._on_ghost_toggled)
+        self._automation_btn.toggled.connect(self._on_automation_toggled)
+        self._score_btn.toggled.connect(self._on_score_toggled)
         self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
         self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
@@ -784,6 +915,9 @@ class EditorView(QWidget):
         self._zoom_slider.blockSignals(True)
         self._zoom_slider.setValue(int(zoom))
         self._zoom_slider.blockSignals(False)
+        # Sync automation and score widgets
+        self._automation_widget.set_zoom(zoom)
+        self._score_widget.set_scroll_x(self._note_roll._scroll_x)
 
     def _on_follow_mode_changed(self, index: int) -> None:
         """Handle follow mode selection change."""
@@ -969,9 +1103,11 @@ class EditorView(QWidget):
             self,
             "載入檔案",
             "",
-            "All Supported Files (*.mid *.midi *.xml *.musicxml *.cqp);;"
+            "All Supported Files (*.mid *.midi *.xml *.musicxml *.abc *.ly *.cqp);;"
             "MIDI Files (*.mid *.midi);;"
             "MusicXML Files (*.xml *.musicxml);;"
+            "ABC Notation (*.abc);;"
+            "LilyPond (*.ly);;"
             "CQP Projects (*.cqp);;"
             "All Files (*)",
         )
@@ -983,11 +1119,14 @@ class EditorView(QWidget):
             self.load_file(path)
 
     def load_file(self, file_path: str) -> None:
-        """Load a MIDI or MusicXML file into the editor."""
+        """Load a MIDI, MusicXML, ABC, or LilyPond file into the editor."""
         try:
-            # Check file extension to determine format
             if file_path.endswith((".xml", ".musicxml")):
                 self._load_musicxml(file_path)
+            elif file_path.endswith(".abc"):
+                self._load_abc(file_path)
+            elif file_path.endswith(".ly"):
+                self._load_lilypond(file_path)
             else:
                 # Load as MIDI
                 events, info = MidiFileParser.parse(file_path)
@@ -995,7 +1134,9 @@ class EditorView(QWidget):
                     events,
                     tempo_bpm=info.tempo_bpm,
                 )
+                self._tempo_spin.blockSignals(True)
                 self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+                self._tempo_spin.blockSignals(False)
                 self._project_path = None
                 self._update_ui_state()
         except Exception:
@@ -1006,7 +1147,9 @@ class EditorView(QWidget):
         try:
             self._sequence = project_file.load(path)
             self._project_path = path
+            self._tempo_spin.blockSignals(True)
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._tempo_spin.blockSignals(False)
             self._update_ui_state()
         except Exception:
             log.exception("Failed to load project %s", path)
@@ -1038,41 +1181,134 @@ class EditorView(QWidget):
             self._sequence._notes.sort(key=lambda n: n.time_beats)
             self._sequence._invalidate_cache()
 
+            self._tempo_spin.blockSignals(True)
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._tempo_spin.blockSignals(False)
             self._project_path = None
             self._update_ui_state()
         except Exception:
             log.exception("Failed to load MusicXML %s", path)
 
+    def _load_abc(self, path: str) -> None:
+        """Load an ABC notation file."""
+        try:
+            from pathlib import Path
+
+            from ...core.abc_parser import parse_abc
+
+            text = Path(path).read_text(encoding="utf-8")
+            result = parse_abc(text)
+
+            self._sequence = EditorSequence()
+            self._sequence.tempo_bpm = result.tempo_bpm or 120.0
+            for n in result.notes:
+                self._sequence._notes.append(n)
+            self._sequence._notes.sort(key=lambda n: n.time_beats)
+            self._sequence._invalidate_cache()
+
+            self._tempo_spin.blockSignals(True)
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._tempo_spin.blockSignals(False)
+            self._project_path = None
+            self._update_ui_state()
+        except Exception:
+            log.exception("Failed to load ABC %s", path)
+
+    def _load_lilypond(self, path: str) -> None:
+        """Load a LilyPond file."""
+        try:
+            from pathlib import Path
+
+            from ...core.lilypond_parser import parse_lilypond
+
+            text = Path(path).read_text(encoding="utf-8")
+            result = parse_lilypond(text)
+
+            self._sequence = EditorSequence()
+            self._sequence.tempo_bpm = result.tempo_bpm or 120.0
+            for n in result.notes:
+                self._sequence._notes.append(n)
+            self._sequence._notes.sort(key=lambda n: n.time_beats)
+            self._sequence._invalidate_cache()
+
+            self._tempo_spin.blockSignals(True)
+            self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._tempo_spin.blockSignals(False)
+            self._project_path = None
+            self._update_ui_state()
+        except Exception:
+            log.exception("Failed to load LilyPond %s", path)
+
     def _on_export(self) -> None:
         if self._sequence.note_count == 0:
             return
 
-        path, _ = QFileDialog.getSaveFileName(
+        path, selected_filter = QFileDialog.getSaveFileName(
             self,
-            "匯出 MIDI 檔案",
+            "匯出檔案",
             "",
-            "MIDI Files (*.mid);;All Files (*)",
+            "MIDI Files (*.mid);;"
+            "ABC Notation (*.abc);;"
+            "LilyPond (*.ly);;"
+            "WAV Audio (*.wav);;"
+            "All Files (*)",
         )
         if not path:
             return
-        if not path.endswith(".mid"):
-            path += ".mid"
 
         try:
-            midi_events = self._sequence.to_midi_file_events()
-            tracks = self._sequence.tracks
-            track_names = [t.name for t in tracks]
-            track_channels = [t.channel for t in tracks]
-            MidiWriter.save_multitrack(
-                midi_events,
-                path,
-                tempo_bpm=self._sequence.tempo_bpm,
-                track_names=track_names,
-                track_channels=track_channels,
-            )
+            if "*.abc" in selected_filter or path.endswith(".abc"):
+                if not path.endswith(".abc"):
+                    path += ".abc"
+                self._export_abc(path)
+            elif "*.ly" in selected_filter or path.endswith(".ly"):
+                if not path.endswith(".ly"):
+                    path += ".ly"
+                self._export_lilypond(path)
+            elif "*.wav" in selected_filter or path.endswith(".wav"):
+                if not path.endswith(".wav"):
+                    path += ".wav"
+                self._export_wav(path)
+            else:
+                if not path.endswith(".mid"):
+                    path += ".mid"
+                midi_events = self._sequence.to_midi_file_events()
+                tracks = self._sequence.tracks
+                track_names = [t.name for t in tracks]
+                track_channels = [t.channel for t in tracks]
+                MidiWriter.save_multitrack(
+                    midi_events,
+                    path,
+                    tempo_bpm=self._sequence.tempo_bpm,
+                    track_names=track_names,
+                    track_channels=track_channels,
+                )
         except Exception:
             log.exception("Failed to export %s", path)
+
+    def _export_abc(self, path: str) -> None:
+        """Export notes as ABC notation."""
+        from pathlib import Path
+
+        from ...core.abc_parser import export_abc
+
+        text = export_abc(self._sequence.notes, tempo_bpm=self._sequence.tempo_bpm)
+        Path(path).write_text(text, encoding="utf-8")
+
+    def _export_lilypond(self, path: str) -> None:
+        """Export notes as LilyPond notation."""
+        from pathlib import Path
+
+        from ...core.lilypond_parser import export_lilypond
+
+        text = export_lilypond(self._sequence.notes, tempo_bpm=self._sequence.tempo_bpm)
+        Path(path).write_text(text, encoding="utf-8")
+
+    def _export_wav(self, path: str) -> None:
+        """Export notes as WAV audio."""
+        from ...core.audio_exporter import export_wav
+
+        export_wav(self._sequence.notes, path, tempo_bpm=self._sequence.tempo_bpm)
 
     def _on_save(self) -> None:
         """Save project (Ctrl+S). If no path, prompt save-as."""
@@ -1128,7 +1364,9 @@ class EditorView(QWidget):
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._sequence = recovered
+            self._tempo_spin.blockSignals(True)
             self._tempo_spin.setValue(int(self._sequence.tempo_bpm))
+            self._tempo_spin.blockSignals(False)
             self._update_ui_state()
             log.info("Recovered %d notes from autosave", recovered.note_count)
 
@@ -1445,6 +1683,108 @@ class EditorView(QWidget):
         self._playback_speed = speed
         if self._preview_player is not None:
             self._preview_player.set_speed(speed)
+
+    # ── Smart Tools ──────────────────────────────────────────
+
+    def _on_arrange(self) -> None:
+        """Apply smart arrangement to current track's notes."""
+        from ...core.smart_arrangement import smart_arrange
+
+        notes = self._sequence.notes
+        if not notes:
+            return
+
+        # Store pre-arrangement as ghost reference
+        self._arrangement_ghost_notes = [
+            copy.copy(n) for n in notes
+        ]
+
+        result = smart_arrange(notes)
+        self._sequence._push_undo()
+
+        # Replace notes
+        self._sequence._notes = list(result.notes)
+        self._sequence._notes.sort(key=lambda n: n.time_beats)
+        self._sequence._invalidate_cache()
+        self._update_ui_state()
+
+        log.info(
+            "Arranged: transpose=%+d, folded=%d, strategy=%s",
+            result.transpose_semitones,
+            result.notes_folded,
+            result.strategy_used,
+        )
+
+    def _on_fx(self) -> None:
+        """Open the MIDI FX dialog."""
+        from ..dialogs.fx_dialog import FxDialog
+
+        notes = self._sequence.notes
+        if not notes:
+            return
+
+        dlg = FxDialog(notes, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            result_notes = dlg.result_notes
+            if result_notes is not None:
+                self._sequence._push_undo()
+                self._sequence._notes = list(result_notes)
+                self._sequence._notes.sort(key=lambda n: n.time_beats)
+                self._sequence._invalidate_cache()
+                self._update_ui_state()
+
+    def _on_generate(self) -> None:
+        """Open the melody generator dialog."""
+        from ..dialogs.melody_dialog import MelodyDialog
+
+        dlg = MelodyDialog(
+            tempo_bpm=self._sequence.tempo_bpm,
+            time_signature=self._sequence.time_signature,
+            parent=self,
+        )
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            generated = dlg.result_notes
+            if generated:
+                self._sequence._push_undo()
+                for n in generated:
+                    self._sequence._notes.append(n)
+                self._sequence._notes.sort(key=lambda n: n.time_beats)
+                self._sequence._invalidate_cache()
+                self._update_ui_state()
+
+    def _on_ghost_toggled(self, checked: bool) -> None:
+        """Toggle arrangement ghost notes visibility."""
+        self._ghost_opacity_slider.setVisible(checked)
+        ghost = getattr(self, "_arrangement_ghost_notes", [])
+        if checked and ghost:
+            opacity = self._ghost_opacity_slider.value() / 100.0
+            self._note_roll.set_arrangement_ghost_notes(ghost)
+            self._note_roll.set_arrangement_ghost_opacity(opacity)
+        else:
+            self._note_roll.set_arrangement_ghost_notes([])
+
+    def _on_ghost_opacity_changed(self, value: int) -> None:
+        ghost = getattr(self, "_arrangement_ghost_notes", [])
+        if self._ghost_btn.isChecked() and ghost:
+            self._note_roll.set_arrangement_ghost_opacity(value / 100.0)
+
+    def _on_automation_toggled(self, checked: bool) -> None:
+        """Toggle automation lane visibility."""
+        if hasattr(self, "_automation_widget"):
+            self._automation_widget.setVisible(checked)
+
+    def _on_score_toggled(self, checked: bool) -> None:
+        """Toggle score view visibility."""
+        if hasattr(self, "_score_widget"):
+            self._score_widget.setVisible(checked)
+            if checked:
+                self._score_widget.set_notes(
+                    self._sequence.notes,
+                    tempo_bpm=self._sequence.tempo_bpm,
+                    time_signature=self._sequence.time_signature,
+                )
+            else:
+                self._score_widget.clear()
 
     def _on_note_deleted(self, index: int) -> None:
         if index == -1:

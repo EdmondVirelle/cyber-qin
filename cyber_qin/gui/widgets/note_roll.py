@@ -106,6 +106,8 @@ class NoteRoll(QWidget):
         self._notes: list = []  # list of BeatNote
         self._rests: list = []  # list of BeatRest
         self._ghost_notes: list = []  # notes from other tracks (BeatNote with .color)
+        self._arrangement_ghost_notes: list = []  # pre-arrangement snapshot
+        self._arrangement_ghost_opacity: float = 0.15
         self._cursor_beats: float = 0.0
         self._playback_beats: float = -1.0  # playback cursor, -1 = hidden
         self._scroll_x: float = 0.0
@@ -210,6 +212,16 @@ class NoteRoll(QWidget):
 
     def set_ghost_notes(self, notes: list) -> None:
         self._ghost_notes = notes
+        self.update()
+
+    def set_arrangement_ghost_notes(self, notes: list) -> None:
+        """Set ghost notes showing pre-arrangement positions."""
+        self._arrangement_ghost_notes = notes
+        self.update()
+
+    def set_arrangement_ghost_opacity(self, opacity: float) -> None:
+        """Set opacity for arrangement ghost notes (0.0-1.0)."""
+        self._arrangement_ghost_opacity = max(0.0, min(1.0, opacity))
         self.update()
 
     def set_active_notes(self, notes: set[int]) -> None:
@@ -964,6 +976,21 @@ class NoteRoll(QWidget):
         # Bottom border (below C4)
         painter.setPen(QPen(QColor(ACCENT_GOLD), 1.5))
         painter.drawLine(0, int(playable_bottom_y), w, int(playable_bottom_y))
+
+        # ── Arrangement ghost notes (pre-arrangement snapshot) ──
+        if self._arrangement_ghost_notes:
+            for agn in self._arrangement_ghost_notes:
+                ax = self._beat_to_x(agn.time_beats)
+                aw = max(4.0, agn.duration_beats * self._zoom)
+                if ax + aw < 0 or ax > w:
+                    continue
+                ay = self._y_for_note(agn.note)
+                arr_rect = QRectF(ax, ay, aw, nh)
+                arr_path = QPainterPath()
+                arr_path.addRoundedRect(arr_rect, _NOTE_RADIUS, _NOTE_RADIUS)
+                ac = QColor("#FF6B6B")  # coral red for arrangement ghost
+                ac.setAlphaF(self._arrangement_ghost_opacity)
+                painter.fillPath(arr_path, ac)
 
         # ── Ghost notes ─────────────────────────────────────
         for gn in self._ghost_notes:

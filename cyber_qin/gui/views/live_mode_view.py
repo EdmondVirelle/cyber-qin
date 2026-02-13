@@ -33,6 +33,7 @@ from ...core.translator import translator
 from ...utils.admin import is_admin
 from ..dialogs import KeyMappingViewer
 from ..theme import BG_PAPER, DIVIDER, TEXT_SECONDARY
+from ..widgets.live_visualizer import LiveVisualizer
 from ..widgets.log_viewer import LogViewer
 from ..widgets.piano_display import PianoDisplay
 from ..widgets.status_bar import StatusBar
@@ -173,6 +174,7 @@ class LiveModeView(QWidget):
             TRANSPOSE_MAX // TRANSPOSE_STEP,
         )
         self._transpose_spin.setValue(0)
+        self._transpose_spin.setMinimumWidth(100)
         self._transpose_spin.setSuffix(translator.tr("live.transpose.suffix"))
         self._transpose_spin.valueChanged.connect(self._on_transpose_changed)
         row1.addWidget(self._transpose_spin)
@@ -242,6 +244,22 @@ class LiveModeView(QWidget):
 
         content.addWidget(device_card)
 
+        # Visualizer toggle + widget
+        vis_row = QHBoxLayout()
+        self._vis_btn = QPushButton(translator.tr("live.visualizer"))
+        self._vis_btn.setCheckable(True)
+        self._vis_btn.setChecked(False)
+        self._vis_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._vis_btn.clicked.connect(self._on_visualizer_toggled)
+        vis_row.addWidget(self._vis_btn)
+        vis_row.addStretch()
+        content.addLayout(vis_row)
+
+        self._visualizer = LiveVisualizer()
+        self._visualizer.setVisible(False)
+        self._visualizer.setFixedHeight(180)
+        content.addWidget(self._visualizer)
+
         # Piano display
         self._piano = PianoDisplay(mapper=self._mapper)
         content.addWidget(self._piano, 1)
@@ -304,6 +322,7 @@ class LiveModeView(QWidget):
 
         # update dynamic labels
         self._auto_tune_check.setText(translator.tr("live.auto_tune"))
+        self._vis_btn.setText(translator.tr("live.visualizer"))
         self._log_title_lbl.setText(translator.tr("live.log"))
         self._transpose_spin.setSuffix(translator.tr("live.transpose.suffix"))
 
@@ -577,6 +596,10 @@ class LiveModeView(QWidget):
         else:
             self._piano.note_off(note)
 
+        # Forward to visualizer
+        if self._visualizer.is_running:
+            self._visualizer.on_note_event(event_type, note, velocity)
+
     def on_latency(self, ms: float) -> None:
         self._status.set_latency(ms)
 
@@ -627,6 +650,15 @@ class LiveModeView(QWidget):
         name = Path(file_path).stem
         self._log.log(f"  錄音已儲存: {name}")
 
+    def _on_visualizer_toggled(self) -> None:
+        enabled = self._vis_btn.isChecked()
+        self._visualizer.setVisible(enabled)
+        if enabled:
+            self._visualizer.start()
+        else:
+            self._visualizer.stop()
+
     def cleanup(self) -> None:
+        self._visualizer.stop()
         self._simulator.release_all()
         self._listener.close()

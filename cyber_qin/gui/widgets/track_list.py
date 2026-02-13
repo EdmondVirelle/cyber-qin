@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -83,6 +84,9 @@ class TrackCard(QWidget):
 
     play_clicked = pyqtSignal(int)  # index
     remove_clicked = pyqtSignal(int)  # index
+    edit_clicked = pyqtSignal(int)  # index
+    practice_clicked = pyqtSignal(int)  # index
+    metadata_clicked = pyqtSignal(int)  # index
 
     def __init__(self, index: int, info: MidiFileInfo, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -184,12 +188,37 @@ class TrackCard(QWidget):
     def mouseDoubleClickEvent(self, event) -> None:  # noqa: N802
         self.play_clicked.emit(self._index)
 
+    def contextMenuEvent(self, event) -> None:  # noqa: N802
+        menu = QMenu(self)
+        act_play = menu.addAction(translator.tr("lib.play"))
+        act_edit = menu.addAction(translator.tr("lib.edit"))
+        act_practice = menu.addAction(translator.tr("lib.practice"))
+        menu.addSeparator()
+        act_metadata = menu.addAction(translator.tr("lib.edit_metadata"))
+        menu.addSeparator()
+        act_remove = menu.addAction(translator.tr("lib.remove"))
+
+        action = menu.exec(event.globalPos())
+        if action == act_play:
+            self.play_clicked.emit(self._index)
+        elif action == act_edit:
+            self.edit_clicked.emit(self._index)
+        elif action == act_practice:
+            self.practice_clicked.emit(self._index)
+        elif action == act_metadata:
+            self.metadata_clicked.emit(self._index)
+        elif action == act_remove:
+            self.remove_clicked.emit(self._index)
+
 
 class TrackList(QWidget):
     """Scrollable list of MIDI track cards with search and sort."""
 
     play_requested = pyqtSignal(int)  # track index (in _all_cards)
     remove_requested = pyqtSignal(int)  # track index (in _all_cards)
+    edit_requested = pyqtSignal(int)  # track index
+    practice_requested = pyqtSignal(int)  # track index
+    metadata_requested = pyqtSignal(int)  # track index
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -281,6 +310,9 @@ class TrackList(QWidget):
         card = TrackCard(index, info)
         card.play_clicked.connect(self.play_requested.emit)
         card.remove_clicked.connect(self._on_remove)
+        card.edit_clicked.connect(self.edit_requested.emit)
+        card.practice_clicked.connect(self.practice_requested.emit)
+        card.metadata_clicked.connect(self.metadata_requested.emit)
         self._all_cards.append(card)
         self._apply_filter()
 

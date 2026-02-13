@@ -21,7 +21,7 @@ from .language_selector import LanguageSelector
 class Sidebar(QWidget):
     """Navigation sidebar with animated icon buttons and brand logo."""
 
-    navigation_changed = pyqtSignal(int)  # 0=Live, 1=Library, 2=Editor
+    navigation_changed = pyqtSignal(int)  # 0=Live, 1=Library, 2=Editor, 3=Practice
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -67,6 +67,11 @@ class Sidebar(QWidget):
         self._editor_btn.clicked.connect(lambda: self._on_nav_click(2))
         layout.addWidget(self._editor_btn)
         self._buttons.append(self._editor_btn)
+
+        self._practice_btn = AnimatedNavButton("practice", "練習")
+        self._practice_btn.clicked.connect(lambda: self._on_nav_click(3))
+        layout.addWidget(self._practice_btn)
+        self._buttons.append(self._practice_btn)
 
         layout.addSpacing(16)
 
@@ -162,6 +167,7 @@ class Sidebar(QWidget):
         self._live_btn.set_text(translator.tr("nav.live"))
         self._library_btn.set_text(translator.tr("nav.library"))
         self._editor_btn.set_text(translator.tr("nav.editor"))
+        self._practice_btn.set_text(translator.tr("nav.practice"))
         credit_text = translator.tr("sidebar.credit")
         self._credit.setText(credit_text)
         self._credit.setToolTip(credit_text)

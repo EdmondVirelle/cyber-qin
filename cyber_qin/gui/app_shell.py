@@ -32,6 +32,7 @@ from .dialogs import SettingsDialog
 from .views.editor_view import EditorView
 from .views.library_view import LibraryView
 from .views.live_mode_view import LiveModeView
+from .views.practice_view import PracticeView
 from .widgets.now_playing_bar import NowPlayingBar, RepeatMode
 from .widgets.sidebar import Sidebar
 
@@ -141,7 +142,7 @@ class AppShell(QMainWindow):
 
         # Restore last active view
         last_view = self._config.get("window.last_view", "live")
-        view_index = {"live": 0, "library": 1, "editor": 2}.get(last_view, 0)
+        view_index = {"live": 0, "library": 1, "editor": 2, "practice": 3}.get(last_view, 0)
         self._stack.setCurrentIndex(view_index)
         self._sidebar._set_active(view_index)  # noqa: SLF001
 
@@ -176,9 +177,13 @@ class AppShell(QMainWindow):
         # View 2: Editor
         self._editor_view = EditorView()
 
+        # View 3: Practice Mode
+        self._practice_view = PracticeView()
+
         self._stack.addWidget(self._live_view)
         self._stack.addWidget(self._library_view)
         self._stack.addWidget(self._editor_view)
+        self._stack.addWidget(self._practice_view)
         top.addWidget(self._stack, 1)
 
         root.addLayout(top, 1)
@@ -234,6 +239,12 @@ class AppShell(QMainWindow):
         self._editor_view.recording_started.connect(self._on_editor_recording_started)
         self._editor_view.recording_stopped.connect(self._on_editor_recording_stopped)
         self._editor_view.play_requested.connect(self._on_editor_play)
+
+        # Library → practice mode
+        self._library_view.practice_requested.connect(self._on_practice_file)
+
+        # MIDI note events → practice mode scoring
+        self._processor.note_event.connect(self._on_practice_note_event)
 
         # Pass player to editor for playback cursor tracking
         self._editor_view.set_player(self._player)
@@ -514,11 +525,37 @@ class AppShell(QMainWindow):
         dialog = SettingsDialog(self)
         dialog.exec()
 
+    def _on_practice_file(self, file_path: str) -> None:
+        """Load a MIDI file into practice mode."""
+        try:
+            from ..core.beat_sequence import EditorSequence
+            from ..core.midi_file_player import MidiFileParser as _Parser
+
+            events, info = _Parser.parse(file_path)
+            seq = EditorSequence(tempo_bpm=info.tempo_bpm)
+            seq.from_midi_file_events(events)
+            notes = seq.notes
+            if notes:
+                self._practice_view.start_practice(notes, info.tempo_bpm)
+                self._stack.setCurrentIndex(3)
+                self._sidebar._set_active(3)  # noqa: SLF001
+                self._live_view.log_viewer.log(
+                    f"  練習模式: {info.name} ({len(notes)} 音符)"
+                )
+        except Exception as e:
+            self._live_view.log_viewer.log(f"  練習載入失敗: {e}")
+            log.exception("Failed to load practice file %s", file_path)
+
+    def _on_practice_note_event(self, event_type: str, note: int, velocity: int) -> None:
+        """Forward live MIDI events to practice mode for scoring."""
+        if self._stack.currentIndex() == 3 and event_type == "note_on":
+            self._practice_view.on_user_note(note)
+
     def closeEvent(self, event) -> None:  # noqa: N802
         # Save window state to config (geometry as base64 string for JSON compatibility)
         geometry_b64 = self.saveGeometry().toBase64().data().decode("ascii")
         self._config.set("window.geometry", geometry_b64)
-        current_view = {0: "live", 1: "library", 2: "editor"}.get(
+        current_view = {0: "live", 1: "library", 2: "editor", 3: "practice"}.get(
             self._stack.currentIndex(), "live"
         )
         self._config.set("window.last_view", current_view)

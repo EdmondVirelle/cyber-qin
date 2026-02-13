@@ -112,6 +112,7 @@ class SettingsDialog(QDialog):
         self._transpose = QSpinBox()
         self._transpose.setMinimum(-24)
         self._transpose.setMaximum(24)
+        self._transpose.setMinimumWidth(120)
         self._transpose.setSuffix(" " + translator.tr("settings.playback.transpose.semitones"))
         self._transpose.setToolTip(translator.tr("settings.playback.transpose.tooltip"))
         group_layout.addRow(translator.tr("settings.playback.transpose.label"), self._transpose)
@@ -156,6 +157,7 @@ class SettingsDialog(QDialog):
         self._auto_save_interval = QSpinBox()
         self._auto_save_interval.setMinimum(10)
         self._auto_save_interval.setMaximum(600)
+        self._auto_save_interval.setMinimumWidth(120)
         self._auto_save_interval.setSuffix(" " + translator.tr("settings.editor.seconds"))
         autosave_layout.addRow(
             translator.tr("settings.editor.autosave.interval"), self._auto_save_interval

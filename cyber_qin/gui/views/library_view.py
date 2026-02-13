@@ -96,6 +96,7 @@ class LibraryView(QWidget):
 
     play_requested = pyqtSignal(str)  # Emits file path
     edit_requested = pyqtSignal(str)  # Emits file path (for editor)
+    practice_requested = pyqtSignal(str)  # Emits file path (for practice mode)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -179,15 +180,15 @@ class LibraryView(QWidget):
         self._track_list = TrackList()
         self._track_list.play_requested.connect(self._on_play)
         self._track_list.remove_requested.connect(self._on_remove)
-        if hasattr(self._track_list, "edit_requested"):
-            self._track_list.edit_requested.connect(self._on_edit)
+        self._track_list.edit_requested.connect(self._on_edit)
+        self._track_list.practice_requested.connect(self._on_practice)
+        self._track_list.metadata_requested.connect(self._on_metadata)
         content.addWidget(self._track_list, 1)
 
         # Empty state
         self._empty_state = _EmptyStateWidget()
         content.addWidget(self._empty_state)
 
-        root.addLayout(content, 1)
         root.addLayout(content, 1)
 
         translator.language_changed.connect(self._update_text)
@@ -304,6 +305,18 @@ class LibraryView(QWidget):
     def _on_edit(self, index: int) -> None:
         if 0 <= index < len(self._tracks):
             self.edit_requested.emit(self._tracks[index].file_path)
+
+    def _on_practice(self, index: int) -> None:
+        if 0 <= index < len(self._tracks):
+            self.practice_requested.emit(self._tracks[index].file_path)
+
+    def _on_metadata(self, index: int) -> None:
+        if 0 <= index < len(self._tracks):
+            from ..dialogs.metadata_dialog import MetadataDialog
+
+            info = self._tracks[index]
+            dlg = MetadataDialog(info.file_path, parent=self)
+            dlg.exec()
 
     def _update_empty_state(self) -> None:
         has_tracks = len(self._tracks) > 0
