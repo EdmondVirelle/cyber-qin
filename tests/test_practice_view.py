@@ -923,3 +923,46 @@ class TestPracticeViewFullFlow:
         practice_view.start_practice(one_note, 120.0)
         # Should not crash
         practice_view._on_display_note_hit(60, 0.0)
+
+
+# ── Regression: classmethod return value bug (v2.3.0 → v2.3.1) ──
+
+
+class TestEditorSequenceClassmethod:
+    """Regression test: EditorSequence.from_midi_file_events is a @classmethod
+    that returns a new EditorSequence. Calling it as an instance method and
+    ignoring the return value produces an empty sequence (the bug in v2.3.0).
+    """
+
+    def test_from_midi_file_events_returns_populated_sequence(self):
+        """Classmethod must return sequence with notes, not empty."""
+        from cyber_qin.core.beat_sequence import EditorSequence
+        from cyber_qin.core.midi_file_player import MidiFileEvent
+
+        events = [
+            MidiFileEvent(0.0, "note_on", 60, 100),
+            MidiFileEvent(0.5, "note_off", 60, 0),
+            MidiFileEvent(1.0, "note_on", 64, 100),
+            MidiFileEvent(1.5, "note_off", 64, 0),
+        ]
+        seq = EditorSequence.from_midi_file_events(events, tempo_bpm=120.0)
+        assert len(seq.notes) == 2, "Classmethod must populate notes"
+        assert seq.notes[0].note == 60
+        assert seq.notes[1].note == 64
+
+    def test_instance_call_discards_return_value_bug(self):
+        """Demonstrate the bug pattern: instance.from_midi_file_events()
+        returns a NEW sequence; the original instance stays empty."""
+        from cyber_qin.core.beat_sequence import EditorSequence
+        from cyber_qin.core.midi_file_player import MidiFileEvent
+
+        events = [
+            MidiFileEvent(0.0, "note_on", 60, 100),
+            MidiFileEvent(0.5, "note_off", 60, 0),
+        ]
+        # Bug pattern (v2.3.0): creates empty seq, calls classmethod on it,
+        # ignores return → seq.notes is []
+        seq = EditorSequence(tempo_bpm=120.0)
+        _returned = seq.from_midi_file_events(events, tempo_bpm=120.0)
+        assert len(seq.notes) == 0, "Original instance should be empty"
+        assert len(_returned.notes) == 1, "Returned instance has the notes"

@@ -559,8 +559,7 @@ class AppShell(QMainWindow):
             from ..core.midi_file_player import MidiFileParser as _Parser
 
             events, info = _Parser.parse(file_path)
-            seq = EditorSequence(tempo_bpm=info.tempo_bpm)
-            seq.from_midi_file_events(events)
+            seq = EditorSequence.from_midi_file_events(events, tempo_bpm=info.tempo_bpm)
             notes = seq.notes
             if notes:
                 self._practice_view.set_current_track_name(info.name)

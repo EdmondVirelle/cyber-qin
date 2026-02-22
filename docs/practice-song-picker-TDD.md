@@ -310,18 +310,28 @@ No performance concerns for expected usage (library of 10-200 tracks).
 
 ### 7.1 Test File
 
-`tests/test_practice_view.py` — 17 tests, 180 LOC
+`tests/test_practice_view.py` — 114 tests
 
 ### 7.2 Test Matrix
 
 | Test Class | Count | Coverage |
 |-----------|-------|---------|
-| `TestPracticeViewInitialState` | 4 | Page 0 default, button hidden, signals exist |
-| `TestPracticeViewStartPractice` | 2 | Page switch to 1, change_track_btn shown |
-| `TestPracticeViewChangeTrack` | 3 | Return to page 0, button hidden, state cleared |
-| `TestPracticeViewSetLibraryTracks` | 3 | Card creation, empty list, card replacement |
-| `TestPracticeViewSetTrackName` | 1 | Header desc label update |
-| `TestPracticeEmptyStateSignals` | 4 | Button signals, card signals, signal forwarding |
+| `TestPracticeViewInitialState` | 14 | Page 0 default, button hidden, signals, score labels, combos |
+| `TestPracticeViewStartPractice` | 14 | Page switch, scorer, extreme tempo/note/velocity values |
+| `TestPracticeViewChangeTrack` | 11 | Return to page 0, state clearing, idempotency, multi-cycle |
+| `TestPracticeViewStartStop` | 4 | Toggle behavior, no-op when empty |
+| `TestPracticeViewUserNote` | 4 | No-op when not playing, wrong pitch |
+| `TestPracticeViewSetLibraryTracks` | 12 | Cards, empty/non-empty transitions, unicode, large values |
+| `TestPracticeViewSetTrackName` | 5 | Unicode, empty, very long, preserved on page 1 |
+| `TestPracticeViewI18n` | 9 | Label refresh, page-conditional desc, language round-trip |
+| `TestPracticeViewScoreDisplay` | 2 | With/without scorer |
+| `TestPracticeViewModeScheme` | 6 | Keyboard/MIDI toggle, scheme changes |
+| `TestPracticeEmptyState` | 9 | Cards, signals, update_text |
+| `TestMiniTrackCard` | 11 | Height, click events, hover, unicode, paint |
+| `TestMusicNoteIcon` | 2 | Size, paint |
+| `TestPracticeViewSignalForwarding` | 4 | Signal chain verification |
+| `TestPracticeViewFullFlow` | 5 | End-to-end flows |
+| `TestEditorSequenceClassmethod` | 2 | Regression: classmethod return value bug (v2.3.0) |
 
 ### 7.3 Test Fixtures
 
@@ -373,14 +383,37 @@ pytest --cov=cyber_qin --cov-report=html tests/test_practice_view.py
 
 ---
 
-## 8. Deployment Checklist
+## 8. Known Issues (Resolved)
+
+### 8.1 v2.3.0 — Track Card Click Did Nothing
+
+**Root cause**: `EditorSequence.from_midi_file_events()` is a `@classmethod` that returns a **new** `EditorSequence`. The original code in `AppShell._on_practice_file()` called it as an instance method and discarded the return value:
+
+```python
+# BUG (v2.3.0):
+seq = EditorSequence(tempo_bpm=info.tempo_bpm)
+seq.from_midi_file_events(events)   # Return value discarded!
+notes = seq.notes                    # Always empty → if notes: never True
+
+# FIX (v2.3.1):
+seq = EditorSequence.from_midi_file_events(events, tempo_bpm=info.tempo_bpm)
+notes = seq.notes                    # Correctly populated
+```
+
+**Impact**: Clicking any `_MiniTrackCard` (or "Open MIDI File" button) would trigger the full signal chain correctly, but `_on_practice_file()` would silently produce an empty note list and never call `start_practice()`.
+
+**Regression test**: `TestEditorSequenceClassmethod` in `tests/test_practice_view.py`.
+
+---
+
+## 9. Deployment Checklist
 
 - [x] `ruff check .` passes (0 errors)
-- [x] `pytest` passes (1144/1144)
+- [x] `pytest` passes (1241/1241)
 - [x] All 5 languages have complete i18n keys
 - [x] No new dependencies added
-- [x] No changes to `pyproject.toml`
 - [x] No changes to PyInstaller spec
 - [x] Backward compatible (existing Library → Practice right-click still works)
+- [x] v2.3.0 classmethod bug fixed and regression-tested
 - [ ] Manual smoke test: sidebar → Practice → see picker → open file → play → change track
 - [ ] Manual smoke test: Library → right-click → Practice → verify same flow

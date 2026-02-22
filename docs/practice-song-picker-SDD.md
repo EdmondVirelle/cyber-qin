@@ -311,7 +311,7 @@ Additionally, `practice.desc` was updated to remove navigation instructions (now
 | `cyber_qin/core/translator.py` | +42 | 6 new i18n keys × 5 languages + practice.desc update |
 | `cyber_qin/gui/views/practice_view.py` | Rewritten (~548 LOC) | +3 new classes, QStackedWidget, signals, change track |
 | `cyber_qin/gui/app_shell.py` | +15 | Wire new signals, QFileDialog, library track passing |
-| `tests/test_practice_view.py` | +180 (new file) | 17 tests covering all new behavior |
+| `tests/test_practice_view.py` | +926 (new file) | 114 tests covering all behavior + edge cases + regression |
 
 ---
 
@@ -323,3 +323,28 @@ Additionally, `practice.desc` was updated to remove navigation instructions (now
 | Large library (500+ tracks) causes scroll lag | Low | Medium | `_MiniTrackCard` is lightweight (48px fixed height, no complex rendering) |
 | Signal chain too deep (5 hops for file open) | — | Low | Standard Qt pattern; each hop is single-line connect |
 | `_on_practice_file` fails on corrupt MIDI | Low | Low | Existing try/except with error logging preserved |
+
+---
+
+## 9. Post-Release Bug Fix (v2.3.0 → v2.3.1)
+
+### 9.1 Bug: Track Card Click Did Nothing
+
+**Symptom**: Clicking a `_MiniTrackCard` in the song picker had no visible effect — no page switch, no practice start.
+
+**Root Cause**: `EditorSequence.from_midi_file_events()` is a `@classmethod` that returns a **new** `EditorSequence`. In `AppShell._on_practice_file()`, the return value was discarded:
+
+```python
+# BUG:
+seq = EditorSequence(tempo_bpm=info.tempo_bpm)
+seq.from_midi_file_events(events)   # ← classmethod return value ignored
+notes = seq.notes                    # ← always [] (empty instance)
+
+# FIX:
+seq = EditorSequence.from_midi_file_events(events, tempo_bpm=info.tempo_bpm)
+notes = seq.notes                    # ← correctly populated
+```
+
+**Why it passed tests**: The 112 practice view tests validated the signal chain and UI behavior, but `_on_practice_file()` lives in `AppShell` (integration layer, not unit-tested). The signal chain was correct — the bug was in the handler at the end of the chain.
+
+**Regression test added**: `TestEditorSequenceClassmethod` (2 tests) in `tests/test_practice_view.py`.
