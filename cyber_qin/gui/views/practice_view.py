@@ -1,13 +1,16 @@
-"""Practice mode view — rhythm game with real-time scoring."""
+"""Practice mode view — rhythm game with real-time scoring and song picker."""
 
 from __future__ import annotations
 
-from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -15,13 +18,19 @@ from PyQt6.QtWidgets import (
 from ...core.beat_sequence import BeatNote
 from ...core.key_mapper import KeyMapper
 from ...core.mapping_schemes import get_scheme, list_schemes
+from ...core.midi_file_player import MidiFileInfo
 from ...core.practice_engine import PracticeScorer, notes_to_practice
 from ...core.translator import translator
 from ..theme import (
     ACCENT,
     ACCENT_GOLD,
+    ACCENT_GOLD_DIM,
+    ACCENT_GOLD_GLOW,
     BG_INK,
+    BG_PAPER,
     BG_SCROLL,
+    BORDER_DIM,
+    TEXT_DISABLED,
     TEXT_PRIMARY,
     TEXT_SECONDARY,
 )
@@ -49,8 +58,216 @@ class _PracticeGradientHeader(QWidget):
         painter.end()
 
 
+# ── Mini track card for the empty-state library list ──────────────
+
+
+class _MiniTrackCard(QWidget):
+    """Compact clickable card representing one library track."""
+
+    clicked = pyqtSignal(str)  # file_path
+
+    def __init__(self, info: MidiFileInfo, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._file_path = info.file_path
+        self._hovered = False
+        self.setFixedHeight(48)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(16, 4, 16, 4)
+
+        name_lbl = QLabel(info.name)
+        name_lbl.setFont(QFont("Microsoft JhengHei", 11))
+        name_lbl.setStyleSheet(f"color: {TEXT_PRIMARY}; background: transparent;")
+        layout.addWidget(name_lbl)
+
+        layout.addStretch()
+
+        mins, secs = divmod(int(info.duration_seconds), 60)
+        dur_lbl = QLabel(f"{mins}:{secs:02d}")
+        dur_lbl.setFont(QFont("Microsoft JhengHei", 10))
+        dur_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
+        layout.addWidget(dur_lbl)
+
+        notes_lbl = QLabel(f"{info.note_count} notes")
+        notes_lbl.setFont(QFont("Microsoft JhengHei", 10))
+        notes_lbl.setStyleSheet(f"color: {TEXT_DISABLED}; background: transparent;")
+        layout.addWidget(notes_lbl)
+
+    def enterEvent(self, event) -> None:  # noqa: N802
+        self._hovered = True
+        self.update()
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        self._hovered = False
+        self.update()
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        bg = QColor(BG_PAPER) if self._hovered else QColor(BG_SCROLL)
+        painter.setBrush(bg)
+        painter.setPen(QPen(QColor(BORDER_DIM), 1))
+        painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 6, 6)
+        painter.end()
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit(self._file_path)
+
+
+# ── Empty state (page 0) ─────────────────────────────────────────
+
+
+class _PracticeEmptyState(QWidget):
+    """Song picker shown when no track is loaded."""
+
+    file_open_clicked = pyqtSignal()
+    track_clicked = pyqtSignal(str)  # file_path
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._track_cards: list[_MiniTrackCard] = []
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setStyleSheet(f"background-color: {BG_INK};")
+
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(48, 40, 48, 40)
+        layout.setSpacing(12)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # ── Icon (music note drawn with QPainter in a small widget) ──
+        icon_widget = _MusicNoteIcon()
+        layout.addWidget(icon_widget, 0, Qt.AlignmentFlag.AlignCenter)
+
+        # ── Title ──
+        self._title_lbl = QLabel(translator.tr("practice.empty.title"))
+        self._title_lbl.setFont(QFont("Microsoft JhengHei", 20, QFont.Weight.Bold))
+        self._title_lbl.setStyleSheet(f"color: {TEXT_PRIMARY};")
+        self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._title_lbl)
+
+        # ── Subtitle ──
+        self._sub_lbl = QLabel(translator.tr("practice.empty.sub"))
+        self._sub_lbl.setFont(QFont("Microsoft JhengHei", 12))
+        self._sub_lbl.setStyleSheet(f"color: {TEXT_SECONDARY};")
+        self._sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._sub_lbl)
+
+        layout.addSpacing(12)
+
+        # ── Open File button (gold accent) ──
+        self._open_btn = QPushButton(translator.tr("practice.open_file"))
+        self._open_btn.setFont(QFont("Microsoft JhengHei", 12, QFont.Weight.Bold))
+        self._open_btn.setMinimumWidth(220)
+        self._open_btn.setFixedHeight(42)
+        self._open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._open_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {ACCENT_GOLD};
+                color: {BG_INK};
+                border: none;
+                border-radius: 6px;
+                padding: 8px 24px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{ background-color: {ACCENT_GOLD_GLOW}; }}
+            QPushButton:pressed {{ background-color: {ACCENT_GOLD_DIM}; }}
+            """
+        )
+        self._open_btn.clicked.connect(self.file_open_clicked.emit)
+        layout.addWidget(self._open_btn, 0, Qt.AlignmentFlag.AlignCenter)
+
+        layout.addSpacing(24)
+
+        # ── Library tracks section header ──
+        self._section_lbl = QLabel(translator.tr("practice.library_tracks"))
+        self._section_lbl.setFont(QFont("Microsoft JhengHei", 13, QFont.Weight.Bold))
+        self._section_lbl.setStyleSheet(f"color: {TEXT_SECONDARY};")
+        layout.addWidget(self._section_lbl)
+
+        # ── Track list container ──
+        self._tracks_container = QVBoxLayout()
+        self._tracks_container.setSpacing(4)
+        layout.addLayout(self._tracks_container)
+
+        # ── No-tracks placeholder ──
+        self._no_tracks_lbl = QLabel(translator.tr("practice.no_tracks"))
+        self._no_tracks_lbl.setFont(QFont("Microsoft JhengHei", 11))
+        self._no_tracks_lbl.setStyleSheet(f"color: {TEXT_DISABLED};")
+        self._no_tracks_lbl.setWordWrap(True)
+        layout.addWidget(self._no_tracks_lbl)
+
+        layout.addStretch()
+
+        scroll.setWidget(container)
+        outer.addWidget(scroll)
+
+    def set_tracks(self, tracks: list[MidiFileInfo]) -> None:
+        """Populate the mini track list from library data."""
+        # Clear old cards
+        for card in self._track_cards:
+            card.setParent(None)
+            card.deleteLater()
+        self._track_cards.clear()
+
+        self._no_tracks_lbl.setVisible(len(tracks) == 0)
+
+        for info in tracks:
+            card = _MiniTrackCard(info)
+            card.clicked.connect(self.track_clicked.emit)
+            self._tracks_container.addWidget(card)
+            self._track_cards.append(card)
+
+    def update_text(self) -> None:
+        self._title_lbl.setText(translator.tr("practice.empty.title"))
+        self._sub_lbl.setText(translator.tr("practice.empty.sub"))
+        self._open_btn.setText(translator.tr("practice.open_file"))
+        self._section_lbl.setText(translator.tr("practice.library_tracks"))
+        self._no_tracks_lbl.setText(translator.tr("practice.no_tracks"))
+
+
+class _MusicNoteIcon(QWidget):
+    """Simple music note icon drawn with QPainter."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFixedSize(64, 64)
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor(ACCENT_GOLD), 3)
+        painter.setPen(pen)
+        # Note head (filled ellipse)
+        painter.setBrush(QColor(ACCENT_GOLD))
+        painter.drawEllipse(14, 38, 18, 14)
+        # Stem
+        painter.drawLine(32, 42, 32, 12)
+        # Flag
+        painter.drawLine(32, 12, 44, 22)
+        painter.drawLine(32, 18, 44, 28)
+        painter.end()
+
+
+# ── Main practice view ────────────────────────────────────────────
+
+
 class PracticeView(QWidget):
-    """Practice mode with falling notes and scoring."""
+    """Practice mode with falling notes, scoring, and built-in song picker."""
+
+    file_open_requested = pyqtSignal()
+    practice_track_requested = pyqtSignal(str)  # file_path
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -79,7 +296,7 @@ class PracticeView(QWidget):
         overlay_layout = QVBoxLayout(header_overlay)
         overlay_layout.setContentsMargins(24, 20, 24, 8)
 
-        # Row 1: title + mode combo + scheme combo
+        # Row 1: title + [change_track_btn] + mode combo + scheme combo
         header_row = QHBoxLayout()
 
         self._title_lbl = QLabel(translator.tr("practice.title"))
@@ -88,6 +305,27 @@ class PracticeView(QWidget):
         header_row.addWidget(self._title_lbl)
 
         header_row.addStretch()
+
+        # Change Track button (hidden until a track is loaded)
+        self._change_track_btn = QPushButton(translator.tr("practice.change_track"))
+        self._change_track_btn.setFixedHeight(28)
+        self._change_track_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._change_track_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {ACCENT_GOLD};
+                border: 1px solid {ACCENT_GOLD};
+                border-radius: 4px;
+                padding: 2px 12px;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{ background-color: rgba(212, 175, 55, 30); }}
+            """
+        )
+        self._change_track_btn.clicked.connect(self._on_change_track)
+        self._change_track_btn.setVisible(False)
+        header_row.addWidget(self._change_track_btn)
 
         self._mode_combo = QComboBox()
         self._mode_combo.addItem(translator.tr("practice.mode.midi"), "midi")
@@ -106,7 +344,7 @@ class PracticeView(QWidget):
 
         overlay_layout.addLayout(header_row)
 
-        # Row 2: description
+        # Row 2: description / track name
         self._desc_lbl = QLabel(translator.tr("practice.desc"))
         self._desc_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent;")
         overlay_layout.addWidget(self._desc_lbl)
@@ -115,7 +353,22 @@ class PracticeView(QWidget):
         header_overlay.setGeometry(0, 0, 800, 100)
         layout.addWidget(header_container)
 
-        # ── Score bar ──
+        # ── Content stack (page 0: empty state, page 1: practice) ──
+        self._content_stack = QStackedWidget()
+
+        # Page 0: Empty state / song picker
+        self._empty_state = _PracticeEmptyState()
+        self._empty_state.file_open_clicked.connect(self.file_open_requested.emit)
+        self._empty_state.track_clicked.connect(self.practice_track_requested.emit)
+        self._content_stack.addWidget(self._empty_state)
+
+        # Page 1: Practice content (score bar + display)
+        practice_content = QWidget()
+        pc_layout = QVBoxLayout(practice_content)
+        pc_layout.setContentsMargins(0, 0, 0, 0)
+        pc_layout.setSpacing(0)
+
+        # Score bar
         score_bar = QWidget()
         score_bar.setFixedHeight(40)
         score_bar.setStyleSheet(f"background-color: {BG_SCROLL};")
@@ -157,46 +410,29 @@ class PracticeView(QWidget):
         self._start_btn.clicked.connect(self._on_start_stop)
         score_layout.addWidget(self._start_btn)
 
-        layout.addWidget(score_bar)
+        pc_layout.addWidget(score_bar)
 
-        # ── Main display ──
+        # Main display
         self._display = PracticeDisplay()
         self._display.note_hit.connect(self._on_display_note_hit)
-        layout.addWidget(self._display, 1)
+        pc_layout.addWidget(self._display, 1)
 
-    def resizeEvent(self, event) -> None:  # noqa: N802
-        super().resizeEvent(event)
-        if hasattr(self, "_gradient_header"):
-            for child in self._gradient_header.children():
-                if isinstance(child, QWidget):
-                    child.setGeometry(0, 0, self.width(), 100)
+        self._content_stack.addWidget(practice_content)
 
-    def _update_text(self) -> None:
-        self._title_lbl.setText(translator.tr("practice.title"))
-        self._desc_lbl.setText(translator.tr("practice.desc"))
-        self._mode_combo.setItemText(0, translator.tr("practice.mode.midi"))
-        self._mode_combo.setItemText(1, translator.tr("practice.mode.keyboard"))
-        for i, scheme in enumerate(list_schemes()):
-            self._scheme_combo.setItemText(i, scheme.translated_name())
-        self._start_btn.setText(
-            translator.tr("practice.stop")
-            if self._display.is_playing
-            else translator.tr("practice.start")
-        )
-        self._update_score_display()
+        # Start on page 0 (empty state)
+        self._content_stack.setCurrentIndex(0)
 
-    def _update_score_display(self) -> None:
-        if self._scorer:
-            stats = self._scorer.stats
-            self._score_label.setText(f"{translator.tr('practice.score')}: {stats.total_score}")
-            self._accuracy_label.setText(
-                f"{translator.tr('practice.accuracy')}: {stats.accuracy * 100:.0f}%"
-            )
-            self._combo_label.setText(f"{translator.tr('practice.combo')}: {stats.current_combo}")
-        else:
-            self._score_label.setText(f"{translator.tr('practice.score')}: 0")
-            self._accuracy_label.setText(f"{translator.tr('practice.accuracy')}: 0%")
-            self._combo_label.setText(f"{translator.tr('practice.combo')}: 0")
+        layout.addWidget(self._content_stack, 1)
+
+    # ── Public API ──
+
+    def set_library_tracks(self, tracks: list[MidiFileInfo]) -> None:
+        """Update the empty-state track list from library data."""
+        self._empty_state.set_tracks(tracks)
+
+    def set_current_track_name(self, name: str) -> None:
+        """Show the current track name in the header description."""
+        self._desc_lbl.setText(name)
 
     def start_practice(self, notes: list[BeatNote], tempo_bpm: float = 120.0) -> None:
         """Start practice session with given notes."""
@@ -208,6 +444,33 @@ class PracticeView(QWidget):
         self._display.set_notes(practice_notes, tempo_bpm)
         self._display.start()
         self._start_btn.setText(translator.tr("practice.stop"))
+
+        # Switch to practice content (page 1)
+        self._content_stack.setCurrentIndex(1)
+        self._change_track_btn.setVisible(True)
+
+    # ── Events ──
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "_gradient_header"):
+            for child in self._gradient_header.children():
+                if isinstance(child, QWidget):
+                    child.setGeometry(0, 0, self.width(), 100)
+
+    # ── Slots ──
+
+    def _on_change_track(self) -> None:
+        """Stop practice and go back to song picker."""
+        if self._display.is_playing:
+            self._display.stop()
+        self._scorer = None
+        self._notes = []
+        self._content_stack.setCurrentIndex(0)
+        self._change_track_btn.setVisible(False)
+        self._desc_lbl.setText(translator.tr("practice.desc"))
+        self._start_btn.setText(translator.tr("practice.start"))
+        self._update_score_display()
 
     def _on_start_stop(self) -> None:
         if self._display.is_playing:
@@ -251,3 +514,34 @@ class PracticeView(QWidget):
             key_labels = {note: km.label for note, km in scheme.mapping.items()}
             self._display.set_keyboard_mapping(reverse_map)
             self._display.set_key_labels(key_labels)
+
+    def _update_text(self) -> None:
+        self._title_lbl.setText(translator.tr("practice.title"))
+        self._change_track_btn.setText(translator.tr("practice.change_track"))
+        # Only update desc if we're on page 0 (not showing track name)
+        if self._content_stack.currentIndex() == 0:
+            self._desc_lbl.setText(translator.tr("practice.desc"))
+        self._mode_combo.setItemText(0, translator.tr("practice.mode.midi"))
+        self._mode_combo.setItemText(1, translator.tr("practice.mode.keyboard"))
+        for i, scheme in enumerate(list_schemes()):
+            self._scheme_combo.setItemText(i, scheme.translated_name())
+        self._start_btn.setText(
+            translator.tr("practice.stop")
+            if self._display.is_playing
+            else translator.tr("practice.start")
+        )
+        self._update_score_display()
+        self._empty_state.update_text()
+
+    def _update_score_display(self) -> None:
+        if self._scorer:
+            stats = self._scorer.stats
+            self._score_label.setText(f"{translator.tr('practice.score')}: {stats.total_score}")
+            self._accuracy_label.setText(
+                f"{translator.tr('practice.accuracy')}: {stats.accuracy * 100:.0f}%"
+            )
+            self._combo_label.setText(f"{translator.tr('practice.combo')}: {stats.current_combo}")
+        else:
+            self._score_label.setText(f"{translator.tr('practice.score')}: 0")
+            self._accuracy_label.setText(f"{translator.tr('practice.accuracy')}: 0%")
+            self._combo_label.setText(f"{translator.tr('practice.combo')}: 0")

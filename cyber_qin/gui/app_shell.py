@@ -193,8 +193,13 @@ class AppShell(QMainWindow):
         root.addWidget(self._now_playing)
 
     def _on_view_changed(self, index: int) -> None:
-        """Hide NowPlayingBar when in editor view (index 2)."""
+        """Hide NowPlayingBar when in editor view (index 2).
+
+        Also pass library tracks to practice view when switching to it.
+        """
         self._now_playing.setVisible(index != 2)
+        if index == 3:
+            self._practice_view.set_library_tracks(self._library_view._tracks)  # noqa: SLF001
 
     def _connect_signals(self) -> None:
         # Sidebar navigation
@@ -247,6 +252,10 @@ class AppShell(QMainWindow):
 
         # Library → practice mode
         self._library_view.practice_requested.connect(self._on_practice_file)
+
+        # Practice view → file open / track select
+        self._practice_view.file_open_requested.connect(self._on_practice_open_file)
+        self._practice_view.practice_track_requested.connect(self._on_practice_file)
 
         # MIDI note events → practice mode scoring
         self._processor.note_event.connect(self._on_practice_note_event)
@@ -530,6 +539,19 @@ class AppShell(QMainWindow):
         dialog = SettingsDialog(self)
         dialog.exec()
 
+    def _on_practice_open_file(self) -> None:
+        """Open a QFileDialog to select a MIDI file for practice."""
+        from PyQt6.QtWidgets import QFileDialog
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            translator.tr("practice.open_file"),
+            "",
+            "MIDI Files (*.mid *.midi);;All Files (*)",
+        )
+        if file_path:
+            self._on_practice_file(file_path)
+
     def _on_practice_file(self, file_path: str) -> None:
         """Load a MIDI file into practice mode."""
         try:
@@ -541,6 +563,7 @@ class AppShell(QMainWindow):
             seq.from_midi_file_events(events)
             notes = seq.notes
             if notes:
+                self._practice_view.set_current_track_name(info.name)
                 self._practice_view.start_practice(notes, info.tempo_bpm)
                 self._stack.setCurrentIndex(3)
                 self._sidebar._set_active(3)  # noqa: SLF001
