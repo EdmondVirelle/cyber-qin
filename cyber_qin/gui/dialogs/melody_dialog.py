@@ -63,7 +63,7 @@ class MelodyDialog(QDialog):
         m_layout = QVBoxLayout(self._melody_tab)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Root Note:"))
+        row.addWidget(QLabel(translator.tr("gen.root")))
         self._mel_root = QComboBox()
         for i, name in enumerate(_NOTE_NAMES):
             self._mel_root.addItem(f"{name}4", 60 + i)
@@ -71,14 +71,14 @@ class MelodyDialog(QDialog):
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Scale:"))
+        row.addWidget(QLabel(translator.tr("gen.scale")))
         self._mel_scale = QComboBox()
         self._mel_scale.addItems(list(SCALE_INTERVALS.keys()))
         row.addWidget(self._mel_scale)
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Bars:"))
+        row.addWidget(QLabel(translator.tr("gen.bars")))
         self._mel_bars = QSpinBox()
         self._mel_bars.setRange(1, 64)
         self._mel_bars.setValue(8)
@@ -86,12 +86,12 @@ class MelodyDialog(QDialog):
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Note Range:"))
+        row.addWidget(QLabel(translator.tr("gen.note_range")))
         self._mel_min = QSpinBox()
         self._mel_min.setRange(21, 108)
         self._mel_min.setValue(60)
         row.addWidget(self._mel_min)
-        row.addWidget(QLabel("to"))
+        row.addWidget(QLabel(translator.tr("gen.to")))
         self._mel_max = QSpinBox()
         self._mel_max.setRange(21, 108)
         self._mel_max.setValue(83)
@@ -99,20 +99,18 @@ class MelodyDialog(QDialog):
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Stepwise Bias:"))
+        row.addWidget(QLabel(translator.tr("gen.stepwise_bias")))
         self._mel_bias = QSlider(Qt.Orientation.Horizontal)
         self._mel_bias.setRange(0, 100)
         self._mel_bias.setValue(70)
         row.addWidget(self._mel_bias)
         self._mel_bias_lbl = QLabel("70%")
-        self._mel_bias.valueChanged.connect(
-            lambda v: self._mel_bias_lbl.setText(f"{v}%")
-        )
+        self._mel_bias.valueChanged.connect(lambda v: self._mel_bias_lbl.setText(f"{v}%"))
         row.addWidget(self._mel_bias_lbl)
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Velocity:"))
+        row.addWidget(QLabel(translator.tr("gen.velocity")))
         self._mel_vel = QSpinBox()
         self._mel_vel.setRange(1, 127)
         self._mel_vel.setValue(100)
@@ -120,25 +118,25 @@ class MelodyDialog(QDialog):
         m_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Seed:"))
+        row.addWidget(QLabel(translator.tr("gen.seed")))
         self._mel_seed = QSpinBox()
         self._mel_seed.setRange(0, 99999)
         self._mel_seed.setValue(42)
         row.addWidget(self._mel_seed)
-        self._mel_random_seed = QCheckBox("Random")
+        self._mel_random_seed = QCheckBox(translator.tr("gen.random"))
         self._mel_random_seed.setChecked(True)
         row.addWidget(self._mel_random_seed)
         m_layout.addLayout(row)
 
         m_layout.addStretch()
-        self._tabs.addTab(self._melody_tab, "Melody")
+        self._tabs.addTab(self._melody_tab, translator.tr("gen.tab.melody"))
 
         # Tab 2: Bass Line
         self._bass_tab = QWidget()
         b_layout = QVBoxLayout(self._bass_tab)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Root Note:"))
+        row.addWidget(QLabel(translator.tr("gen.root")))
         self._bass_root = QComboBox()
         for i, name in enumerate(_NOTE_NAMES):
             self._bass_root.addItem(f"{name}3", 48 + i)
@@ -146,14 +144,14 @@ class MelodyDialog(QDialog):
         b_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Scale:"))
+        row.addWidget(QLabel(translator.tr("gen.scale")))
         self._bass_scale = QComboBox()
         self._bass_scale.addItems(list(SCALE_INTERVALS.keys()))
         row.addWidget(self._bass_scale)
         b_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Bars:"))
+        row.addWidget(QLabel(translator.tr("gen.bars")))
         self._bass_bars = QSpinBox()
         self._bass_bars.setRange(1, 64)
         self._bass_bars.setValue(8)
@@ -161,21 +159,21 @@ class MelodyDialog(QDialog):
         b_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Progression:"))
+        row.addWidget(QLabel(translator.tr("gen.progression")))
         self._bass_prog = QComboBox()
         self._bass_prog.addItems(list(PROGRESSIONS.keys()))
         row.addWidget(self._bass_prog)
         b_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Pattern:"))
+        row.addWidget(QLabel(translator.tr("gen.pattern")))
         self._bass_pattern = QComboBox()
         self._bass_pattern.addItems(["root", "root_fifth", "walking"])
         row.addWidget(self._bass_pattern)
         b_layout.addLayout(row)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Track:"))
+        row.addWidget(QLabel(translator.tr("gen.track")))
         self._bass_track = QSpinBox()
         self._bass_track.setRange(0, 11)
         self._bass_track.setValue(1)
@@ -183,7 +181,7 @@ class MelodyDialog(QDialog):
         b_layout.addLayout(row)
 
         b_layout.addStretch()
-        self._tabs.addTab(self._bass_tab, "Bass Line")
+        self._tabs.addTab(self._bass_tab, translator.tr("gen.tab.bass"))
 
         layout.addWidget(self._tabs)
 
@@ -191,12 +189,12 @@ class MelodyDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
-        generate_btn = QPushButton("Generate")
+        generate_btn = QPushButton(translator.tr("gen.generate"))
         generate_btn.setMinimumWidth(100)
         generate_btn.clicked.connect(self._on_generate)
         btn_row.addWidget(generate_btn)
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(translator.tr("gen.cancel"))
         cancel_btn.setMinimumWidth(80)
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
@@ -213,7 +211,7 @@ class MelodyDialog(QDialog):
             if seed is None:
                 seed = random.randint(0, 99999)
 
-            config = MelodyConfig(
+            mel_config = MelodyConfig(
                 root=self._mel_root.currentData(),
                 scale=self._mel_scale.currentText(),
                 note_min=self._mel_min.value(),
@@ -224,10 +222,10 @@ class MelodyDialog(QDialog):
                 track=0,
                 stepwise_bias=self._mel_bias.value() / 100.0,
             )
-            self._result_notes = generate_melody(config, seed=seed)
+            self._result_notes = generate_melody(mel_config, seed=seed)
 
         elif tab == 1:  # Bass Line
-            config = BassConfig(
+            bass_config = BassConfig(
                 root=self._bass_root.currentData(),
                 scale=self._bass_scale.currentText(),
                 num_bars=self._bass_bars.value(),
@@ -236,6 +234,6 @@ class MelodyDialog(QDialog):
                 track=self._bass_track.value(),
                 pattern=self._bass_pattern.currentText(),
             )
-            self._result_notes = generate_bass_line(config)
+            self._result_notes = generate_bass_line(bass_config)
 
         self.accept()

@@ -24,7 +24,7 @@ class AudioExportConfig:
 
 def _midi_to_freq(midi_note: int) -> float:
     """Convert MIDI note number to frequency in Hz (A4 = 440 Hz)."""
-    return 440.0 * (2.0 ** ((midi_note - 69) / 12.0))
+    return float(440.0 * (2.0 ** ((midi_note - 69) / 12.0)))
 
 
 def _generate_tone(
@@ -128,9 +128,9 @@ def export_wav(
     if not beat_notes:
         total_sec = 1.0
     else:
-        total_sec = max(
-            (n.time_beats + n.duration_beats) * sec_per_beat for n in beat_notes
-        ) + 0.5  # 0.5s tail
+        total_sec = (
+            max((n.time_beats + n.duration_beats) * sec_per_beat for n in beat_notes) + 0.5
+        )  # 0.5s tail
 
     total_samples = int(total_sec * config.sample_rate)
     buffer = [0.0] * total_samples
@@ -192,9 +192,7 @@ def export_wav_bytes(
     if not beat_notes:
         total_sec = 1.0
     else:
-        total_sec = max(
-            (n.time_beats + n.duration_beats) * sec_per_beat for n in beat_notes
-        ) + 0.5
+        total_sec = max((n.time_beats + n.duration_beats) * sec_per_beat for n in beat_notes) + 0.5
 
     total_samples = int(total_sec * config.sample_rate)
     buffer = [0.0] * total_samples
@@ -206,8 +204,12 @@ def export_wav_bytes(
         vel_scale = n.velocity / 127.0
 
         tone = _generate_tone(
-            freq, dur_sec, config.sample_rate,
-            config.amplitude * vel_scale, config.attack_ms, config.release_ms,
+            freq,
+            dur_sec,
+            config.sample_rate,
+            config.amplitude * vel_scale,
+            config.attack_ms,
+            config.release_ms,
         )
 
         start_idx = int(start_sec * config.sample_rate)

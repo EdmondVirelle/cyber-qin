@@ -88,7 +88,9 @@ class MelodyConfig:
     stepwise_bias: float = 0.7  # probability of step (vs skip) motion
 
 
-def _interval_weight(pool: list[int], current_idx: int, target_idx: int, stepwise_bias: float) -> float:
+def _interval_weight(
+    pool: list[int], current_idx: int, target_idx: int, stepwise_bias: float
+) -> float:
     """Weight for transitioning from pool[current] to pool[target]."""
     interval = abs(target_idx - current_idx)
     if interval == 0:
@@ -102,7 +104,9 @@ def _interval_weight(pool: list[int], current_idx: int, target_idx: int, stepwis
     return (1.0 - stepwise_bias) * 0.1  # large skip
 
 
-def _apply_contour(weights: list[float], pool: list[int], current_idx: int, bar_in_phrase: int, phrase_len: int) -> list[float]:
+def _apply_contour(
+    weights: list[float], pool: list[int], current_idx: int, bar_in_phrase: int, phrase_len: int
+) -> list[float]:
     """Shape weights to produce an arch contour across the phrase."""
     if phrase_len <= 1:
         return weights
@@ -124,7 +128,9 @@ def _apply_contour(weights: list[float], pool: list[int], current_idx: int, bar_
     return adjusted
 
 
-def generate_melody(config: MelodyConfig | None = None, *, seed: int | None = None) -> list[BeatNote]:
+def generate_melody(
+    config: MelodyConfig | None = None, *, seed: int | None = None
+) -> list[BeatNote]:
     """Generate a melody using first-order Markov chain with music theory.
 
     Steps:
@@ -172,8 +178,10 @@ def generate_melody(config: MelodyConfig | None = None, *, seed: int | None = No
                 continue
 
             # Force resolution on phrase boundaries (last beat of last bar)
-            is_phrase_end = (phrase_bar == config.phrase_length - 1 and beat_off >= beats_per_bar - 1)
-            is_final_bar = (bar == config.num_bars - 1 and beat_off >= beats_per_bar - 1)
+            is_phrase_end = (
+                phrase_bar == config.phrase_length - 1 and beat_off >= beats_per_bar - 1
+            )
+            is_final_bar = bar == config.num_bars - 1 and beat_off >= beats_per_bar - 1
 
             if is_phrase_end or is_final_bar:
                 # Resolve to tonic or 5th
@@ -183,8 +191,13 @@ def generate_melody(config: MelodyConfig | None = None, *, seed: int | None = No
                     current_idx = min(resolution_candidates, key=lambda i: abs(i - current_idx))
             else:
                 # Normal Markov transition
-                weights = [_interval_weight(pool, current_idx, j, config.stepwise_bias) for j in range(len(pool))]
-                weights = _apply_contour(weights, pool, current_idx, phrase_bar, config.phrase_length)
+                weights = [
+                    _interval_weight(pool, current_idx, j, config.stepwise_bias)
+                    for j in range(len(pool))
+                ]
+                weights = _apply_contour(
+                    weights, pool, current_idx, phrase_bar, config.phrase_length
+                )
 
                 total = sum(weights)
                 if total > 0:
@@ -199,13 +212,15 @@ def generate_melody(config: MelodyConfig | None = None, *, seed: int | None = No
 
             # Clamp duration to not exceed bar
             actual_dur = min(duration, beats_per_bar - beat_off)
-            notes.append(BeatNote(
-                time_beats=bar_offset + beat_off,
-                duration_beats=actual_dur,
-                note=pool[current_idx],
-                velocity=config.velocity,
-                track=config.track,
-            ))
+            notes.append(
+                BeatNote(
+                    time_beats=bar_offset + beat_off,
+                    duration_beats=actual_dur,
+                    note=pool[current_idx],
+                    velocity=config.velocity,
+                    track=config.track,
+                )
+            )
 
     return notes
 
@@ -239,7 +254,9 @@ class BassConfig:
     pattern: str = "root"  # "root", "root_fifth", "walking"
 
 
-def generate_bass_line(config: BassConfig | None = None, *, seed: int | None = None) -> list[BeatNote]:
+def generate_bass_line(
+    config: BassConfig | None = None, *, seed: int | None = None
+) -> list[BeatNote]:
     """Generate a bass line following a chord progression."""
     if config is None:
         config = BassConfig()
@@ -271,22 +288,28 @@ def generate_bass_line(config: BassConfig | None = None, *, seed: int | None = N
         bass_note = min(degree_notes, key=lambda p: abs(p - config.root))
 
         if config.pattern == "root":
-            notes.append(BeatNote(
-                time_beats=bar_offset,
-                duration_beats=beats_per_bar,
-                note=bass_note,
-                velocity=config.velocity,
-                track=config.track,
-            ))
+            notes.append(
+                BeatNote(
+                    time_beats=bar_offset,
+                    duration_beats=beats_per_bar,
+                    note=bass_note,
+                    velocity=config.velocity,
+                    track=config.track,
+                )
+            )
 
         elif config.pattern == "root_fifth":
             fifth_pc = (target_pc + 7) % 12
             fifth_notes = [p for p in pool if p % 12 == fifth_pc]
-            fifth_note = min(fifth_notes, key=lambda p: abs(p - bass_note)) if fifth_notes else bass_note
+            fifth_note = (
+                min(fifth_notes, key=lambda p: abs(p - bass_note)) if fifth_notes else bass_note
+            )
 
             half = beats_per_bar / 2
             notes.append(BeatNote(bar_offset, half, bass_note, config.velocity, config.track))
-            notes.append(BeatNote(bar_offset + half, half, fifth_note, config.velocity, config.track))
+            notes.append(
+                BeatNote(bar_offset + half, half, fifth_note, config.velocity, config.track)
+            )
 
         elif config.pattern == "walking":
             # Simple walking bass: root, passing tone, 5th, approach
@@ -303,6 +326,8 @@ def generate_bass_line(config: BassConfig | None = None, *, seed: int | None = N
                 else:
                     walk_note = bass_note
                 vel = config.velocity if i == 0 else max(1, config.velocity - 10)
-                notes.append(BeatNote(bar_offset + i * step_dur, step_dur, walk_note, vel, config.track))
+                notes.append(
+                    BeatNote(bar_offset + i * step_dur, step_dur, walk_note, vel, config.track)
+                )
 
     return notes

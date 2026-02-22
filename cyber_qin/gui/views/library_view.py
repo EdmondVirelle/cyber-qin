@@ -314,8 +314,7 @@ class LibraryView(QWidget):
         if 0 <= index < len(self._tracks):
             from ..dialogs.metadata_dialog import MetadataDialog
 
-            info = self._tracks[index]
-            dlg = MetadataDialog(info.file_path, parent=self)
+            dlg = MetadataDialog(parent=self)
             dlg.exec()
 
     def _update_empty_state(self) -> None:

@@ -179,22 +179,20 @@ class PracticeView(QWidget):
         for i, scheme in enumerate(list_schemes()):
             self._scheme_combo.setItemText(i, scheme.translated_name())
         self._start_btn.setText(
-            translator.tr("practice.stop") if self._display.is_playing else translator.tr("practice.start")
+            translator.tr("practice.stop")
+            if self._display.is_playing
+            else translator.tr("practice.start")
         )
         self._update_score_display()
 
     def _update_score_display(self) -> None:
         if self._scorer:
             stats = self._scorer.stats
-            self._score_label.setText(
-                f"{translator.tr('practice.score')}: {stats.total_score}"
-            )
+            self._score_label.setText(f"{translator.tr('practice.score')}: {stats.total_score}")
             self._accuracy_label.setText(
-                f"{translator.tr('practice.accuracy')}: {stats.accuracy_percent:.0f}%"
+                f"{translator.tr('practice.accuracy')}: {stats.accuracy * 100:.0f}%"
             )
-            self._combo_label.setText(
-                f"{translator.tr('practice.combo')}: {stats.current_combo}"
-            )
+            self._combo_label.setText(f"{translator.tr('practice.combo')}: {stats.current_combo}")
         else:
             self._score_label.setText(f"{translator.tr('practice.score')}: 0")
             self._accuracy_label.setText(f"{translator.tr('practice.accuracy')}: 0%")
@@ -223,8 +221,9 @@ class PracticeView(QWidget):
         if not self._scorer or not self._display.is_playing:
             return
         current_time = self._display.current_time
-        grade = self._scorer.on_user_note(note, current_time)
-        self._display.show_feedback(grade, note)
+        hit = self._scorer.on_user_note(note, current_time)
+        if hit is not None:
+            self._display.show_feedback(hit.grade, note)
         self._update_score_display()
 
     def _on_display_note_hit(self, note: int, time: float) -> None:

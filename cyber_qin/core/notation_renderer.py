@@ -156,7 +156,7 @@ def midi_to_staff_position(midi_note: int, key_sig: int = 0) -> StaffPosition:
                 accidental = Accidental.SHARP
     else:
         # Flat key: check if this PC needs a flat
-        if pc in {p - 1 for p in _KEY_SIG_FLATS_ORDER[:abs(key_sig)]}:
+        if pc in {p - 1 for p in _KEY_SIG_FLATS_ORDER[: abs(key_sig)]}:
             accidental = Accidental.NONE  # in key signature
         elif pc in _SHARP_PCS:
             accidental = Accidental.SHARP
@@ -266,16 +266,18 @@ def render_notation(
         head_type, dotted = duration_to_head_type(bn.duration_beats)
         stem_dir = stem_direction(staff_pos.line)
 
-        notation_notes.append(NotationNote(
-            x_beats=bn.time_beats,
-            staff_pos=staff_pos,
-            head_type=head_type,
-            stem_dir=stem_dir,
-            duration_beats=bn.duration_beats,
-            midi_note=bn.note,
-            velocity=bn.velocity,
-            dot=dotted,
-        ))
+        notation_notes.append(
+            NotationNote(
+                x_beats=bn.time_beats,
+                staff_pos=staff_pos,
+                head_type=head_type,
+                stem_dir=stem_dir,
+                duration_beats=bn.duration_beats,
+                midi_note=bn.note,
+                velocity=bn.velocity,
+                dot=dotted,
+            )
+        )
 
         end = bn.time_beats + bn.duration_beats
         if end > max_beat:
@@ -290,12 +292,15 @@ def render_notation(
     # Generate bar lines
     bar_lines: list[BarLine] = []
     import math
+
     num_bars = math.ceil(max_beat / beats_per_bar) if beats_per_bar > 0 else 0
     for b in range(num_bars + 1):
-        bar_lines.append(BarLine(
-            x_beats=b * beats_per_bar,
-            is_double=(b == num_bars),
-        ))
+        bar_lines.append(
+            BarLine(
+                x_beats=b * beats_per_bar,
+                is_double=(b == num_bars),
+            )
+        )
 
     return NotationData(
         notes=notation_notes,

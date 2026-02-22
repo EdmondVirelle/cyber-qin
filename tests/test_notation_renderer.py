@@ -8,7 +8,6 @@ Covers:
 - Beam grouping logic
 """
 
-
 from cyber_qin.core.beat_sequence import BeatNote
 from cyber_qin.core.notation_renderer import (
     Accidental,

@@ -544,9 +544,7 @@ class AppShell(QMainWindow):
                 self._practice_view.start_practice(notes, info.tempo_bpm)
                 self._stack.setCurrentIndex(3)
                 self._sidebar._set_active(3)  # noqa: SLF001
-                self._live_view.log_viewer.log(
-                    f"  練習模式: {info.name} ({len(notes)} 音符)"
-                )
+                self._live_view.log_viewer.log(f"  練習模式: {info.name} ({len(notes)} 音符)")
         except Exception as e:
             self._live_view.log_viewer.log(f"  練習載入失敗: {e}")
             log.exception("Failed to load practice file %s", file_path)

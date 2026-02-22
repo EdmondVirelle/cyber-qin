@@ -25,7 +25,9 @@ class ArpeggiatorConfig:
     gate: float = 0.9  # fraction of rate used as note duration (0-1)
 
 
-def arpeggiate(notes: list[BeatNote], config: ArpeggiatorConfig | None = None, *, seed: int | None = None) -> list[BeatNote]:
+def arpeggiate(
+    notes: list[BeatNote], config: ArpeggiatorConfig | None = None, *, seed: int | None = None
+) -> list[BeatNote]:
     """Spread chords in time by arpeggiating overlapping notes.
 
     Groups notes by identical ``time_beats`` and ``track``, then spreads
@@ -79,13 +81,15 @@ def arpeggiate(notes: list[BeatNote], config: ArpeggiatorConfig | None = None, *
         dur = config.rate * config.gate
 
         for i, pitch in enumerate(pitches):
-            result.append(BeatNote(
-                time_beats=base_time + i * config.rate,
-                duration_beats=max(0.0625, dur),
-                note=max(0, min(127, pitch)),
-                velocity=vel,
-                track=track,
-            ))
+            result.append(
+                BeatNote(
+                    time_beats=base_time + i * config.rate,
+                    duration_beats=max(0.0625, dur),
+                    note=max(0, min(127, pitch)),
+                    velocity=vel,
+                    track=track,
+                )
+            )
 
     result.extend(singles)
     result.sort(key=lambda n: n.time_beats)
@@ -104,7 +108,9 @@ class HumanizeConfig:
     duration_jitter_beats: float = 0.0  # max duration jitter
 
 
-def humanize(notes: list[BeatNote], config: HumanizeConfig | None = None, *, seed: int | None = None) -> list[BeatNote]:
+def humanize(
+    notes: list[BeatNote], config: HumanizeConfig | None = None, *, seed: int | None = None
+) -> list[BeatNote]:
     """Add random timing and velocity variations for a more natural feel."""
     if config is None:
         config = HumanizeConfig()
@@ -151,7 +157,9 @@ def quantize(notes: list[BeatNote], config: QuantizeConfig | None = None) -> lis
         config = QuantizeConfig()
 
     if config.grid <= 0 or config.strength <= 0:
-        return [BeatNote(n.time_beats, n.duration_beats, n.note, n.velocity, n.track) for n in notes]
+        return [
+            BeatNote(n.time_beats, n.duration_beats, n.note, n.velocity, n.track) for n in notes
+        ]
 
     result: list[BeatNote] = []
     for n in notes:

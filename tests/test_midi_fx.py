@@ -264,7 +264,10 @@ class TestHumanize:
         result1 = humanize(notes, seed=1)
         result2 = humanize(notes, seed=2)
         # Different seeds should produce different results
-        assert result1[0].time_beats != result2[0].time_beats or result1[0].velocity != result2[0].velocity
+        assert (
+            result1[0].time_beats != result2[0].time_beats
+            or result1[0].velocity != result2[0].velocity
+        )
 
     def test_seed_makes_output_deterministic(self):
         """Same seed should produce identical output."""
@@ -311,7 +314,7 @@ class TestHumanize:
     def test_velocity_stays_within_1_127(self):
         """Velocity should be clamped to valid MIDI range 1-127."""
         notes = [
-            BeatNote(0.0, 0.5, 60, 1, 0),    # minimum velocity
+            BeatNote(0.0, 0.5, 60, 1, 0),  # minimum velocity
             BeatNote(1.0, 0.5, 64, 127, 0),  # maximum velocity
         ]
         for seed in range(100):
@@ -337,11 +340,15 @@ class TestHumanize:
     def test_large_jitter_values_still_produce_valid_output(self):
         """Large jitter values should still produce valid notes."""
         notes = [BeatNote(2.0, 0.5, 60, 64, 0)]
-        result = humanize(notes, HumanizeConfig(
-            timing_jitter_beats=5.0,
-            velocity_jitter=100,
-            duration_jitter_beats=2.0,
-        ), seed=42)
+        result = humanize(
+            notes,
+            HumanizeConfig(
+                timing_jitter_beats=5.0,
+                velocity_jitter=100,
+                duration_jitter_beats=2.0,
+            ),
+            seed=42,
+        )
         assert len(result) == 1
         assert result[0].time_beats >= 0.0
         assert 1 <= result[0].velocity <= 127
@@ -390,10 +397,14 @@ class TestHumanize:
             BeatNote(1.0, 0.5, 64, 100, 0),
             BeatNote(2.0, 0.5, 67, 100, 0),
         ]
-        result = humanize(notes, HumanizeConfig(
-            timing_jitter_beats=0.1,
-            velocity_jitter=10,
-        ), seed=42)
+        result = humanize(
+            notes,
+            HumanizeConfig(
+                timing_jitter_beats=0.1,
+                velocity_jitter=10,
+            ),
+            seed=42,
+        )
         # Extremely unlikely all three get identical jitter
         times = {n.time_beats for n in result}
         velocities = {n.velocity for n in result}
@@ -412,11 +423,15 @@ class TestHumanize:
             BeatNote(0.0, 0.5, 60, 100, 0),
             BeatNote(1.0, 0.25, 64, 80, 1),
         ]
-        result = humanize(notes, HumanizeConfig(
-            timing_jitter_beats=0.0,
-            velocity_jitter=0,
-            duration_jitter_beats=0.0,
-        ), seed=42)
+        result = humanize(
+            notes,
+            HumanizeConfig(
+                timing_jitter_beats=0.0,
+                velocity_jitter=0,
+                duration_jitter_beats=0.0,
+            ),
+            seed=42,
+        )
         assert result[0].time_beats == 0.0
         assert result[0].duration_beats == 0.5
         assert result[0].velocity == 100
@@ -468,9 +483,9 @@ class TestQuantize:
     def test_off_grid_notes_snapped(self):
         """Notes off grid should be snapped to nearest grid point."""
         notes = [
-            BeatNote(0.1, 0.5, 60, 100, 0),   # snap to 0.0
-            BeatNote(0.6, 0.5, 64, 100, 0),   # snap to 0.5
-            BeatNote(1.3, 0.5, 67, 100, 0),   # snap to 1.5
+            BeatNote(0.1, 0.5, 60, 100, 0),  # snap to 0.0
+            BeatNote(0.6, 0.5, 64, 100, 0),  # snap to 0.5
+            BeatNote(1.3, 0.5, 67, 100, 0),  # snap to 1.5
         ]
         result = quantize(notes, QuantizeConfig(grid=0.5, strength=1.0))
         assert result[0].time_beats == 0.0
@@ -504,9 +519,9 @@ class TestQuantize:
     def test_grid_quarter_note(self):
         """grid=0.25 should snap to quarter note grid."""
         notes = [
-            BeatNote(0.1, 0.5, 60, 100, 0),   # snap to 0.0
-            BeatNote(0.3, 0.5, 64, 100, 0),   # snap to 0.25
-            BeatNote(0.6, 0.5, 67, 100, 0),   # snap to 0.5
+            BeatNote(0.1, 0.5, 60, 100, 0),  # snap to 0.0
+            BeatNote(0.3, 0.5, 64, 100, 0),  # snap to 0.25
+            BeatNote(0.6, 0.5, 67, 100, 0),  # snap to 0.5
         ]
         result = quantize(notes, QuantizeConfig(grid=0.25, strength=1.0))
         assert result[0].time_beats == 0.0
@@ -523,9 +538,9 @@ class TestQuantize:
     def test_grid_whole_note(self):
         """grid=1.0 should snap to whole note grid."""
         notes = [
-            BeatNote(0.3, 0.5, 60, 100, 0),   # snap to 0.0
-            BeatNote(0.8, 0.5, 64, 100, 0),   # snap to 1.0
-            BeatNote(1.6, 0.5, 67, 100, 0),   # snap to 2.0
+            BeatNote(0.3, 0.5, 60, 100, 0),  # snap to 0.0
+            BeatNote(0.8, 0.5, 64, 100, 0),  # snap to 1.0
+            BeatNote(1.6, 0.5, 67, 100, 0),  # snap to 2.0
         ]
         result = quantize(notes, QuantizeConfig(grid=1.0, strength=1.0))
         assert result[0].time_beats == 0.0
@@ -849,5 +864,16 @@ class TestChordGenerator:
 
     def test_chord_intervals_constant_exists(self):
         """CHORD_INTERVALS constant should contain all expected chord types."""
-        expected_types = {"major", "minor", "7th", "maj7", "min7", "dim", "aug", "sus2", "sus4", "power"}
+        expected_types = {
+            "major",
+            "minor",
+            "7th",
+            "maj7",
+            "min7",
+            "dim",
+            "aug",
+            "sus2",
+            "sus4",
+            "power",
+        }
         assert expected_types.issubset(set(CHORD_INTERVALS.keys()))

@@ -548,7 +548,9 @@ class TestGenerateTone:
         quarter = len(samples) // 4
         # Average absolute values over a range to avoid zero-crossing issues
         avg_quarter = sum(abs(samples[quarter + i]) for i in range(100)) / 100
-        avg_near_end = sum(abs(samples[near_end + i]) for i in range(min(100, len(samples) - near_end))) / min(100, len(samples) - near_end)
+        avg_near_end = sum(
+            abs(samples[near_end + i]) for i in range(min(100, len(samples) - near_end))
+        ) / min(100, len(samples) - near_end)
         assert avg_near_end < avg_quarter
 
 

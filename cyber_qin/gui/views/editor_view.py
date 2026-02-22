@@ -582,8 +582,7 @@ class EditorView(QWidget):
         self._ghost_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._ghost_btn.setMinimumHeight(28)
         self._ghost_btn.setToolTip(
-            "幽靈音符：顯示編排前的原始位置\n"
-            "Ghost Notes: Show pre-arrangement positions"
+            "幽靈音符：顯示編排前的原始位置\nGhost Notes: Show pre-arrangement positions"
         )
         self._ghost_btn.setStyleSheet(
             "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
@@ -625,10 +624,7 @@ class EditorView(QWidget):
         self._score_btn.setCheckable(True)
         self._score_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._score_btn.setMinimumHeight(28)
-        self._score_btn.setToolTip(
-            "樂譜顯示：標準五線譜視圖\n"
-            "Score View: Standard music notation"
-        )
+        self._score_btn.setToolTip("樂譜顯示：標準五線譜視圖\nScore View: Standard music notation")
         self._score_btn.setStyleSheet(
             "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
             "QPushButton:checked { background-color: #D4A853; color: #0A0E14; }"
@@ -1304,7 +1300,7 @@ class EditorView(QWidget):
 
         from ...core.abc_parser import export_abc
 
-        text = export_abc(self._sequence.notes, tempo_bpm=self._sequence.tempo_bpm)
+        text = export_abc(self._sequence.notes, tempo_bpm=int(self._sequence.tempo_bpm))
         Path(path).write_text(text, encoding="utf-8")
 
     def _export_lilypond(self, path: str) -> None:
@@ -1313,7 +1309,7 @@ class EditorView(QWidget):
 
         from ...core.lilypond_parser import export_lilypond
 
-        text = export_lilypond(self._sequence.notes, tempo_bpm=self._sequence.tempo_bpm)
+        text = export_lilypond(self._sequence.notes, tempo_bpm=int(self._sequence.tempo_bpm))
         Path(path).write_text(text, encoding="utf-8")
 
     def _export_wav(self, path: str) -> None:
@@ -1728,9 +1724,7 @@ class EditorView(QWidget):
             return
 
         # Store pre-arrangement as ghost reference
-        self._arrangement_ghost_notes = [
-            copy.copy(n) for n in notes
-        ]
+        self._arrangement_ghost_notes = [copy.copy(n) for n in notes]
 
         result = smart_arrange(notes)
         self._sequence._push_undo()

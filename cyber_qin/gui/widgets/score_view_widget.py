@@ -94,7 +94,9 @@ class ScoreViewWidget(QWidget):
         if not self._notation or not self._notation.notes:
             painter.setPen(QColor(TEXT_SECONDARY))
             painter.setFont(QFont("Microsoft JhengHei", 10))
-            painter.drawText(QRectF(0, 0, w, h), Qt.AlignmentFlag.AlignCenter, "No notes to display")
+            painter.drawText(
+                QRectF(0, 0, w, h), Qt.AlignmentFlag.AlignCenter, "No notes to display"
+            )
             painter.end()
             return
 
@@ -127,7 +129,7 @@ class ScoreViewWidget(QWidget):
         painter.setFont(font)
         # Unicode treble clef
         y = self._staff_y(2) + 18
-        painter.drawText(int(8 - self._scroll_x), int(y), "\U0001D11E")
+        painter.drawText(int(8 - self._scroll_x), int(y), "\U0001d11e")
 
     def _draw_notes(self, painter: QPainter, width: float) -> None:
         """Draw note heads, stems, and ledger lines."""
@@ -178,7 +180,11 @@ class ScoreViewWidget(QWidget):
                 )
 
             # Note head
-            filled = rn.head_type in (NoteHeadType.QUARTER, NoteHeadType.EIGHTH, NoteHeadType.SIXTEENTH)
+            filled = rn.head_type in (
+                NoteHeadType.QUARTER,
+                NoteHeadType.EIGHTH,
+                NoteHeadType.SIXTEENTH,
+            )
             painter.setPen(QPen(QColor(TEXT_PRIMARY), 1.2))
             if filled:
                 painter.setBrush(QColor(TEXT_PRIMARY))
@@ -196,7 +202,7 @@ class ScoreViewWidget(QWidget):
 
             # Stem (not for whole notes)
             if rn.head_type != NoteHeadType.WHOLE:
-                stem_up = (rn.stem_dir == StemDirection.UP)
+                stem_up = rn.stem_dir == StemDirection.UP
                 if stem_up:
                     sx = x + _NOTE_HEAD_RX - 0.5
                     painter.drawLine(int(sx), int(y), int(sx), int(y - _STEM_HEIGHT))
@@ -216,7 +222,11 @@ class ScoreViewWidget(QWidget):
                 painter.setFont(QFont("Times New Roman", 12))
                 from ...core.notation_renderer import Accidental
 
-                acc_map = {Accidental.SHARP: "#", Accidental.FLAT: "b", Accidental.NATURAL: "\u266E"}
+                acc_map = {
+                    Accidental.SHARP: "#",
+                    Accidental.FLAT: "b",
+                    Accidental.NATURAL: "\u266e",
+                }
                 acc_symbol = acc_map.get(rn.staff_pos.accidental, "")
                 painter.drawText(int(x - _NOTE_HEAD_RX - 12), int(y + 4), acc_symbol)
 

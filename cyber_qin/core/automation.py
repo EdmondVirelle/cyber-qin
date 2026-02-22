@@ -131,7 +131,9 @@ class AutomationManager:
     def get_lane(self, parameter: str) -> AutomationLane | None:
         return self._lanes.get(parameter)
 
-    def ensure_lane(self, parameter: str, value_min: float = 0.0, value_max: float = 127.0) -> AutomationLane:
+    def ensure_lane(
+        self, parameter: str, value_min: float = 0.0, value_max: float = 127.0
+    ) -> AutomationLane:
         """Get or create a lane for the given parameter."""
         if parameter not in self._lanes:
             self._lanes[parameter] = AutomationLane(

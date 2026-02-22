@@ -61,9 +61,17 @@ def _compute_best_transpose(
 
 def _apply_transpose(notes: list[BeatNote], semitones: int) -> list[BeatNote]:
     if semitones == 0:
-        return [BeatNote(n.time_beats, n.duration_beats, n.note, n.velocity, n.track) for n in notes]
+        return [
+            BeatNote(n.time_beats, n.duration_beats, n.note, n.velocity, n.track) for n in notes
+        ]
     return [
-        BeatNote(n.time_beats, n.duration_beats, max(0, min(127, n.note + semitones)), n.velocity, n.track)
+        BeatNote(
+            n.time_beats,
+            n.duration_beats,
+            max(0, min(127, n.note + semitones)),
+            n.velocity,
+            n.track,
+        )
         for n in notes
     ]
 

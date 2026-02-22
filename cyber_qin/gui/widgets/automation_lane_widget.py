@@ -6,7 +6,7 @@ from PyQt6.QtCore import QPointF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QWidget
 
-from ...core.automation import AutomationLane, AutomationPoint
+from ...core.automation import AutomationLane
 from ..theme import ACCENT, ACCENT_GOLD, BG_INK, DIVIDER, TEXT_SECONDARY
 
 _POINT_RADIUS = 5.0
@@ -100,7 +100,7 @@ class AutomationLaneWidget(QWidget):
             # Add new point on double-click or plain click
             beat = max(0.0, self._x_to_beat(pos.x()))
             value = self._y_to_value(pos.y())
-            self._lane.add_point(AutomationPoint(beat, value))
+            self._lane.add_point(beat, value)
             self.points_changed.emit()
             self.update()
 

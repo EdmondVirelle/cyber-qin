@@ -198,7 +198,7 @@ class PracticeScorer:
             if abs_error > self._windows.good_ms:
                 continue
 
-            pitch_correct = (midi_note == target.note)
+            pitch_correct = midi_note == target.note
 
             # Grade based on timing
             if abs_error <= self._windows.perfect_ms:

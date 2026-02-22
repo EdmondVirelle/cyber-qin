@@ -410,8 +410,12 @@ def test_library_index_from_dict():
 def test_library_index_roundtrip():
     """to_dict() / from_dict() roundtrip preserves data."""
     index = LibraryIndex()
-    index.add(LibraryEntry(file_path="test1.mid", metadata=TrackMetadata(title="青花瓷", difficulty=5)))
-    index.add(LibraryEntry(file_path="test2.mid", metadata=TrackMetadata(title="東風破", difficulty=3)))
+    index.add(
+        LibraryEntry(file_path="test1.mid", metadata=TrackMetadata(title="青花瓷", difficulty=5))
+    )
+    index.add(
+        LibraryEntry(file_path="test2.mid", metadata=TrackMetadata(title="東風破", difficulty=3))
+    )
     data = index.to_dict()
     restored = LibraryIndex.from_dict(data)
     assert restored.count == index.count
@@ -603,7 +607,9 @@ def test_export_bundle_includes_title_and_author(tmp_path):
     entry = LibraryEntry(file_path=str(midi_file))
     output_path = tmp_path / "bundle.cqlib"
 
-    export_bundle([entry], output_path, bundle_title="Test Collection", bundle_author="Test Author")
+    export_bundle(
+        [entry], output_path, bundle_title="Test Collection", bundle_author="Test Author"
+    )
 
     with zipfile.ZipFile(output_path, "r") as zf:
         manifest = json.loads(zf.read(BUNDLE_MANIFEST))

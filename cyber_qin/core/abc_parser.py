@@ -24,8 +24,20 @@ from .beat_sequence import BeatNote
 
 # ABC note → MIDI offset from C in the reference octave
 _ABC_NOTE_MAP = {
-    "C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11,
-    "c": 0, "d": 2, "e": 4, "f": 5, "g": 7, "a": 9, "b": 11,
+    "C": 0,
+    "D": 2,
+    "E": 4,
+    "F": 5,
+    "G": 7,
+    "A": 9,
+    "B": 11,
+    "c": 0,
+    "d": 2,
+    "e": 4,
+    "f": 5,
+    "g": 7,
+    "a": 9,
+    "b": 11,
 }
 
 
@@ -44,21 +56,33 @@ class AbcParseResult:
 # ── Key signature → accidentals ───────────────────────────
 
 _KEY_SHARPS: dict[str, set[str]] = {
-    "C": set(), "Am": set(),
-    "G": {"F"}, "Em": {"F"},
-    "D": {"F", "C"}, "Bm": {"F", "C"},
-    "A": {"F", "C", "G"}, "F#m": {"F", "C", "G"},
-    "E": {"F", "C", "G", "D"}, "C#m": {"F", "C", "G", "D"},
-    "B": {"F", "C", "G", "D", "A"}, "G#m": {"F", "C", "G", "D", "A"},
-    "F#": {"F", "C", "G", "D", "A", "E"}, "D#m": {"F", "C", "G", "D", "A", "E"},
+    "C": set(),
+    "Am": set(),
+    "G": {"F"},
+    "Em": {"F"},
+    "D": {"F", "C"},
+    "Bm": {"F", "C"},
+    "A": {"F", "C", "G"},
+    "F#m": {"F", "C", "G"},
+    "E": {"F", "C", "G", "D"},
+    "C#m": {"F", "C", "G", "D"},
+    "B": {"F", "C", "G", "D", "A"},
+    "G#m": {"F", "C", "G", "D", "A"},
+    "F#": {"F", "C", "G", "D", "A", "E"},
+    "D#m": {"F", "C", "G", "D", "A", "E"},
 }
 
 _KEY_FLATS: dict[str, set[str]] = {
-    "F": {"B"}, "Dm": {"B"},
-    "Bb": {"B", "E"}, "Gm": {"B", "E"},
-    "Eb": {"B", "E", "A"}, "Cm": {"B", "E", "A"},
-    "Ab": {"B", "E", "A", "D"}, "Fm": {"B", "E", "A", "D"},
-    "Db": {"B", "E", "A", "D", "G"}, "Bbm": {"B", "E", "A", "D", "G"},
+    "F": {"B"},
+    "Dm": {"B"},
+    "Bb": {"B", "E"},
+    "Gm": {"B", "E"},
+    "Eb": {"B", "E", "A"},
+    "Cm": {"B", "E", "A"},
+    "Ab": {"B", "E", "A", "D"},
+    "Fm": {"B", "E", "A", "D"},
+    "Db": {"B", "E", "A", "D", "G"},
+    "Bbm": {"B", "E", "A", "D", "G"},
 }
 
 
@@ -80,9 +104,9 @@ def _key_accidentals(key: str) -> dict[str, int]:
 
 # Regex for a single ABC note token
 _NOTE_RE = re.compile(
-    r"(?P<acc>[_^=]?)"        # accidental
-    r"(?P<note>[a-gA-G])"     # note letter
-    r"(?P<octave>[',]*)"      # octave modifiers
+    r"(?P<acc>[_^=]?)"  # accidental
+    r"(?P<note>[a-gA-G])"  # note letter
+    r"(?P<octave>[',]*)"  # octave modifiers
     r"(?P<dur>[0-9]*/?[0-9]*)"  # duration modifier
 )
 
@@ -220,13 +244,15 @@ def parse_abc(text: str) -> AbcParseResult:
             midi_note = max(0, min(127, midi_note))
 
             dur = _parse_duration(dur_str, default_length)
-            notes.append(BeatNote(
-                time_beats=current_beat,
-                duration_beats=dur,
-                note=midi_note,
-                velocity=100,
-                track=0,
-            ))
+            notes.append(
+                BeatNote(
+                    time_beats=current_beat,
+                    duration_beats=dur,
+                    note=midi_note,
+                    velocity=100,
+                    track=0,
+                )
+            )
             current_beat += dur
             pos = note_match.end()
             continue
@@ -252,7 +278,11 @@ for _oct in range(0, 10):
         _midi = (_oct + 1) * 12 + _i
         if 0 <= _midi <= 127:
             if _oct < 4:
-                _abc = _name.replace("^", "^") + ("," * (4 - _oct - 1)) if _name[0].isupper() else _name
+                _abc = (
+                    _name.replace("^", "^") + ("," * (4 - _oct - 1))
+                    if _name[0].isupper()
+                    else _name
+                )
                 if len(_name) > 1 and _name[0] == "^":
                     _base = _name[1]
                     _abc = "^" + _base + ("," * (4 - _oct - 1))

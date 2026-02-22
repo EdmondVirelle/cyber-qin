@@ -21,7 +21,13 @@ from .beat_sequence import BeatNote
 # ── Note mapping ──────────────────────────────────────────
 
 _LY_NOTE_MAP = {
-    "c": 0, "d": 2, "e": 4, "f": 5, "g": 7, "a": 9, "b": 11,
+    "c": 0,
+    "d": 2,
+    "e": 4,
+    "f": 5,
+    "g": 7,
+    "a": 9,
+    "b": 11,
 }
 
 # Duration number → beats
@@ -174,13 +180,15 @@ def parse_lilypond(text: str) -> LilyPondParseResult:
             if dot:
                 dur *= 1.5
 
-            notes.append(BeatNote(
-                time_beats=current_beat,
-                duration_beats=dur,
-                note=midi_note,
-                velocity=100,
-                track=0,
-            ))
+            notes.append(
+                BeatNote(
+                    time_beats=current_beat,
+                    duration_beats=dur,
+                    note=midi_note,
+                    velocity=100,
+                    track=0,
+                )
+            )
             current_beat += dur
             pos = note_match.end()
             continue
@@ -199,8 +207,18 @@ def parse_lilypond(text: str) -> LilyPondParseResult:
 # ── Export ────────────────────────────────────────────────
 
 _MIDI_TO_LY_NAME: dict[int, str] = {
-    0: "c", 1: "cis", 2: "d", 3: "dis", 4: "e", 5: "f",
-    6: "fis", 7: "g", 8: "gis", 9: "a", 10: "ais", 11: "b",
+    0: "c",
+    1: "cis",
+    2: "d",
+    3: "dis",
+    4: "e",
+    5: "f",
+    6: "fis",
+    7: "g",
+    8: "gis",
+    9: "a",
+    10: "ais",
+    11: "b",
 }
 
 _BEATS_TO_LY_DUR: list[tuple[float, str]] = [

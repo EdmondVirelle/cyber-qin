@@ -34,7 +34,7 @@ class MetadataDialog(QDialog):
         self._build_ui()
 
     @property
-    def result(self) -> TrackMetadata | None:
+    def metadata_result(self) -> TrackMetadata | None:
         return self._result
 
     def _build_ui(self) -> None:

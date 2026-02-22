@@ -613,10 +613,14 @@ def test_integration_apply_contour_shapes_weights():
     base_weights = [1.0] * len(pool)
 
     # Rising phase (bar_in_phrase=0, phrase_len=4)
-    rising_weights = _apply_contour(base_weights, pool, current_idx=2, bar_in_phrase=0, phrase_len=4)
+    rising_weights = _apply_contour(
+        base_weights, pool, current_idx=2, bar_in_phrase=0, phrase_len=4
+    )
 
     # Falling phase (bar_in_phrase=3, phrase_len=4)
-    falling_weights = _apply_contour(base_weights, pool, current_idx=5, bar_in_phrase=3, phrase_len=4)
+    falling_weights = _apply_contour(
+        base_weights, pool, current_idx=5, bar_in_phrase=3, phrase_len=4
+    )
 
     # Rising should boost higher indices
     assert sum(rising_weights[3:]) > sum(base_weights[3:])

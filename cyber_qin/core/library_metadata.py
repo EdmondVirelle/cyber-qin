@@ -208,11 +208,12 @@ def export_bundle(
     """
     output_path = Path(output_path)
 
-    manifest = {
+    entries_list: list[dict[str, object]] = []
+    manifest: dict[str, object] = {
         "version": 1,
         "title": bundle_title,
         "author": bundle_author,
-        "entries": [],
+        "entries": entries_list,
     }
 
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -225,10 +226,12 @@ def export_bundle(
             arc_name = BUNDLE_FILES_DIR + src.name
             zf.write(src, arc_name)
 
-            manifest["entries"].append({
-                "filename": src.name,
-                "metadata": entry.metadata.to_dict(),
-            })
+            entries_list.append(
+                {
+                    "filename": src.name,
+                    "metadata": entry.metadata.to_dict(),
+                }
+            )
 
         # Write manifest
         zf.writestr(BUNDLE_MANIFEST, json.dumps(manifest, ensure_ascii=False, indent=2))
@@ -278,9 +281,11 @@ def import_bundle(
                 with zf.open(arc_name) as src, open(target, "wb") as dst:
                     dst.write(src.read())
 
-                entries.append(LibraryEntry(
-                    file_path=str(target),
-                    metadata=metadata,
-                ))
+                entries.append(
+                    LibraryEntry(
+                        file_path=str(target),
+                        metadata=metadata,
+                    )
+                )
 
     return entries
