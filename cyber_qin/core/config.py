@@ -10,8 +10,11 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 # Default configuration schema
 DEFAULT_CONFIG = {
@@ -99,8 +102,8 @@ class ConfigManager:
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self._config, f, indent=2, ensure_ascii=False)
-        except OSError as e:
-            print(f"Warning: Failed to save config: {e}")
+        except OSError:
+            log.warning("Failed to save config to %s", self.config_file, exc_info=True)
 
     def get(self, key_path: str, default: Any = None) -> Any:
         """Get config value using dot notation.

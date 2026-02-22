@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from cyber_qin.core.beat_sequence import (
     EditorSequence,
 )
@@ -42,11 +44,11 @@ class TestBeatSequenceEdgeCases:
         assert bc >= 2  # 5 beats + rest duration → at least 2 bars in 4/4
 
     def test_bar_count_beats_per_bar_zero(self):
-        """bpb <= 0 should return 0 (line 231)."""
+        """Setting numerator <= 0 should raise ValueError."""
         seq = EditorSequence()
         seq.add_note_at(0.0, 60)
-        seq.time_signature = (0, 4)  # degenerate → bpb = 0
-        assert seq.bar_count == 0
+        with pytest.raises(ValueError, match="numerator must be positive"):
+            seq.time_signature = (0, 4)
 
     # ── reorder_tracks covers rests (line 358) ───────────────
 

@@ -59,7 +59,7 @@ class MidiListener:
         try:
             self._port = mido.open_input(port_name, callback=self._on_message)
             log.info("Opened MIDI port: %s", port_name)
-        except Exception:
+        except (OSError, RuntimeError):
             self._port = None
             self._port_name = None
             raise
@@ -85,5 +85,5 @@ class MidiListener:
             elif msg.type == "note_off" or (msg.type == "note_on" and msg.velocity == 0):
                 self._callback("note_off", msg.note, 0)
             # Silently ignore all other message types (aftertouch, sysex, etc.)
-        except Exception:
+        except (AttributeError, IndexError, TypeError, ValueError):
             log.exception("Error in MIDI callback")

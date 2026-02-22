@@ -147,7 +147,6 @@ class EditorSequence:
         self._redo_stack: list[_Snapshot] = []
 
         # Clipboard for copy/paste
-        # Clipboard for copy/paste
         self._clipboard: list[BeatItem] = []
 
         self._cache_notes_by_track: dict[int, list[BeatNote]] | None = None
@@ -161,16 +160,14 @@ class EditorSequence:
         if self._cache_notes_by_track is not None:
             return
 
-        if self._cache_notes_by_track is None or self._cache_rests_by_track is None:
-            # Should not happen due to initial checks, but strict mypy needs this
-            from collections import defaultdict
+        from collections import defaultdict
 
-            self._cache_notes_by_track = defaultdict(list)
-            self._cache_rests_by_track = defaultdict(list)
-            for n in self._notes:
-                self._cache_notes_by_track[n.track].append(n)
-            for r in self._rests:
-                self._cache_rests_by_track[r.track].append(r)
+        self._cache_notes_by_track = defaultdict(list)
+        self._cache_rests_by_track = defaultdict(list)
+        for n in self._notes:
+            self._cache_notes_by_track[n.track].append(n)
+        for r in self._rests:
+            self._cache_rests_by_track[r.track].append(r)
 
     # ── Properties ──────────────────────────────────────────
 
@@ -230,6 +227,11 @@ class EditorSequence:
 
     @time_signature.setter
     def time_signature(self, value: tuple[int, int]) -> None:
+        num, denom = value
+        if denom <= 0:
+            raise ValueError(f"Time signature denominator must be positive, got {denom}")
+        if num <= 0:
+            raise ValueError(f"Time signature numerator must be positive, got {num}")
         self._time_signature = value
 
     @property
