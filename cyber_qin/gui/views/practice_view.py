@@ -19,7 +19,7 @@ from ...core.beat_sequence import BeatNote
 from ...core.key_mapper import KeyMapper
 from ...core.mapping_schemes import get_scheme, list_schemes
 from ...core.midi_file_player import MidiFileInfo
-from ...core.practice_engine import PracticeScorer, notes_to_practice
+from ...core.practice_engine import PracticeScorer, PracticeStats, notes_to_practice
 from ...core.translator import translator
 from ..theme import (
     ACCENT,
@@ -35,10 +35,17 @@ from ..theme import (
     TEXT_SECONDARY,
 )
 from ..widgets.practice_display import PracticeDisplay
+from ..widgets.speed_control import SpeedControl
 
 # Green gradient for practice header
 _PRACTICE_GRADIENT_START = "#0D4F2B"
 _PRACTICE_GRADIENT_END = "#0A3F22"
+
+# Grade colors for results page
+_PERFECT_COLOR = "#D4AF37"
+_GREAT_COLOR = "#33FF55"
+_GOOD_COLOR = "#FFBB33"
+_MISS_COLOR = "#FF4444"
 
 
 class _PracticeGradientHeader(QWidget):
@@ -260,6 +267,178 @@ class _MusicNoteIcon(QWidget):
         painter.end()
 
 
+# ── Results page (page 2) ────────────────────────────────────────
+
+
+class _PracticeResultsPage(QWidget):
+    """End-of-session results summary with grade breakdown."""
+
+    retry_clicked = pyqtSignal()
+    change_track_clicked = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self.setStyleSheet(f"background-color: {BG_INK};")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(60, 40, 60, 40)
+        layout.setSpacing(16)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Title
+        self._title_lbl = QLabel(translator.tr("practice.result"))
+        self._title_lbl.setFont(QFont("Microsoft JhengHei", 28, QFont.Weight.Bold))
+        self._title_lbl.setStyleSheet(f"color: {TEXT_PRIMARY};")
+        self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._title_lbl)
+
+        layout.addSpacing(8)
+
+        # Score (large gold number)
+        self._score_lbl = QLabel("0")
+        self._score_lbl.setFont(QFont("Microsoft JhengHei", 48, QFont.Weight.Bold))
+        self._score_lbl.setStyleSheet(f"color: {ACCENT_GOLD};")
+        self._score_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._score_lbl)
+
+        # Accuracy
+        self._accuracy_lbl = QLabel("0%")
+        self._accuracy_lbl.setFont(QFont("Microsoft JhengHei", 18))
+        self._accuracy_lbl.setStyleSheet(f"color: {TEXT_PRIMARY};")
+        self._accuracy_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._accuracy_lbl)
+
+        layout.addSpacing(16)
+
+        # Grade breakdown row
+        grades_row = QHBoxLayout()
+        grades_row.setSpacing(24)
+
+        self._perfect_lbl = self._make_grade_label("PERFECT", _PERFECT_COLOR)
+        self._great_lbl = self._make_grade_label("GREAT", _GREAT_COLOR)
+        self._good_lbl = self._make_grade_label("GOOD", _GOOD_COLOR)
+        self._miss_lbl = self._make_grade_label("MISS", _MISS_COLOR)
+
+        grades_row.addStretch()
+        grades_row.addWidget(self._perfect_lbl)
+        grades_row.addWidget(self._great_lbl)
+        grades_row.addWidget(self._good_lbl)
+        grades_row.addWidget(self._miss_lbl)
+        grades_row.addStretch()
+
+        layout.addLayout(grades_row)
+
+        layout.addSpacing(8)
+
+        # Max combo + total notes
+        self._combo_lbl = QLabel()
+        self._combo_lbl.setFont(QFont("Microsoft JhengHei", 14))
+        self._combo_lbl.setStyleSheet(f"color: {TEXT_SECONDARY};")
+        self._combo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._combo_lbl)
+
+        self._total_lbl = QLabel()
+        self._total_lbl.setFont(QFont("Microsoft JhengHei", 12))
+        self._total_lbl.setStyleSheet(f"color: {TEXT_DISABLED};")
+        self._total_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._total_lbl)
+
+        layout.addSpacing(24)
+
+        # Buttons row
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(16)
+        btn_row.addStretch()
+
+        self._retry_btn = QPushButton(translator.tr("practice.retry"))
+        self._retry_btn.setFont(QFont("Microsoft JhengHei", 13, QFont.Weight.Bold))
+        self._retry_btn.setFixedHeight(42)
+        self._retry_btn.setMinimumWidth(140)
+        self._retry_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._retry_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {ACCENT_GOLD};
+                color: {BG_INK};
+                border: none;
+                border-radius: 6px;
+                padding: 8px 24px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{ background-color: {ACCENT_GOLD_GLOW}; }}
+            QPushButton:pressed {{ background-color: {ACCENT_GOLD_DIM}; }}
+            """
+        )
+        self._retry_btn.clicked.connect(self.retry_clicked.emit)
+        btn_row.addWidget(self._retry_btn)
+
+        self._change_btn = QPushButton(translator.tr("practice.change_track"))
+        self._change_btn.setFont(QFont("Microsoft JhengHei", 12))
+        self._change_btn.setFixedHeight(42)
+        self._change_btn.setMinimumWidth(140)
+        self._change_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._change_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {ACCENT_GOLD};
+                border: 1px solid {ACCENT_GOLD};
+                border-radius: 6px;
+                padding: 8px 24px;
+            }}
+            QPushButton:hover {{ background-color: rgba(212, 175, 55, 30); }}
+            """
+        )
+        self._change_btn.clicked.connect(self.change_track_clicked.emit)
+        btn_row.addWidget(self._change_btn)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
+        layout.addStretch()
+
+    @staticmethod
+    def _make_grade_label(name: str, color: str) -> QLabel:
+        lbl = QLabel(f"{name}\n0")
+        lbl.setFont(QFont("Microsoft JhengHei", 13, QFont.Weight.Bold))
+        lbl.setStyleSheet(f"color: {color};")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl.setMinimumWidth(80)
+        return lbl
+
+    def show_results(self, stats: PracticeStats) -> None:
+        """Populate the results page with final session stats."""
+        self._score_lbl.setText(str(stats.total_score))
+        self._accuracy_lbl.setText(
+            f"{translator.tr('practice.accuracy')}: {stats.accuracy * 100:.1f}%"
+        )
+        self._perfect_lbl.setText(
+            f"{translator.tr('practice.perfect')}\n{stats.perfect}"
+        )
+        self._great_lbl.setText(
+            f"{translator.tr('practice.great')}\n{stats.great}"
+        )
+        self._good_lbl.setText(
+            f"{translator.tr('practice.good')}\n{stats.good}"
+        )
+        self._miss_lbl.setText(
+            f"{translator.tr('practice.miss')}\n{stats.missed}"
+        )
+        self._combo_lbl.setText(
+            f"{translator.tr('practice.max_combo')}: {stats.max_combo}"
+        )
+        self._total_lbl.setText(
+            f"{translator.tr('practice.total_notes')}: {stats.total_notes}"
+        )
+
+    def update_text(self) -> None:
+        self._title_lbl.setText(translator.tr("practice.result"))
+        self._retry_btn.setText(translator.tr("practice.retry"))
+        self._change_btn.setText(translator.tr("practice.change_track"))
+
+
 # ── Main practice view ────────────────────────────────────────────
 
 
@@ -269,11 +448,18 @@ class PracticeView(QWidget):
     file_open_requested = pyqtSignal()
     practice_track_requested = pyqtSignal(str)  # file_path
 
+    # Lifecycle signals for AppShell to sync audio playback
+    speed_changed = pyqtSignal(float)
+    practice_started = pyqtSignal()  # practice session began
+    practice_stopped = pyqtSignal()  # user stopped or changed track
+    practice_finished = pyqtSignal()  # session ended naturally (all notes passed)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._scorer: PracticeScorer | None = None
         self._notes: list[BeatNote] = []
         self._tempo_bpm: float = 120.0
+        self._speed: float = 1.0
         self._build_ui()
 
         translator.language_changed.connect(self._update_text)
@@ -353,7 +539,7 @@ class PracticeView(QWidget):
         header_overlay.setGeometry(0, 0, 800, 100)
         layout.addWidget(header_container)
 
-        # ── Content stack (page 0: empty state, page 1: practice) ──
+        # ── Content stack (page 0: empty, page 1: practice, page 2: results) ──
         self._content_stack = QStackedWidget()
 
         # Page 0: Empty state / song picker
@@ -362,7 +548,7 @@ class PracticeView(QWidget):
         self._empty_state.track_clicked.connect(self.practice_track_requested.emit)
         self._content_stack.addWidget(self._empty_state)
 
-        # Page 1: Practice content (score bar + display)
+        # Page 1: Practice content (score bar + speed control + display)
         practice_content = QWidget()
         pc_layout = QVBoxLayout(practice_content)
         pc_layout.setContentsMargins(0, 0, 0, 0)
@@ -392,6 +578,11 @@ class PracticeView(QWidget):
 
         score_layout.addStretch()
 
+        # Speed control
+        self._speed_control = SpeedControl()
+        self._speed_control.speed_changed.connect(self._on_speed_changed)
+        score_layout.addWidget(self._speed_control)
+
         self._start_btn = QPushButton(translator.tr("practice.start"))
         self._start_btn.setMinimumWidth(100)
         self._start_btn.setStyleSheet(
@@ -415,9 +606,16 @@ class PracticeView(QWidget):
         # Main display
         self._display = PracticeDisplay()
         self._display.note_hit.connect(self._on_display_note_hit)
+        self._display.practice_finished.connect(self._on_practice_ended)
         pc_layout.addWidget(self._display, 1)
 
         self._content_stack.addWidget(practice_content)
+
+        # Page 2: Results summary
+        self._results_page = _PracticeResultsPage()
+        self._results_page.retry_clicked.connect(self._on_retry)
+        self._results_page.change_track_clicked.connect(self._on_change_track)
+        self._content_stack.addWidget(self._results_page)
 
         # Start on page 0 (empty state)
         self._content_stack.setCurrentIndex(0)
@@ -441,6 +639,8 @@ class PracticeView(QWidget):
 
         practice_notes = notes_to_practice(notes, tempo_bpm)
         self._scorer = PracticeScorer(practice_notes)
+        self._scorer.start()
+        self._display.set_speed(self._speed)
         self._display.set_notes(practice_notes, tempo_bpm)
         self._display.start()
         self._start_btn.setText(translator.tr("practice.stop"))
@@ -448,6 +648,7 @@ class PracticeView(QWidget):
         # Switch to practice content (page 1)
         self._content_stack.setCurrentIndex(1)
         self._change_track_btn.setVisible(True)
+        self.practice_started.emit()
 
     # ── Events ──
 
@@ -462,6 +663,7 @@ class PracticeView(QWidget):
 
     def _on_change_track(self) -> None:
         """Stop practice and go back to song picker."""
+        was_playing = self._display.is_playing
         if self._display.is_playing:
             self._display.stop()
         self._scorer = None
@@ -471,11 +673,14 @@ class PracticeView(QWidget):
         self._desc_lbl.setText(translator.tr("practice.desc"))
         self._start_btn.setText(translator.tr("practice.start"))
         self._update_score_display()
+        if was_playing or self._content_stack.currentIndex() != 0:
+            self.practice_stopped.emit()
 
     def _on_start_stop(self) -> None:
         if self._display.is_playing:
             self._display.stop()
             self._start_btn.setText(translator.tr("practice.start"))
+            self.practice_stopped.emit()
         elif self._notes:
             self.start_practice(self._notes, self._tempo_bpm)
 
@@ -487,11 +692,30 @@ class PracticeView(QWidget):
         hit = self._scorer.on_user_note(note, current_time)
         if hit is not None:
             self._display.show_feedback(hit.grade, note)
+            self._display.set_combo(self._scorer.stats.current_combo)
         self._update_score_display()
 
     def _on_display_note_hit(self, note: int, time: float) -> None:
         """Handle note hit from keyboard input in display."""
         self.on_user_note(note)
+
+    def _on_practice_ended(self) -> None:
+        """Session ended naturally (all notes passed)."""
+        if self._scorer:
+            stats = self._scorer.finalize()
+            self._results_page.show_results(stats)
+            self._content_stack.setCurrentIndex(2)
+        self.practice_finished.emit()
+
+    def _on_retry(self) -> None:
+        """Restart practice with the same notes."""
+        if self._notes:
+            self.start_practice(self._notes, self._tempo_bpm)
+
+    def _on_speed_changed(self, speed: float) -> None:
+        self._speed = speed
+        self._display.set_speed(speed)
+        self.speed_changed.emit(speed)
 
     def _on_mode_changed(self, index: int) -> None:
         is_keyboard = self._mode_combo.currentData() == "keyboard"
@@ -532,6 +756,7 @@ class PracticeView(QWidget):
         )
         self._update_score_display()
         self._empty_state.update_text()
+        self._results_page.update_text()
 
     def _update_score_display(self) -> None:
         if self._scorer:

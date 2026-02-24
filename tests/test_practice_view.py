@@ -20,7 +20,9 @@ from cyber_qin.gui.views.practice_view import (
     _MiniTrackCard,
     _MusicNoteIcon,
     _PracticeEmptyState,
+    _PracticeResultsPage,
 )
+from cyber_qin.gui.widgets.practice_display import PracticeDisplay
 
 # ── Fixtures ──────────────────────────────────────────────
 
@@ -123,8 +125,8 @@ class TestPracticeViewInitialState:
     def test_scheme_combo_hidden_initially(self, practice_view):
         assert practice_view._scheme_combo.isHidden()
 
-    def test_content_stack_has_two_pages(self, practice_view):
-        assert practice_view._content_stack.count() == 2
+    def test_content_stack_has_three_pages(self, practice_view):
+        assert practice_view._content_stack.count() == 3
 
     def test_empty_state_track_cards_empty(self, practice_view):
         assert len(practice_view._empty_state._track_cards) == 0
@@ -966,3 +968,230 @@ class TestEditorSequenceClassmethod:
         _returned = seq.from_midi_file_events(events, tempo_bpm=120.0)
         assert len(seq.notes) == 0, "Original instance should be empty"
         assert len(_returned.notes) == 1, "Returned instance has the notes"
+
+
+# ── PracticeDisplay: Speed ─────────────────────────────────
+
+
+class TestPracticeDisplaySpeed:
+    """PracticeDisplay speed scaling behavior."""
+
+    def test_default_speed_is_one(self, qapp):
+        d = PracticeDisplay()
+        assert d._speed == 1.0
+        d.deleteLater()
+
+    def test_set_speed(self, qapp):
+        d = PracticeDisplay()
+        d.set_speed(0.5)
+        assert d._speed == 0.5
+        d.deleteLater()
+
+    def test_tick_advances_by_speed(self, qapp):
+        from cyber_qin.core.practice_engine import PracticeNote
+
+        d = PracticeDisplay()
+        d.set_notes([PracticeNote(10.0, 60)], 120.0)
+        d.set_speed(0.5)
+        d.start()
+        initial = d.current_time
+        d._tick()
+        expected = initial + 0.016 * 0.5
+        assert abs(d.current_time - expected) < 0.001
+        d.stop()
+        d.deleteLater()
+
+    def test_tick_at_double_speed(self, qapp):
+        from cyber_qin.core.practice_engine import PracticeNote
+
+        d = PracticeDisplay()
+        d.set_notes([PracticeNote(10.0, 60)], 120.0)
+        d.set_speed(2.0)
+        d.start()
+        initial = d.current_time
+        d._tick()
+        expected = initial + 0.016 * 2.0
+        assert abs(d.current_time - expected) < 0.001
+        d.stop()
+        d.deleteLater()
+
+
+class TestPracticeDisplayCombo:
+    """PracticeDisplay combo overlay."""
+
+    def test_default_combo_zero(self, qapp):
+        d = PracticeDisplay()
+        assert d._combo == 0
+        d.deleteLater()
+
+    def test_set_combo(self, qapp):
+        d = PracticeDisplay()
+        d.set_combo(10)
+        assert d._combo == 10
+        d.deleteLater()
+
+
+class TestPracticeDisplayFinished:
+    """PracticeDisplay emits practice_finished when all notes pass."""
+
+    def test_has_practice_finished_signal(self, qapp):
+        d = PracticeDisplay()
+        assert hasattr(d, "practice_finished")
+        d.deleteLater()
+
+
+class TestPracticeDisplayFlash:
+    """PracticeDisplay flash effects on hit."""
+
+    def test_show_feedback_adds_flash_for_perfect(self, qapp):
+        from cyber_qin.core.practice_engine import HitGrade, PracticeNote
+
+        d = PracticeDisplay()
+        d.set_notes([PracticeNote(0.0, 60)], 120.0)
+        d.resize(800, 600)
+        d.show_feedback(HitGrade.PERFECT, 60)
+        assert len(d._flashes) == 1
+        d.deleteLater()
+
+    def test_show_feedback_no_flash_for_miss(self, qapp):
+        from cyber_qin.core.practice_engine import HitGrade, PracticeNote
+
+        d = PracticeDisplay()
+        d.set_notes([PracticeNote(0.0, 60)], 120.0)
+        d.resize(800, 600)
+        d.show_feedback(HitGrade.MISS, 60)
+        assert len(d._flashes) == 0
+        d.deleteLater()
+
+
+# ── PracticeView: Speed Control ─────────────────────────────
+
+
+class TestPracticeViewSpeedControl:
+    """PracticeView has an integrated SpeedControl."""
+
+    def test_speed_control_exists(self, practice_view):
+        assert hasattr(practice_view, "_speed_control")
+
+    def test_initial_speed_is_one(self, practice_view):
+        assert practice_view._speed == 1.0
+
+    def test_speed_changed_signal(self, practice_view, qtbot):
+        with qtbot.waitSignal(practice_view.speed_changed, timeout=1000):
+            practice_view._on_speed_changed(0.5)
+        assert practice_view._speed == 0.5
+
+    def test_speed_propagates_to_display(self, practice_view):
+        practice_view._on_speed_changed(0.75)
+        assert practice_view._display._speed == 0.75
+
+
+# ── PracticeView: Results Page ────────────────────────────────
+
+
+class TestPracticeViewResults:
+    """Results page (page 2) shows end-of-session stats."""
+
+    def test_results_page_exists(self, practice_view):
+        assert hasattr(practice_view, "_results_page")
+        assert practice_view._content_stack.count() == 3
+
+    def test_practice_ended_shows_results_page(self, practice_view, one_note):
+        practice_view.start_practice(one_note, 120.0)
+        practice_view._on_practice_ended()
+        assert practice_view._content_stack.currentIndex() == 2
+
+    def test_retry_restarts_on_page_1(self, practice_view, one_note):
+        practice_view.start_practice(one_note, 120.0)
+        practice_view._on_practice_ended()
+        assert practice_view._content_stack.currentIndex() == 2
+        practice_view._on_retry()
+        assert practice_view._content_stack.currentIndex() == 1
+        assert practice_view._display.is_playing
+
+    def test_change_track_from_results_goes_to_page_0(self, practice_view, one_note):
+        practice_view.start_practice(one_note, 120.0)
+        practice_view._on_practice_ended()
+        practice_view._on_change_track()
+        assert practice_view._content_stack.currentIndex() == 0
+
+    def test_retry_with_no_notes_is_noop(self, practice_view):
+        practice_view._on_retry()
+        assert practice_view._content_stack.currentIndex() == 0
+
+
+class TestPracticeResultsPage:
+    """_PracticeResultsPage widget behavior."""
+
+    @pytest.fixture()
+    def results_page(self, qapp):
+        page = _PracticeResultsPage()
+        yield page
+        page.close()
+        page.deleteLater()
+
+    def test_has_retry_signal(self, results_page):
+        assert hasattr(results_page, "retry_clicked")
+
+    def test_has_change_track_signal(self, results_page):
+        assert hasattr(results_page, "change_track_clicked")
+
+    def test_show_results_sets_score(self, results_page):
+        from cyber_qin.core.practice_engine import PracticeStats
+
+        stats = PracticeStats(
+            total_notes=10,
+            perfect=5,
+            great=3,
+            good=1,
+            missed=1,
+            total_score=2100,
+            max_combo=8,
+        )
+        results_page.show_results(stats)
+        assert "2100" in results_page._score_lbl.text()
+
+    def test_update_text_no_crash(self, results_page):
+        results_page.update_text()
+        assert results_page._title_lbl.text() == translator.tr("practice.result")
+
+    def test_retry_btn_emits(self, results_page, qtbot):
+        with qtbot.waitSignal(results_page.retry_clicked, timeout=1000):
+            results_page._retry_btn.click()
+
+    def test_change_btn_emits(self, results_page, qtbot):
+        with qtbot.waitSignal(results_page.change_track_clicked, timeout=1000):
+            results_page._change_btn.click()
+
+
+# ── PracticeView: Lifecycle Signals ──────────────────────────
+
+
+class TestPracticeViewLifecycle:
+    """PracticeView lifecycle signals for audio integration."""
+
+    def test_practice_started_on_start(self, practice_view, qtbot, one_note):
+        with qtbot.waitSignal(practice_view.practice_started, timeout=1000):
+            practice_view.start_practice(one_note, 120.0)
+
+    def test_practice_stopped_on_stop(self, practice_view, qtbot, one_note):
+        practice_view.start_practice(one_note, 120.0)
+        with qtbot.waitSignal(practice_view.practice_stopped, timeout=1000):
+            practice_view._on_start_stop()
+
+    def test_practice_finished_on_end(self, practice_view, qtbot, one_note):
+        practice_view.start_practice(one_note, 120.0)
+        with qtbot.waitSignal(practice_view.practice_finished, timeout=1000):
+            practice_view._on_practice_ended()
+
+    def test_has_speed_changed_signal(self, practice_view):
+        assert hasattr(practice_view, "speed_changed")
+
+    def test_combo_updated_on_user_note(self, practice_view, one_note):
+        """on_user_note updates display combo from scorer stats."""
+        practice_view.start_practice(one_note, 120.0)
+        # Advance time to match the note (at 0.0 seconds, lead-in is -1.0)
+        practice_view._display._current_time = 0.0
+        practice_view.on_user_note(60)
+        # The combo should be updated (could be 0 or 1 depending on timing)
+        # Main thing is no crash

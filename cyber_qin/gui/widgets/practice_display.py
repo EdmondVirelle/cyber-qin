@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QWidget
 
 from ...core.constants import Modifier
@@ -15,6 +15,7 @@ _NOTE_WIDTH = 28
 _NOTE_HEIGHT = 16
 _FALL_SPEED = 300.0  # pixels per second (base)
 _FEEDBACK_DURATION = 0.6  # seconds
+_FLASH_DURATION = 0.15  # seconds — bright glow on hit
 
 # Colors
 _NOTE_COLOR = QColor("#00F0FF")
@@ -24,6 +25,7 @@ _MISS_COLOR = QColor("#FF4444")
 _GOOD_COLOR = QColor("#FFBB33")
 _GREAT_COLOR = QColor("#33FF55")
 _PERFECT_COLOR = QColor("#D4AF37")
+_COMBO_COLOR = QColor("#D4AF37")
 
 _GRADE_COLORS = {
     HitGrade.MISS: _MISS_COLOR,
@@ -51,10 +53,22 @@ class _FeedbackEffect:
         self.life = _FEEDBACK_DURATION
 
 
+class _FlashEffect:
+    """Brief bright glow at the hit line when a note is hit."""
+
+    __slots__ = ("x", "color", "life")
+
+    def __init__(self, x: float, color: QColor) -> None:
+        self.x = x
+        self.color = color
+        self.life = _FLASH_DURATION
+
+
 class PracticeDisplay(QWidget):
     """Falling notes display with hit line and visual feedback."""
 
     note_hit = pyqtSignal(int, float)  # note, time_seconds — emitted on user input
+    practice_finished = pyqtSignal()  # emitted when all notes have passed
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -62,7 +76,10 @@ class PracticeDisplay(QWidget):
         self._current_time: float = 0.0
         self._playing: bool = False
         self._tempo_bpm: float = 120.0
+        self._speed: float = 1.0
         self._feedbacks: list[_FeedbackEffect] = []
+        self._flashes: list[_FlashEffect] = []
+        self._combo: int = 0
 
         # Note range for x-mapping
         self._note_min: int = 60
@@ -89,10 +106,20 @@ class PracticeDisplay(QWidget):
             self._note_max = min(108, max(pitches) + 2)
         self.update()
 
+    def set_speed(self, speed: float) -> None:
+        """Set playback speed multiplier (affects song-time advancement)."""
+        self._speed = speed
+
+    def set_combo(self, combo: int) -> None:
+        """Update the current combo count for overlay display."""
+        self._combo = combo
+
     def start(self) -> None:
         self._current_time = -1.0  # 1 second lead-in
         self._playing = True
         self._feedbacks.clear()
+        self._flashes.clear()
+        self._combo = 0
         self._timer.start()
 
     def stop(self) -> None:
@@ -115,6 +142,9 @@ class PracticeDisplay(QWidget):
         color = _GRADE_COLORS.get(grade, _MISS_COLOR)
         text = _GRADE_TEXT.get(grade, "")
         self._feedbacks.append(_FeedbackEffect(text, color, x, hit_y - 30))
+        # Bright flash at hit line for non-miss hits
+        if grade != HitGrade.MISS:
+            self._flashes.append(_FlashEffect(x, color))
 
     def set_keyboard_mapping(self, reverse_map: dict[tuple[str, Modifier], int] | None) -> None:
         """Enable or disable keyboard input for practice."""
@@ -174,9 +204,10 @@ class PracticeDisplay(QWidget):
     def _tick(self) -> None:
         if not self._playing:
             return
-        self._current_time += 0.016  # ~16ms
+        # Song time scales with speed (0.5x → half as fast)
+        self._current_time += 0.016 * self._speed
 
-        # Update feedbacks
+        # Update feedback effects (real-time, not scaled by speed)
         alive = []
         for fb in self._feedbacks:
             fb.life -= 0.016
@@ -185,10 +216,19 @@ class PracticeDisplay(QWidget):
                 alive.append(fb)
         self._feedbacks = alive
 
+        # Update flash effects (real-time)
+        alive_flashes = []
+        for fl in self._flashes:
+            fl.life -= 0.016
+            if fl.life > 0:
+                alive_flashes.append(fl)
+        self._flashes = alive_flashes
+
         # Check if all notes have passed
         if self._notes and self._current_time > self._notes[-1].time_seconds + 3.0:
             self._playing = False
             self._timer.stop()
+            self.practice_finished.emit()
 
         self.update()
 
@@ -198,8 +238,6 @@ class PracticeDisplay(QWidget):
         w, h = self.width(), self.height()
 
         # Background gradient
-        from PyQt6.QtGui import QLinearGradient
-
         bg_grad = QLinearGradient(0, 0, 0, h)
         bg_grad.setColorAt(0.0, QColor("#0A0E1A"))
         bg_grad.setColorAt(1.0, QColor("#0D1520"))
@@ -215,6 +253,18 @@ class PracticeDisplay(QWidget):
         glow_color = QColor(_HIT_LINE_COLOR)
         glow_color.setAlphaF(0.15)
         painter.fillRect(QRectF(0, hit_y - 3, w, 6), glow_color)
+
+        # Flash effects at hit line (bright circular glow on hit)
+        for fl in self._flashes:
+            alpha = fl.life / _FLASH_DURATION
+            glow = QColor(fl.color)
+            glow.setAlphaF(alpha * 0.6)
+            radius = 30 * (1.0 + (1.0 - alpha) * 0.5)
+            painter.setBrush(glow)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(
+                QRectF(fl.x - radius, hit_y - radius, radius * 2, radius * 2),
+            )
 
         # Falling notes
         for pn in self._notes:
@@ -244,7 +294,7 @@ class PracticeDisplay(QWidget):
             painter.setPen(QPen(_NOTE_BORDER, 1.0))
             painter.drawPath(path)
 
-        # Feedback effects
+        # Feedback effects (grade text floating upward)
         for fb in self._feedbacks:
             alpha = max(0, fb.life / _FEEDBACK_DURATION)
             color = QColor(fb.color)
@@ -256,6 +306,19 @@ class PracticeDisplay(QWidget):
                 QRectF(fb.x - 60, fb.y, 120, 30),
                 Qt.AlignmentFlag.AlignCenter,
                 fb.text,
+            )
+
+        # Combo counter overlay (shown when combo > 5)
+        if self._combo > 5:
+            combo_alpha = min(1.0, self._combo / 20.0) * 0.8
+            combo_color = QColor(_COMBO_COLOR)
+            combo_color.setAlphaF(combo_alpha)
+            painter.setPen(combo_color)
+            painter.setFont(QFont("Microsoft JhengHei", 32, QFont.Weight.Bold))
+            painter.drawText(
+                QRectF(0, h * 0.3, w, 50),
+                Qt.AlignmentFlag.AlignCenter,
+                f"{self._combo} COMBO",
             )
 
         # Lane labels at bottom

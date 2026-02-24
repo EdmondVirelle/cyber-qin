@@ -24,6 +24,7 @@ from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
 from ..core.midi_file_player import PlaybackState, create_player_controller
 from ..core.midi_listener import MidiListener
+from ..core.midi_output_player import create_midi_output_player
 from ..core.midi_recorder import MidiRecorder
 from ..core.midi_writer import MidiWriter
 from ..core.priority import set_thread_priority_realtime
@@ -118,6 +119,11 @@ class AppShell(QMainWindow):
         self._player = create_player_controller(self._mapper, self._simulator)
         self._recorder = MidiRecorder()
         self._config = get_config()
+
+        # Practice mode audio player (MIDI synth output for reference + hit sounds)
+        self._practice_player = create_midi_output_player()
+        self._practice_events: list = []  # stored for retry
+        self._practice_duration: float = 0.0
 
         self._build_ui()
         self._connect_signals()
@@ -259,6 +265,12 @@ class AppShell(QMainWindow):
 
         # MIDI note events → practice mode scoring
         self._processor.note_event.connect(self._on_practice_note_event)
+
+        # Practice lifecycle → audio player
+        self._practice_view.practice_started.connect(self._on_practice_audio_start)
+        self._practice_view.practice_stopped.connect(self._on_practice_audio_stop)
+        self._practice_view.practice_finished.connect(self._on_practice_audio_stop)
+        self._practice_view.speed_changed.connect(self._on_practice_speed_changed)
 
         # Pass player to editor for playback cursor tracking
         self._editor_view.set_player(self._player)
@@ -562,6 +574,9 @@ class AppShell(QMainWindow):
             seq = EditorSequence.from_midi_file_events(events, tempo_bpm=info.tempo_bpm)
             notes = seq.notes
             if notes:
+                # Store events for audio playback (+ retry)
+                self._practice_events = list(events)
+                self._practice_duration = info.duration_seconds
                 self._practice_view.set_current_track_name(info.name)
                 self._practice_view.start_practice(notes, info.tempo_bpm)
                 self._stack.setCurrentIndex(3)
@@ -572,9 +587,30 @@ class AppShell(QMainWindow):
             log.exception("Failed to load practice file %s", file_path)
 
     def _on_practice_note_event(self, event_type: str, note: int, velocity: int) -> None:
-        """Forward live MIDI events to practice mode for scoring."""
+        """Forward live MIDI events to practice mode for scoring + hit sound."""
         if self._stack.currentIndex() == 3 and event_type == "note_on":
             self._practice_view.on_user_note(note)
+            # Play feedback sound for user's note hit
+            if self._practice_player is not None:
+                self._practice_player.preview_note(note, velocity=velocity, duration_ms=150)
+
+    def _on_practice_audio_start(self) -> None:
+        """Start reference audio playback when practice begins."""
+        if self._practice_player is None or not self._practice_events:
+            return
+        self._practice_player.load(self._practice_events, self._practice_duration)
+        self._practice_player.set_speed(self._practice_view._speed)  # noqa: SLF001
+        self._practice_player.play()
+
+    def _on_practice_audio_stop(self) -> None:
+        """Stop reference audio playback."""
+        if self._practice_player is not None:
+            self._practice_player.stop()
+
+    def _on_practice_speed_changed(self, speed: float) -> None:
+        """Sync practice audio speed with display speed."""
+        if self._practice_player is not None:
+            self._practice_player.set_speed(speed)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         # Save window state to config (geometry as base64 string for JSON compatibility)
@@ -590,5 +626,7 @@ class AppShell(QMainWindow):
             self._processor.set_recorder(None)
             self._recorder.stop()
         self._player.cleanup()
+        if self._practice_player is not None:
+            self._practice_player.cleanup()
         self._live_view.cleanup()
         super().closeEvent(event)
