@@ -414,24 +414,12 @@ class _PracticeResultsPage(QWidget):
         self._accuracy_lbl.setText(
             f"{translator.tr('practice.accuracy')}: {stats.accuracy * 100:.1f}%"
         )
-        self._perfect_lbl.setText(
-            f"{translator.tr('practice.perfect')}\n{stats.perfect}"
-        )
-        self._great_lbl.setText(
-            f"{translator.tr('practice.great')}\n{stats.great}"
-        )
-        self._good_lbl.setText(
-            f"{translator.tr('practice.good')}\n{stats.good}"
-        )
-        self._miss_lbl.setText(
-            f"{translator.tr('practice.miss')}\n{stats.missed}"
-        )
-        self._combo_lbl.setText(
-            f"{translator.tr('practice.max_combo')}: {stats.max_combo}"
-        )
-        self._total_lbl.setText(
-            f"{translator.tr('practice.total_notes')}: {stats.total_notes}"
-        )
+        self._perfect_lbl.setText(f"{translator.tr('practice.perfect')}\n{stats.perfect}")
+        self._great_lbl.setText(f"{translator.tr('practice.great')}\n{stats.great}")
+        self._good_lbl.setText(f"{translator.tr('practice.good')}\n{stats.good}")
+        self._miss_lbl.setText(f"{translator.tr('practice.miss')}\n{stats.missed}")
+        self._combo_lbl.setText(f"{translator.tr('practice.max_combo')}: {stats.max_combo}")
+        self._total_lbl.setText(f"{translator.tr('practice.total_notes')}: {stats.total_notes}")
 
     def update_text(self) -> None:
         self._title_lbl.setText(translator.tr("practice.result"))

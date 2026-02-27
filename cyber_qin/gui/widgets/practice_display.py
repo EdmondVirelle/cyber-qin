@@ -357,7 +357,7 @@ class PracticeDisplay(QWidget):
         for i in range(1, num_grid):
             t = i / num_grid
             # Power curve: denser near vanishing point, sparser near hit
-            grid_y = vanish_y + (hit_y - vanish_y) * (t ** 1.4)
+            grid_y = vanish_y + (hit_y - vanish_y) * (t**1.4)
             scale = self._perspective_at_y(grid_y)
             gx_l = self._apply_perspective_x(_LANE_MARGIN, grid_y)
             gx_r = self._apply_perspective_x(w - _LANE_MARGIN, grid_y)
