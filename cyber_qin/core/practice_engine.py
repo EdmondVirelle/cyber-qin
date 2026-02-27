@@ -210,9 +210,9 @@ class PracticeScorer:
             else:
                 continue
 
-            # Wrong pitch downgrades
+            # Only match pitch-correct notes — wrong key = no match
             if not pitch_correct:
-                grade = HitGrade.GOOD  # cap at GOOD for wrong pitch
+                continue
 
             result = HitResult(grade, target, midi_note, error_ms, pitch_correct)
             if abs_error < best_abs_error:

@@ -321,33 +321,37 @@ def test_scorer_single_note_20ms_early_perfect():
     assert result.timing_error_ms == pytest.approx(-20.0)
 
 
-def test_scorer_wrong_pitch_caps_at_good():
-    """Wrong pitch → caps at GOOD."""
+def test_scorer_wrong_pitch_returns_none():
+    """Wrong pitch → no match (returns None), target stays available."""
     target = [PracticeNote(time_seconds=1.0, note=60)]
     scorer = PracticeScorer(target)
     scorer.start()
 
     result = scorer.on_user_note(62, 1.0)  # Wrong note, perfect timing
 
-    assert result is not None
-    assert result.grade == HitGrade.GOOD
-    assert result.pitch_correct is False
+    assert result is None  # Wrong pitch is ignored
+    assert scorer.stats.perfect == 0  # Not consumed
+
+    # Correct note still matches
+    correct = scorer.on_user_note(60, 1.02)
+    assert correct is not None
+    assert correct.grade == HitGrade.PERFECT
+    assert correct.pitch_correct is True
 
 
-def test_scorer_wrong_pitch_with_perfect_timing_good():
-    """Wrong pitch with perfect timing → GOOD."""
+def test_scorer_wrong_pitch_with_perfect_timing_ignored():
+    """Wrong pitch with perfect timing → ignored (no match)."""
     target = [PracticeNote(time_seconds=1.0, note=60)]
     scorer = PracticeScorer(target)
     scorer.start()
 
     result = scorer.on_user_note(61, 1.0)
 
-    assert result is not None
-    assert result.grade == HitGrade.GOOD
+    assert result is None
 
 
 def test_scorer_correct_pitch_tracking():
-    """Correct pitch tracking in result."""
+    """Correct pitch always True in results (wrong pitch is filtered out)."""
     target = [PracticeNote(time_seconds=1.0, note=60)]
     scorer = PracticeScorer(target)
     scorer.start()
@@ -358,8 +362,7 @@ def test_scorer_correct_pitch_tracking():
 
     scorer.start()  # Reset
     wrong = scorer.on_user_note(61, 1.0)
-    assert wrong is not None
-    assert wrong.pitch_correct is False
+    assert wrong is None  # Wrong pitch produces no match
 
 
 def test_scorer_timing_error_negative_when_early():
@@ -740,15 +743,17 @@ def test_scorer_progress_empty_sequence():
     assert scorer.progress == 1.0
 
 
-def test_scorer_wrong_pitch_increments_wrong_pitch_count():
-    """Wrong pitch increments wrong_pitch count."""
+def test_scorer_wrong_pitch_does_not_consume_note():
+    """Wrong pitch does not consume the target note."""
     target = [PracticeNote(time_seconds=1.0, note=60)]
     scorer = PracticeScorer(target)
     scorer.start()
 
-    scorer.on_user_note(62, 1.0)  # Wrong note
+    scorer.on_user_note(62, 1.0)  # Wrong note — ignored
 
-    assert scorer.stats.wrong_pitch == 1
+    assert scorer.stats.wrong_pitch == 0
+    assert scorer.stats.perfect == 0
+    assert not scorer.is_complete  # Note still available
 
 
 def test_scorer_correct_pitch_does_not_increment_wrong_pitch():
