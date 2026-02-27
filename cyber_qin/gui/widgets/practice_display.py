@@ -1,7 +1,8 @@
 """Falling-note rhythm game display for practice mode — 60fps QPainter rendering.
 
-Features a 3D perspective "highway" effect where notes approach the hit line
-from a vanishing point, similar to Guitar Hero / Rock Band.
+Features a lane-based layout like osu!mania / DJMAX where each unique note
+in the song gets its own column. Notes fall down their lane toward the hit line.
+3D perspective effect converges lanes toward a vanishing point.
 """
 
 from __future__ import annotations
@@ -24,12 +25,19 @@ from ...core.practice_engine import HitGrade, PracticeNote
 # ── Perspective Geometry ─────────────────────────────────────
 _HIT_LINE_Y_RATIO = 0.85  # Hit line at 85% from top
 _VANISH_Y_RATIO = 0.06  # Vanishing point at 6% from top
-_LANE_MARGIN = 40  # Horizontal margin at hit line level
+_LANE_MARGIN = 30  # Horizontal margin at hit line level
 
-# ── Note Sizing (at hit line, full scale) ────────────────────
-_NOTE_WIDTH = 36
+# ── Note Sizing ──────────────────────────────────────────────
 _NOTE_HEIGHT = 18
+_NOTE_LANE_FILL = 0.72  # Note width = lane_width * this ratio
 _FALL_SPEED = 300.0  # pixels per second (base)
+
+# ── Lane visuals ─────────────────────────────────────────────
+_LANE_BG_EVEN = QColor(10, 16, 28, 140)
+_LANE_BG_ODD = QColor(14, 22, 36, 140)
+_LANE_DIVIDER_COLOR = QColor(30, 50, 75, 100)
+_LANE_LABEL_BG = QColor(8, 14, 24, 200)
+_LANE_LABEL_HEIGHT = 36  # pixels below hit line for label area
 
 # ── Timing & Effects ────────────────────────────────────────
 _FEEDBACK_DURATION = 1.0  # seconds — grade text display time
@@ -60,6 +68,13 @@ _GRADE_TEXT = {
     HitGrade.PERFECT: "PERFECT!",
 }
 
+# ── Note name helper ─────────────────────────────────────────
+_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+
+def _midi_note_name(midi: int) -> str:
+    return _NOTE_NAMES[midi % 12] + str(midi // 12 - 1)
+
 
 class _FeedbackEffect:
     """Floating grade text that pops in and fades out."""
@@ -78,12 +93,16 @@ class _FeedbackEffect:
 class _FlashEffect:
     """Brief bright glow at the hit line when a note is hit."""
 
-    __slots__ = ("x", "color", "life")
+    __slots__ = ("x", "color", "life", "lane_left", "lane_right")
 
-    def __init__(self, x: float, color: QColor) -> None:
+    def __init__(
+        self, x: float, color: QColor, lane_left: float = 0, lane_right: float = 0
+    ) -> None:
         self.x = x
         self.color = color
         self.life = _FLASH_DURATION
+        self.lane_left = lane_left
+        self.lane_right = lane_right
 
 
 _CONSUMED_DURATION = 0.3  # seconds — consumed note burst animation
@@ -103,7 +122,7 @@ class _ConsumedNoteEffect:
 
 
 class PracticeDisplay(QWidget):
-    """Falling notes display with 3D perspective highway effect."""
+    """Lane-based falling notes display (osu!mania style) with 3D perspective."""
 
     note_hit = pyqtSignal(int, float)  # note, time_seconds — emitted on user input
     practice_finished = pyqtSignal()  # emitted when all notes have passed
@@ -121,9 +140,9 @@ class PracticeDisplay(QWidget):
         self._hit_note_times: set[float] = set()
         self._combo: int = 0
 
-        # Note range for x-mapping
-        self._note_min: int = 60
-        self._note_max: int = 83
+        # Lane system: only notes that appear in the song get lanes
+        self._lane_notes: list[int] = []  # sorted unique MIDI notes
+        self._lane_index: dict[int, int] = {}  # MIDI note → lane index
 
         # Keyboard input mode
         self._reverse_map: dict[tuple[str, Modifier], int] | None = None
@@ -141,10 +160,14 @@ class PracticeDisplay(QWidget):
     def set_notes(self, notes: list[PracticeNote], tempo_bpm: float = 120.0) -> None:
         self._notes = sorted(notes, key=lambda n: n.time_seconds)
         self._tempo_bpm = tempo_bpm
+        # Build lane system from unique notes in the song
         if notes:
-            pitches = [n.note for n in notes]
-            self._note_min = max(21, min(pitches) - 2)
-            self._note_max = min(108, max(pitches) + 2)
+            unique = sorted({n.note for n in notes})
+            self._lane_notes = unique
+            self._lane_index = {note: i for i, note in enumerate(unique)}
+        else:
+            self._lane_notes = []
+            self._lane_index = {}
         self.update()
 
     def set_speed(self, speed: float) -> None:
@@ -192,12 +215,14 @@ class PracticeDisplay(QWidget):
         self._feedbacks.append(_FeedbackEffect(text, color, x, hit_y - 60))
         # Bright flash at hit line for non-miss hits
         if grade != HitGrade.MISS:
-            self._flashes.append(_FlashEffect(x, color))
+            ll, lr = self._lane_edges(note)
+            self._flashes.append(_FlashEffect(x, color, ll, lr))
             # Mark note consumed + burst effect
+            note_w = self._lane_width() * _NOTE_LANE_FILL if self._lane_notes else 36
             if target_time is not None:
                 self._hit_note_times.add(target_time)
                 self._consumed_effects.append(
-                    _ConsumedNoteEffect(x, hit_y, color, _NOTE_WIDTH),
+                    _ConsumedNoteEffect(x, hit_y, color, note_w),
                 )
 
     def set_keyboard_mapping(self, reverse_map: dict[tuple[str, Modifier], int] | None) -> None:
@@ -240,14 +265,32 @@ class PracticeDisplay(QWidget):
         if midi_note is not None:
             self.note_hit.emit(midi_note, self._current_time)
 
-    # ── Coordinate Mapping ──────────────────────────────────
+    # ── Lane Geometry ─────────────────────────────────────────
+
+    def _lane_width(self) -> float:
+        """Width of a single lane at hit-line level."""
+        n = len(self._lane_notes)
+        if n == 0:
+            return 60.0
+        usable = self.width() - 2 * _LANE_MARGIN
+        return usable / n
 
     def _note_to_x(self, midi_note: int) -> float:
-        """Map MIDI note to base x position (flat, at hit line level)."""
-        w = self.width()
-        usable = w - 2 * _LANE_MARGIN
-        note_range = max(1, self._note_max - self._note_min)
-        return _LANE_MARGIN + ((midi_note - self._note_min) / note_range) * usable
+        """Map MIDI note to the center x of its lane (at hit-line level)."""
+        idx = self._lane_index.get(midi_note)
+        if idx is None:
+            # Fallback: spread unknown notes across width
+            w = self.width()
+            return w / 2.0
+        lw = self._lane_width()
+        return _LANE_MARGIN + (idx + 0.5) * lw
+
+    def _lane_edges(self, midi_note: int) -> tuple[float, float]:
+        """Return (left_x, right_x) of the lane at hit-line level."""
+        idx = self._lane_index.get(midi_note, 0)
+        lw = self._lane_width()
+        left = _LANE_MARGIN + idx * lw
+        return left, left + lw
 
     def _time_to_y(self, note_time: float) -> float:
         """Map note time to y position (falling from top)."""
@@ -264,7 +307,6 @@ class PracticeDisplay(QWidget):
         if hit_y <= vanish_y:
             return 1.0
         ratio = (y - vanish_y) / (hit_y - vanish_y)
-        # Allow slight overshoot past hit line for notes below it
         return max(0.0, min(1.3, ratio))
 
     def _apply_perspective_x(self, base_x: float, y: float) -> float:
@@ -323,6 +365,8 @@ class PracticeDisplay(QWidget):
         hit_y = h * _HIT_LINE_Y_RATIO
         vanish_y = h * _VANISH_Y_RATIO
         center_x = w / 2.0
+        n_lanes = len(self._lane_notes)
+        lw = self._lane_width() if n_lanes > 0 else 60.0
 
         # ── Background gradient ──
         bg_grad = QLinearGradient(0, 0, 0, h)
@@ -332,36 +376,69 @@ class PracticeDisplay(QWidget):
         painter.fillRect(0, 0, w, h, bg_grad)
 
         # ── Highway surface (darker trapezoid) ──
+        highway_left = _LANE_MARGIN
+        highway_right = w - _LANE_MARGIN
+        lt = self._apply_perspective_x(highway_left, vanish_y)
+        rt = self._apply_perspective_x(highway_right, vanish_y)
         highway_path = QPainterPath()
-        lt = self._apply_perspective_x(_LANE_MARGIN, vanish_y)
-        rt = self._apply_perspective_x(w - _LANE_MARGIN, vanish_y)
         highway_path.moveTo(lt, vanish_y)
         highway_path.lineTo(rt, vanish_y)
-        highway_path.lineTo(w - _LANE_MARGIN, hit_y + 30)
-        highway_path.lineTo(_LANE_MARGIN, hit_y + 30)
+        highway_path.lineTo(highway_right, hit_y + _LANE_LABEL_HEIGHT + 10)
+        highway_path.lineTo(highway_left, hit_y + _LANE_LABEL_HEIGHT + 10)
         highway_path.closeSubpath()
         painter.fillPath(highway_path, QColor(8, 14, 24, 180))
 
-        # ── Highway rail lines (perspective edges) ──
-        rail_pen = QPen(QColor(25, 40, 60, 120), 1.5)
-        painter.setPen(rail_pen)
-        painter.drawLine(int(lt), int(vanish_y), int(_LANE_MARGIN), int(hit_y + 30))
-        painter.drawLine(int(rt), int(vanish_y), int(w - _LANE_MARGIN), int(hit_y + 30))
+        # ── Lane backgrounds (alternating) ──
+        if n_lanes > 0:
+            for i in range(n_lanes):
+                lane_left = _LANE_MARGIN + i * lw
+                lane_right = lane_left + lw
+                bg_color = _LANE_BG_EVEN if i % 2 == 0 else _LANE_BG_ODD
 
-        # ── Center guide line ──
-        painter.setPen(QPen(QColor(20, 35, 55, 60), 0.5))
-        painter.drawLine(int(center_x), int(vanish_y), int(center_x), int(hit_y + 30))
+                # Build perspective trapezoid for this lane
+                tl = self._apply_perspective_x(lane_left, vanish_y)
+                tr = self._apply_perspective_x(lane_right, vanish_y)
+                lane_path = QPainterPath()
+                lane_path.moveTo(tl, vanish_y)
+                lane_path.lineTo(tr, vanish_y)
+                lane_path.lineTo(lane_right, hit_y + _LANE_LABEL_HEIGHT + 10)
+                lane_path.lineTo(lane_left, hit_y + _LANE_LABEL_HEIGHT + 10)
+                lane_path.closeSubpath()
+                painter.fillPath(lane_path, bg_color)
+
+        # ── Lane dividers (perspective lines) ──
+        if n_lanes > 1:
+            divider_pen = QPen(_LANE_DIVIDER_COLOR, 1.0)
+            painter.setPen(divider_pen)
+            for i in range(n_lanes + 1):
+                base_x = _LANE_MARGIN + i * lw
+                top_x = self._apply_perspective_x(base_x, vanish_y)
+                painter.drawLine(
+                    int(top_x),
+                    int(vanish_y),
+                    int(base_x),
+                    int(hit_y + _LANE_LABEL_HEIGHT + 10),
+                )
+
+        # ── Highway rail lines (outer edges) ──
+        rail_pen = QPen(QColor(30, 50, 70, 150), 1.5)
+        painter.setPen(rail_pen)
+        painter.drawLine(
+            int(lt), int(vanish_y), int(highway_left), int(hit_y + _LANE_LABEL_HEIGHT + 10)
+        )
+        painter.drawLine(
+            int(rt), int(vanish_y), int(highway_right), int(hit_y + _LANE_LABEL_HEIGHT + 10)
+        )
 
         # ── Horizontal grid lines (perspective-spaced for depth) ──
-        num_grid = 14
+        num_grid = 12
         for i in range(1, num_grid):
             t = i / num_grid
-            # Power curve: denser near vanishing point, sparser near hit
             grid_y = vanish_y + (hit_y - vanish_y) * (t**1.4)
+            gx_l = self._apply_perspective_x(highway_left, grid_y)
+            gx_r = self._apply_perspective_x(highway_right, grid_y)
             scale = self._perspective_at_y(grid_y)
-            gx_l = self._apply_perspective_x(_LANE_MARGIN, grid_y)
-            gx_r = self._apply_perspective_x(w - _LANE_MARGIN, grid_y)
-            grid_alpha = int(scale * 25)
+            grid_alpha = int(scale * 20)
             painter.setPen(QPen(QColor(20, 40, 65, grid_alpha), 0.5))
             painter.drawLine(int(gx_l), int(grid_y), int(gx_r), int(grid_y))
 
@@ -381,11 +458,27 @@ class PracticeDisplay(QWidget):
         painter.setPen(QPen(_HIT_LINE_COLOR, 2.5))
         painter.drawLine(0, int(hit_y), w, int(hit_y))
 
-        # ── Flash effects (radial glow at hit line on successful hit) ──
+        # ── Flash effects (lane column highlight on successful hit) ──
         for fl in self._flashes:
             alpha = fl.life / _FLASH_DURATION
+            # Column highlight: glow the entire lane column
+            if fl.lane_left < fl.lane_right:
+                col_color = QColor(fl.color)
+                col_color.setAlphaF(alpha * 0.15)
+                col_top = vanish_y + (hit_y - vanish_y) * 0.3
+                tl = self._apply_perspective_x(fl.lane_left, col_top)
+                tr = self._apply_perspective_x(fl.lane_right, col_top)
+                col_path = QPainterPath()
+                col_path.moveTo(tl, col_top)
+                col_path.lineTo(tr, col_top)
+                col_path.lineTo(fl.lane_right, hit_y + 5)
+                col_path.lineTo(fl.lane_left, hit_y + 5)
+                col_path.closeSubpath()
+                painter.fillPath(col_path, col_color)
+
+            # Radial glow at hit point
             px = self._apply_perspective_x(fl.x, hit_y)
-            radius = 50 * (1.0 + (1.0 - alpha) * 0.8)
+            radius = 40 * (1.0 + (1.0 - alpha) * 0.8)
             glow_grad = QRadialGradient(px, hit_y, radius)
             gc = QColor(fl.color)
             gc.setAlphaF(alpha * 0.5)
@@ -399,26 +492,25 @@ class PracticeDisplay(QWidget):
                 QRectF(px - radius, hit_y - radius, radius * 2, radius * 2),
             )
 
-        # ── Falling notes (3D perspective) ──
+        # ── Falling notes (lane-based, 3D perspective) ──
+        note_w_base = lw * _NOTE_LANE_FILL if n_lanes > 0 else 36
         for pn in self._notes:
-            # Skip consumed (successfully hit) notes
             if pn.time_seconds in self._hit_note_times:
                 continue
 
             ny = self._time_to_y(pn.time_seconds)
-            # Cull off-screen notes
             if ny > h + 40 or ny < vanish_y - 10:
                 continue
 
             scale = self._perspective_at_y(ny)
             if scale < 0.05:
-                continue  # Too small to render
+                continue
 
             base_x = self._note_to_x(pn.note)
             px = self._apply_perspective_x(base_x, ny)
 
             # Scale note dimensions with perspective
-            nw = _NOTE_WIDTH * scale
+            nw = note_w_base * scale
             nh = max(
                 _NOTE_HEIGHT * scale,
                 pn.duration_seconds * _FALL_SPEED * 0.5 * scale,
@@ -441,13 +533,13 @@ class PracticeDisplay(QWidget):
 
             painter.fillPath(path, color)
 
-            # Note border (fades with distance)
+            # Note border
             border = QColor(_NOTE_BORDER)
             border.setAlphaF(min(1.0, scale * 1.5))
             painter.setPen(QPen(border, max(0.5, scale)))
             painter.drawPath(path)
 
-            # Subtle glow for notes approaching the hit zone
+            # Glow for notes approaching the hit zone
             if dist_to_hit < 80:
                 glow_a = (1.0 - dist_to_hit / 80) * 0.25
                 note_glow = QColor(_NOTE_COLOR)
@@ -457,11 +549,11 @@ class PracticeDisplay(QWidget):
                 gp.addRoundedRect(gr, corner + 2, corner + 2)
                 painter.fillPath(gp, note_glow)
 
-        # ── Consumed note burst effects (expanding bright ring) ──
+        # ── Consumed note burst effects ──
         for ce in self._consumed_effects:
             progress = 1.0 - ce.life / _CONSUMED_DURATION
             alpha = max(0, 1.0 - progress)
-            expand = 1.0 + progress * 2.5  # expand to 3.5x size
+            expand = 1.0 + progress * 2.5
             px = self._apply_perspective_x(ce.x, ce.y)
             rw = ce.width * expand
             rh = _NOTE_HEIGHT * expand
@@ -471,7 +563,6 @@ class PracticeDisplay(QWidget):
             burst_path = QPainterPath()
             burst_path.addRoundedRect(burst_rect, 6, 6)
             painter.fillPath(burst_path, burst_color)
-            # Bright white core
             if progress < 0.5:
                 core_alpha = (1.0 - progress * 2) * 0.8
                 core = QColor(255, 255, 255, int(core_alpha * 255))
@@ -482,15 +573,13 @@ class PracticeDisplay(QWidget):
 
         # ── Feedback text (large, centered, with glow) ──
         for fb in self._feedbacks:
-            progress = 1.0 - fb.life / fb.initial_life  # 0→1 over lifetime
+            progress = 1.0 - fb.life / fb.initial_life
 
-            # Alpha: hold steady for 60%, then fade out
             if progress < 0.6:
                 alpha = 1.0
             else:
                 alpha = max(0, 1.0 - (progress - 0.6) / 0.4)
 
-            # Pop-in scale: start at 1.8x, settle to 1.0x over first 15%
             if progress < 0.15:
                 pop_scale = 1.8 - 0.8 * (progress / 0.15)
             else:
@@ -500,25 +589,28 @@ class PracticeDisplay(QWidget):
             font_size = max(12, int(base_size * pop_scale))
             text_rect = QRectF(center_x - 220, fb.y, 440, 70)
 
-            # Shadow/glow layer behind text
             glow_c = QColor(fb.color)
             glow_c.setAlphaF(alpha * 0.35)
             painter.setPen(glow_c)
             painter.setFont(QFont("Microsoft JhengHei", font_size + 3, QFont.Weight.Bold))
             painter.drawText(
-                QRectF(text_rect.x(), text_rect.y() + 2, text_rect.width(), text_rect.height()),
+                QRectF(
+                    text_rect.x(),
+                    text_rect.y() + 2,
+                    text_rect.width(),
+                    text_rect.height(),
+                ),
                 Qt.AlignmentFlag.AlignCenter,
                 fb.text,
             )
 
-            # Main text
             main_c = QColor(fb.color)
             main_c.setAlphaF(alpha)
             painter.setPen(main_c)
             painter.setFont(QFont("Microsoft JhengHei", font_size, QFont.Weight.Bold))
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, fb.text)
 
-        # ── Combo counter (shown when combo > 5) ──
+        # ── Combo counter ──
         if self._combo > 5:
             combo_alpha = min(1.0, self._combo / 20.0) * 0.8
             combo_color = QColor(_COMBO_COLOR)
@@ -531,21 +623,43 @@ class PracticeDisplay(QWidget):
                 f"{self._combo} COMBO",
             )
 
-        # ── Lane labels at bottom ──
-        painter.setPen(QColor("#666666"))
-        painter.setFont(QFont("Microsoft JhengHei", 8))
-        label_y = int(hit_y + 22)
-        if self._key_labels:
-            for midi, label in self._key_labels.items():
-                if self._note_min <= midi <= self._note_max:
-                    x = self._note_to_x(midi)
-                    painter.drawText(int(x - 15), label_y, label)
-        else:
-            note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-            for midi in range(self._note_min, self._note_max + 1):
-                if midi % 12 == 0 or midi == self._note_min:
-                    x = self._note_to_x(midi)
-                    name = note_names[midi % 12] + str(midi // 12 - 1)
-                    painter.drawText(int(x - 10), label_y, name)
+        # ── Lane key labels (below hit line) ──
+        if n_lanes > 0:
+            label_top = int(hit_y + 4)
+
+            # Background strip for labels
+            painter.fillRect(
+                QRectF(_LANE_MARGIN, label_top, w - 2 * _LANE_MARGIN, _LANE_LABEL_HEIGHT),
+                _LANE_LABEL_BG,
+            )
+
+            # Determine font size based on lane width
+            max_font = 14
+            min_font = 8
+            font_size = max(min_font, min(max_font, int(lw * 0.35)))
+            painter.setFont(QFont("Microsoft JhengHei", font_size, QFont.Weight.Bold))
+
+            for i, midi in enumerate(self._lane_notes):
+                lane_center = _LANE_MARGIN + (i + 0.5) * lw
+                label_rect = QRectF(
+                    lane_center - lw / 2 + 2,
+                    label_top,
+                    lw - 4,
+                    _LANE_LABEL_HEIGHT,
+                )
+
+                # Get label text: prefer keyboard key label, fallback to note name
+                if self._key_labels and midi in self._key_labels:
+                    label = self._key_labels[midi]
+                else:
+                    label = _midi_note_name(midi)
+
+                # Draw label centered in lane
+                painter.setPen(QColor(180, 200, 220, 200))
+                painter.drawText(
+                    label_rect,
+                    Qt.AlignmentFlag.AlignCenter,
+                    label,
+                )
 
         painter.end()
