@@ -86,6 +86,22 @@ class _FlashEffect:
         self.life = _FLASH_DURATION
 
 
+_CONSUMED_DURATION = 0.3  # seconds — consumed note burst animation
+
+
+class _ConsumedNoteEffect:
+    """Expanding bright burst when a note is successfully hit."""
+
+    __slots__ = ("x", "y", "color", "life", "width")
+
+    def __init__(self, x: float, y: float, color: QColor, width: float) -> None:
+        self.x = x
+        self.y = y
+        self.color = color
+        self.life = _CONSUMED_DURATION
+        self.width = width
+
+
 class PracticeDisplay(QWidget):
     """Falling notes display with 3D perspective highway effect."""
 
@@ -101,6 +117,8 @@ class PracticeDisplay(QWidget):
         self._speed: float = 1.0
         self._feedbacks: list[_FeedbackEffect] = []
         self._flashes: list[_FlashEffect] = []
+        self._consumed_effects: list[_ConsumedNoteEffect] = []
+        self._hit_note_times: set[float] = set()
         self._combo: int = 0
 
         # Note range for x-mapping
@@ -142,6 +160,8 @@ class PracticeDisplay(QWidget):
         self._playing = True
         self._feedbacks.clear()
         self._flashes.clear()
+        self._consumed_effects.clear()
+        self._hit_note_times.clear()
         self._combo = 0
         self._timer.start()
 
@@ -158,8 +178,13 @@ class PracticeDisplay(QWidget):
     def current_time(self) -> float:
         return self._current_time
 
-    def show_feedback(self, grade: HitGrade, note: int) -> None:
-        """Show hit grade visual feedback."""
+    def show_feedback(
+        self,
+        grade: HitGrade,
+        note: int,
+        target_time: float | None = None,
+    ) -> None:
+        """Show hit grade visual feedback and mark note as consumed."""
         x = self._note_to_x(note)
         hit_y = self.height() * _HIT_LINE_Y_RATIO
         color = _GRADE_COLORS.get(grade, _MISS_COLOR)
@@ -168,6 +193,12 @@ class PracticeDisplay(QWidget):
         # Bright flash at hit line for non-miss hits
         if grade != HitGrade.MISS:
             self._flashes.append(_FlashEffect(x, color))
+            # Mark note consumed + burst effect
+            if target_time is not None:
+                self._hit_note_times.add(target_time)
+                self._consumed_effects.append(
+                    _ConsumedNoteEffect(x, hit_y, color, _NOTE_WIDTH),
+                )
 
     def set_keyboard_mapping(self, reverse_map: dict[tuple[str, Modifier], int] | None) -> None:
         """Enable or disable keyboard input for practice."""
@@ -267,6 +298,14 @@ class PracticeDisplay(QWidget):
                 alive_flashes.append(fl)
         self._flashes = alive_flashes
 
+        # Update consumed-note burst effects
+        alive_consumed = []
+        for ce in self._consumed_effects:
+            ce.life -= 0.016
+            if ce.life > 0:
+                alive_consumed.append(ce)
+        self._consumed_effects = alive_consumed
+
         # Check if all notes have passed
         if self._notes and self._current_time > self._notes[-1].time_seconds + 3.0:
             self._playing = False
@@ -362,6 +401,10 @@ class PracticeDisplay(QWidget):
 
         # ── Falling notes (3D perspective) ──
         for pn in self._notes:
+            # Skip consumed (successfully hit) notes
+            if pn.time_seconds in self._hit_note_times:
+                continue
+
             ny = self._time_to_y(pn.time_seconds)
             # Cull off-screen notes
             if ny > h + 40 or ny < vanish_y - 10:
@@ -413,6 +456,29 @@ class PracticeDisplay(QWidget):
                 gp = QPainterPath()
                 gp.addRoundedRect(gr, corner + 2, corner + 2)
                 painter.fillPath(gp, note_glow)
+
+        # ── Consumed note burst effects (expanding bright ring) ──
+        for ce in self._consumed_effects:
+            progress = 1.0 - ce.life / _CONSUMED_DURATION
+            alpha = max(0, 1.0 - progress)
+            expand = 1.0 + progress * 2.5  # expand to 3.5x size
+            px = self._apply_perspective_x(ce.x, ce.y)
+            rw = ce.width * expand
+            rh = _NOTE_HEIGHT * expand
+            burst_color = QColor(ce.color)
+            burst_color.setAlphaF(alpha * 0.7)
+            burst_rect = QRectF(px - rw / 2, ce.y - rh / 2, rw, rh)
+            burst_path = QPainterPath()
+            burst_path.addRoundedRect(burst_rect, 6, 6)
+            painter.fillPath(burst_path, burst_color)
+            # Bright white core
+            if progress < 0.5:
+                core_alpha = (1.0 - progress * 2) * 0.8
+                core = QColor(255, 255, 255, int(core_alpha * 255))
+                core_rect = QRectF(px - rw / 4, ce.y - rh / 4, rw / 2, rh / 2)
+                core_path = QPainterPath()
+                core_path.addRoundedRect(core_rect, 4, 4)
+                painter.fillPath(core_path, core)
 
         # ── Feedback text (large, centered, with glow) ──
         for fb in self._feedbacks:

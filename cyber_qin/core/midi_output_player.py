@@ -207,27 +207,27 @@ def _ensure_qt_class():
         def _run(self) -> None:
             """Blocking playback loop on background thread.
 
-            Uses _stop_flag.wait(timeout=...) instead of time.sleep()
-            so that stop() can interrupt immediately.
-
-            Event times are divided by _speed so that 2.0x plays twice
-            as fast and 0.5x plays at half speed.
+            Uses incremental timing so speed changes take effect immediately.
+            Each event's wait is computed from the previous event using
+            the *current* speed, not a stale snapshot.
             """
             while True:
                 duration = self._duration
-                speed = self._speed
-                start_wall = time.perf_counter()
+                prev_song_time = 0.0
+                wall_cursor = time.perf_counter()
 
                 for evt in self._events:
                     if self._stop_flag.is_set():
                         return
 
-                    target_wall = start_wall + evt.time_seconds / speed
+                    # Re-read speed for each event so mid-playback changes work
+                    speed = self._speed
+                    delta_song = evt.time_seconds - prev_song_time
+                    target_wall = wall_cursor + delta_song / speed
                     now = time.perf_counter()
                     wait = target_wall - now
 
                     if wait > 0.002:
-                        # improved loop: wake up every 30ms to emit progress
                         while wait > 0.03:
                             if self._stop_flag.wait(timeout=0.03):
                                 return
@@ -238,12 +238,13 @@ def _ensure_qt_class():
                                 if self._stop_flag.is_set():
                                     return
                                 paused_dur = time.perf_counter() - pause_start
-                                start_wall += paused_dur
+                                wall_cursor += paused_dur
                                 target_wall += paused_dur
-                            # Update progress while waiting
-                            current_time = time.perf_counter()
-                            elapsed_so_far = (current_time - start_wall) * speed
-                            self.progress_updated.emit(elapsed_so_far, duration)
+                            # Re-read speed during wait (allows live speed change)
+                            speed = self._speed
+                            target_wall = wall_cursor + delta_song / speed
+                            # Emit progress
+                            self.progress_updated.emit(evt.time_seconds, duration)
 
                             now = time.perf_counter()
                             wait = target_wall - now
@@ -263,8 +264,7 @@ def _ensure_qt_class():
                         self._pause_flag.wait()
                         if self._stop_flag.is_set():
                             return
-                        # Adjust start_wall for time spent paused
-                        start_wall += time.perf_counter() - pause_start
+                        wall_cursor += time.perf_counter() - pause_start
 
                     if self._midi_out is None:
                         return
@@ -281,14 +281,18 @@ def _ensure_qt_class():
                         )
                         self.note_fired.emit("note_off", evt.note, 0)
 
-                    # Emit original time (not scaled) for progress bar accuracy
                     self.progress_updated.emit(evt.time_seconds, duration)
 
-                # Wait out any remaining duration (e.g. trailing rests)
-                elapsed = time.perf_counter() - start_wall
-                remaining = duration / speed - elapsed
-                if remaining > 0.01:
-                    self._stop_flag.wait(timeout=remaining)
+                    # Advance cursors for next iteration
+                    prev_song_time = evt.time_seconds
+                    wall_cursor = time.perf_counter()
+
+                # Wait out any remaining duration (trailing rests)
+                speed = self._speed
+                elapsed_song = prev_song_time
+                remaining_song = duration - elapsed_song
+                if remaining_song > 0.01:
+                    self._stop_flag.wait(timeout=remaining_song / speed)
 
                 if not self._loop_enabled or self._stop_flag.is_set():
                     break

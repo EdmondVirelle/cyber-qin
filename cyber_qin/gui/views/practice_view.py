@@ -691,7 +691,7 @@ class PracticeView(QWidget):
         current_time = self._display.current_time
         hit = self._scorer.on_user_note(note, current_time)
         if hit is not None:
-            self._display.show_feedback(hit.grade, note)
+            self._display.show_feedback(hit.grade, note, hit.target_note.time_seconds)
             self._display.set_combo(self._scorer.stats.current_combo)
         self._update_score_display()
 

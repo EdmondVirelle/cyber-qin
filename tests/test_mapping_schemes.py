@@ -15,7 +15,7 @@ class TestRegistry:
     def test_list_schemes_returns_list(self):
         schemes = list_schemes()
         assert isinstance(schemes, list)
-        assert len(schemes) >= 5
+        assert len(schemes) >= 6
 
     def test_all_schemes_are_mapping_scheme(self):
         for scheme in list_schemes():
@@ -109,6 +109,32 @@ class TestGeneric48:
     def test_midi_range(self):
         scheme = get_scheme("generic_48")
         assert scheme.midi_range == (36, 83)
+
+
+class TestBeginner36:
+    def test_key_count(self):
+        scheme = get_scheme("beginner_36")
+        assert scheme.key_count == 36
+
+    def test_midi_range(self):
+        scheme = get_scheme("beginner_36")
+        assert scheme.midi_range == (48, 83)
+
+    def test_no_modifiers(self):
+        """Beginner scheme must use only Modifier.NONE."""
+        from cyber_qin.core.constants import Modifier
+
+        scheme = get_scheme("beginner_36")
+        for note, km in scheme.mapping.items():
+            assert km.modifier == Modifier.NONE, (
+                f"MIDI {note} uses modifier {km.modifier}, expected NONE"
+            )
+
+    def test_all_keys_unique(self):
+        """Each key should map to exactly one MIDI note (no duplicates)."""
+        scheme = get_scheme("beginner_36")
+        labels = [km.label for km in scheme.mapping.values()]
+        assert len(labels) == len(set(labels)), "Duplicate key labels found"
 
 
 class TestGeneric88:

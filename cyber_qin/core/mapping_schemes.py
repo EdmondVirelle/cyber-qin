@@ -256,6 +256,41 @@ def _build_generic_48() -> MappingScheme:
     )
 
 
+def _build_beginner_36() -> MappingScheme:
+    """新手 36鍵 — no modifiers, pure keyboard keys only."""
+    m: dict[int, KeyMapping] = {}
+
+    # Row 1 (MIDI 48-54): Z X C V B N M  (7 keys)
+    for i, key in enumerate(["Z", "X", "C", "V", "B", "N", "M"]):
+        m[48 + i] = _km(key, Modifier.NONE)
+
+    # Row 2 (MIDI 55-63): A S D F G H J K L  (9 keys)
+    for i, key in enumerate(["A", "S", "D", "F", "G", "H", "J", "K", "L"]):
+        m[55 + i] = _km(key, Modifier.NONE)
+
+    # Row 3 (MIDI 64-73): Q W E R T Y U I O P  (10 keys)
+    for i, key in enumerate(["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"]):
+        m[64 + i] = _km(key, Modifier.NONE)
+
+    # Row 4 (MIDI 74-83): 1 2 3 4 5 6 7 8 9 0  (10 keys)
+    for i, key in enumerate(["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]):
+        m[74 + i] = _km(key, Modifier.NONE)
+
+    return MappingScheme(
+        id="beginner_36",
+        name="新手 36鍵",
+        game="通用",
+        key_count=36,
+        midi_range=(48, 83),
+        mapping=m,
+        description="4行純鍵盤：ZXCVBNM / ASDFGHJKL / QWERTYUIOP / 1234567890，無修飾鍵",
+        rows=4,
+        keys_per_row=9,
+        name_key="scheme.beginner_36.name",
+        desc_key="scheme.beginner_36.desc",
+    )
+
+
 def _build_generic_88() -> MappingScheme:
     """通用 88鍵 — 8 rows of 11 keys (covering full piano range)."""
     m: dict[int, KeyMapping] = {}
@@ -329,6 +364,7 @@ def _init_registry() -> None:
     for builder in [
         _build_wwm_36,
         _build_ff14_37,
+        _build_beginner_36,
         _build_generic_24,
         _build_generic_48,
         _build_generic_88,
