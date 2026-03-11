@@ -17,9 +17,10 @@ from PyQt6.QtWidgets import (
 
 from ...core.beat_sequence import BeatNote
 from ...core.key_mapper import KeyMapper
-from ...core.mapping_schemes import get_scheme, list_schemes
+from ...core.mapping_schemes import default_scheme_id, get_scheme, list_schemes
 from ...core.midi_file_player import MidiFileInfo
 from ...core.practice_engine import PracticeScorer, PracticeStats, notes_to_practice
+from ...core.smart_arrangement import smart_arrange
 from ...core.translator import translator
 from ..theme import (
     ACCENT,
@@ -625,7 +626,13 @@ class PracticeView(QWidget):
         self._notes = notes
         self._tempo_bpm = tempo_bpm
 
-        practice_notes = notes_to_practice(notes, tempo_bpm)
+        # Fold out-of-range notes into the current scheme's playable range
+        scheme_id = self._scheme_combo.currentData() or default_scheme_id()
+        scheme = get_scheme(scheme_id)
+        midi_min, midi_max = scheme.midi_range
+        arranged = smart_arrange(notes, note_min=midi_min, note_max=midi_max)
+
+        practice_notes = notes_to_practice(arranged.notes, tempo_bpm)
         self._scorer = PracticeScorer(practice_notes)
         self._scorer.start()
         self._display.set_speed(self._speed)
@@ -681,6 +688,9 @@ class PracticeView(QWidget):
         if hit is not None:
             self._display.show_feedback(hit.grade, note, hit.target_note.time_seconds)
             self._display.set_combo(self._scorer.stats.current_combo)
+        else:
+            # Empty press — still flash the lane as visual feedback
+            self._display.show_lane_press(note)
         self._update_score_display()
 
     def _on_display_note_hit(self, note: int, time: float) -> None:

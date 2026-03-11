@@ -2,7 +2,7 @@
 
 > **版本**：v1.0 Draft
 > **日期**：2026-02-11
-> **作者**：Developer + Claude
+> **作者**：Edmond Virelle
 > **狀態**：RFC (Request for Comments)
 
 ---

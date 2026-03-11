@@ -225,6 +225,13 @@ class PracticeDisplay(QWidget):
                     _ConsumedNoteEffect(x, hit_y, color, note_w),
                 )
 
+    def show_lane_press(self, note: int) -> None:
+        """Show a dim lane flash for an empty press (no matching note)."""
+        x = self._note_to_x(note)
+        ll, lr = self._lane_edges(note)
+        dim_color = QColor(120, 160, 200, 180)  # subtle blue-white
+        self._flashes.append(_FlashEffect(x, dim_color, ll, lr))
+
     def set_keyboard_mapping(self, reverse_map: dict[tuple[str, Modifier], int] | None) -> None:
         """Enable or disable keyboard input for practice."""
         self._reverse_map = reverse_map
@@ -585,14 +592,14 @@ class PracticeDisplay(QWidget):
             else:
                 pop_scale = 1.0
 
-            base_size = 42
-            font_size = max(12, int(base_size * pop_scale))
-            text_rect = QRectF(center_x - 220, fb.y, 440, 70)
+            base_size = 26
+            font_size = max(10, int(base_size * pop_scale))
+            text_rect = QRectF(center_x - 180, fb.y, 360, 50)
 
             glow_c = QColor(fb.color)
             glow_c.setAlphaF(alpha * 0.35)
             painter.setPen(glow_c)
-            painter.setFont(QFont("Microsoft JhengHei", font_size + 3, QFont.Weight.Bold))
+            painter.setFont(QFont("Microsoft JhengHei", font_size + 2, QFont.Weight.Bold))
             painter.drawText(
                 QRectF(
                     text_rect.x(),

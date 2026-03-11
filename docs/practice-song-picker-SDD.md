@@ -4,7 +4,7 @@
 **Feature**: Practice Mode Built-in Song Picker
 **Version**: 1.0
 **Date**: 2026-02-23
-**Author**: Claude Opus 4.6 + Edmond Virelle
+**Author**: Edmond Virelle
 
 ---
 

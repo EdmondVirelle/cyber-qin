@@ -50,7 +50,5 @@ releases/dist/
 releases/*.exe
 releases/*.zip
 
-# Claude Code local config
-.claude/settings.local.json
-.claude/skills/
-.claude/agents/
+# Claude Code
+.claude/

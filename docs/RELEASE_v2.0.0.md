@@ -311,7 +311,6 @@ cyber_qin/gui/dialogs/settings_dialog.py — SpinBox 寬度修正
 
 ## 致謝
 
-- AI 協作: Claude Opus 4.6
 - MIDI 硬體測試: Roland FP-30X
 - 開源社群: mido, python-rtmidi, PyQt6
 

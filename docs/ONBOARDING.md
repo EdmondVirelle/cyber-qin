@@ -177,7 +177,7 @@
 ```
 賽博琴仙/
 ├── pyproject.toml          ← 專案設定（名稱、版本、依賴）
-├── CLAUDE.md               ← AI 助手開發指南
+├── .gitignore              ← Git 忽略清單
 ├── README.md               ← GitHub 說明
 │
 ├── cyber_qin/              ← 原始碼（45 個模組，~10,300 行）
