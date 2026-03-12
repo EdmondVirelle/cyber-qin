@@ -21,7 +21,7 @@ from ...core.beat_sequence import BeatNote
 from ...core.key_mapper import KeyMapper
 from ...core.mapping_schemes import default_scheme_id, get_scheme, list_schemes
 from ...core.midi_file_player import MidiFileInfo
-from ...core.practice_engine import HitGrade, PracticeScorer, PracticeStats, notes_to_practice
+from ...core.practice_engine import PracticeScorer, PracticeStats, notes_to_practice
 from ...core.smart_arrangement import smart_arrange
 from ...core.translator import translator
 from ..theme import (

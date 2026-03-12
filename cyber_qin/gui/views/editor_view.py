@@ -147,7 +147,6 @@ class EditorView(QWidget):
 
     def _rebuild_reverse_map(self) -> None:
         """Build reverse map from (key_letter, Modifier) → MIDI note."""
-        from ...core.constants import Modifier
         from ...core.key_mapper import KeyMapper
 
         mapper = getattr(self, "_mapper", None)
@@ -2233,7 +2232,7 @@ class EditorView(QWidget):
 
         # Piano visual + track which notes are held by keyboard
         self._piano.note_on(midi_note)
-        held = getattr(self, "_held_keys", set())
+        held: set[int] = getattr(self, "_held_keys", set())
         held.add(midi_note)
         return True
 
