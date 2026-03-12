@@ -691,8 +691,10 @@ class PracticeDisplay(QWidget):
                 if flash_intensity > 0 and flash_color is not None:
                     # Bright gradient background behind label
                     glow_bg = QLinearGradient(
-                        lane_left, label_top,
-                        lane_left, label_top + _LANE_LABEL_HEIGHT,
+                        lane_left,
+                        label_top,
+                        lane_left,
+                        label_top + _LANE_LABEL_HEIGHT,
                     )
                     gc = QColor(flash_color)
                     gc.setAlphaF(flash_intensity * 0.4)

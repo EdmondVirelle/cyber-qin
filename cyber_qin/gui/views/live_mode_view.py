@@ -206,9 +206,7 @@ class LiveModeView(QWidget):
         self._scheme_desc.setStyleSheet(
             f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
         )
-        self._scheme_desc.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
+        self._scheme_desc.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row2.addWidget(self._scheme_desc, 1)
 
         device_card_layout.addLayout(row2)

@@ -454,9 +454,7 @@ def _snap_to_scheme(notes: list[BeatNote], playable: list[int]) -> list[BeatNote
             if idx < len(playable):
                 candidates.append(playable[idx])
             nearest = min(candidates, key=lambda p: abs(p - n.note)) if candidates else n.note
-            result.append(
-                BeatNote(n.time_beats, n.duration_beats, nearest, n.velocity, n.track)
-            )
+            result.append(BeatNote(n.time_beats, n.duration_beats, nearest, n.velocity, n.track))
     return result
 
 

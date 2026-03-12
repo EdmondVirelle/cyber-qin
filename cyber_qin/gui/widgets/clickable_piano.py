@@ -61,7 +61,7 @@ def _abbreviate_label(label: str) -> str:
     """Shorten modifier labels: 'Shift+Q' -> '⇧Q', 'Ctrl+E' -> '^E'."""
     for prefix, abbrev in _MODIFIER_ABBREV.items():
         if label.startswith(prefix):
-            return abbrev + label[len(prefix):]
+            return abbrev + label[len(prefix) :]
     return label
 
 
