@@ -162,6 +162,11 @@ class AppShell(QMainWindow):
         self._setup_shortcuts()
         self._restore_window_state()
 
+        # Share the single MIDI output with the editor (Windows only allows
+        # one client to open GS Wavetable Synth at a time).
+        if self._practice_player is not None:
+            self._editor_view.set_preview_player(self._practice_player)
+
         translator.language_changed.connect(self._update_text)
 
     def _update_text(self) -> None:

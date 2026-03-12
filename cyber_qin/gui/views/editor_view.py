@@ -1538,11 +1538,28 @@ class EditorView(QWidget):
         self._sequence._notes.sort(key=lambda n: n.time_beats)
         self._update_ui_state()
 
-    def ensure_preview_player(self):
-        """Lazily create the MidiOutputPlayer for piano/editor audio preview.
+    def set_preview_player(self, player) -> None:
+        """Use an externally-provided MidiOutputPlayer (shared instance).
 
-        Public so that app_shell can access the preview MIDI output for
-        recording audio feedback.
+        Called by AppShell to share the single MIDI output port — Windows
+        only allows one client to open GS Wavetable Synth at a time.
+        """
+        if self._preview_player is not None or player is None:
+            return
+        player.progress_updated.connect(self._on_preview_progress)
+        player.state_changed.connect(self._on_preview_state_changed)
+        player.note_fired.connect(self._on_preview_note_fired)
+        self._preview_player = player
+        player.set_speed(self._playback_speed)
+        self._update_midi_status(player)
+        log.info("Editor preview player set (shared): %s", player._port_name)
+
+    def ensure_preview_player(self):
+        """Return the MidiOutputPlayer for piano/editor audio preview.
+
+        If a shared player was already set via ``set_preview_player()``,
+        returns that.  Otherwise attempts to create a new one (will fail
+        if the port is already held by another instance).
         """
         if self._preview_player is not None:
             return self._preview_player
@@ -1555,7 +1572,6 @@ class EditorView(QWidget):
                 player.state_changed.connect(self._on_preview_state_changed)
                 player.note_fired.connect(self._on_preview_note_fired)
                 self._preview_player = player
-                # Apply persisted speed
                 player.set_speed(self._playback_speed)
                 log.info("Editor preview player created: %s", player._port_name)
             else:
