@@ -61,10 +61,30 @@ class MidiProcessor(QObject):
         self._simulator = simulator
         self._priority_set = False
         self._recorder: MidiRecorder | None = None
+        self._midi_preview_out = None  # raw MIDI output for audio preview
 
     def set_recorder(self, recorder: MidiRecorder | None) -> None:
         """Attach/detach a recorder. Called from the main thread."""
         self._recorder = recorder
+
+    def set_midi_preview(self, midi_out) -> None:
+        """Set a raw MIDI output for audio preview during recording.
+
+        The object must have a ``send_message(list[int])`` method.
+        Runs on the rtmidi callback thread for <2 ms latency.
+        """
+        self._midi_preview_out = midi_out
+
+    def clear_midi_preview(self) -> None:
+        """Remove the audio preview output and send all-notes-off."""
+        out = self._midi_preview_out
+        self._midi_preview_out = None
+        if out is not None:
+            try:
+                for ch in range(16):
+                    out.send_message([0xB0 | ch, 123, 0])
+            except Exception:
+                pass
 
     def on_midi_event(self, event_type: str, note: int, velocity: int) -> None:
         """Called on the rtmidi callback thread. Must be fast."""
@@ -86,6 +106,18 @@ class MidiProcessor(QObject):
                 self._simulator.press(note, mapping)
         elif event_type == "note_off":
             self._simulator.release(note)
+
+        # Audio preview through system MIDI synth (runs on callback thread)
+        midi_out = self._midi_preview_out
+        if midi_out is not None:
+            try:
+                n = note & 0x7F
+                if event_type == "note_on":
+                    midi_out.send_message([0x90, n, velocity & 0x7F])
+                elif event_type == "note_off":
+                    midi_out.send_message([0x80, n, 0])
+            except Exception:
+                pass
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
         self.note_event.emit(event_type, note, velocity)
@@ -329,11 +361,16 @@ class AppShell(QMainWindow):
         """Start recording into the editor."""
         self._recorder.start()
         self._processor.set_recorder(self._recorder)
+        # Enable audio preview through system MIDI synth during recording
+        preview = self._editor_view.ensure_preview_player()
+        if preview is not None and preview._midi_out is not None:
+            self._processor.set_midi_preview(preview._midi_out)
         self._live_view.log_viewer.log("  編曲器錄音開始")
 
     def _on_editor_recording_stopped(self) -> None:
         """Stop recording and merge events into the editor sequence."""
         self._processor.set_recorder(None)
+        self._processor.clear_midi_preview()
         events = self._recorder.stop()
 
         if not events:

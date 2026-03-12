@@ -21,7 +21,7 @@ class Translator(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self._current_lang = "en"  # Default
+        self._current_lang = "zh_tw"  # Default
 
         # Define translations
         self._data = {

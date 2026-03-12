@@ -128,6 +128,9 @@ class EditorView(QWidget):
         # Deferred autosave recovery check (after widget is shown)
         QTimer.singleShot(500, self._check_autosave_recovery)
 
+        # Eagerly init MIDI preview player so the status indicator is correct
+        QTimer.singleShot(800, self._init_midi_preview)
+
     def set_mapper(self, mapper) -> None:
         """Set the key mapper — updates the piano to scheme-aware layout."""
         from ...core.key_mapper import KeyMapper
@@ -305,6 +308,18 @@ class EditorView(QWidget):
         )
         row1.addWidget(self._metronome_btn)
 
+        # MIDI output status indicator
+        self._midi_status_btn = QPushButton("♪")
+        self._midi_status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._midi_status_btn.setFixedSize(32, 32)
+        self._midi_status_btn.setToolTip("MIDI 音訊預覽：初始化中…")
+        self._midi_status_btn.setStyleSheet(
+            "QPushButton { padding: 0; border-radius: 6px; font-size: 14px; "
+            "background-color: #1A1A2E; color: #555; border: none; }"
+        )
+        self._midi_status_btn.clicked.connect(self._on_midi_status_clicked)
+        row1.addWidget(self._midi_status_btn)
+
         row1.addSpacing(16)
 
         # Edit group
@@ -429,7 +444,9 @@ class EditorView(QWidget):
         row2.setSpacing(6)
 
         self._dur_lbl = QLabel()
-        self._dur_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._dur_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         row2.addWidget(self._dur_lbl)
 
         self._duration_combo = QComboBox()
@@ -444,7 +461,9 @@ class EditorView(QWidget):
         row2.addWidget(self._duration_combo)
 
         self._ts_lbl = QLabel()
-        self._ts_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._ts_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         row2.addWidget(self._ts_lbl)
 
         self._ts_combo = QComboBox()
@@ -457,7 +476,9 @@ class EditorView(QWidget):
         row2.addWidget(self._ts_combo)
 
         self._bpm_lbl = QLabel()
-        self._bpm_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._bpm_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         row2.addWidget(self._bpm_lbl)
 
         self._tempo_spin = QSpinBox()
@@ -502,7 +523,9 @@ class EditorView(QWidget):
 
         # Zoom slider (icon label instead of text)
         self._zoom_lbl = QLabel()
-        self._zoom_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._zoom_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         row2.addWidget(self._zoom_lbl)
 
         self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
@@ -561,7 +584,9 @@ class EditorView(QWidget):
         row3.addWidget(self._auto_tune_cb)
 
         self._vel_lbl = QLabel()
-        self._vel_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._vel_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         row3.addWidget(self._vel_lbl)
 
         self._velocity_spin = QSpinBox()
@@ -576,7 +601,9 @@ class EditorView(QWidget):
 
         # Follow mode
         follow_lbl = QLabel()
-        follow_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        follow_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
         self._follow_lbl = follow_lbl
         row3.addWidget(follow_lbl)
 
@@ -1073,7 +1100,7 @@ class EditorView(QWidget):
 
     def _on_piano_key_pressed(self, midi_note: int) -> None:
         """Play audio preview when piano key is pressed."""
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             # Send note_on directly for held preview
             if player._midi_out is not None:
@@ -1081,16 +1108,52 @@ class EditorView(QWidget):
 
     def _on_piano_key_released(self, midi_note: int) -> None:
         """Stop audio when piano key is released."""
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             if player._midi_out is not None:
                 player._midi_out.send_message([0x80, midi_note & 0x7F, 0])
 
     def _preview_midi_note(self, midi_note: int) -> None:
         """Play a short preview of a MIDI note."""
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             player.preview_note(midi_note, velocity=80, duration_ms=150)
+
+    def _init_midi_preview(self) -> None:
+        """Eagerly initialize the preview player and update the status indicator."""
+        player = self.ensure_preview_player()
+        self._update_midi_status(player)
+
+    def _update_midi_status(self, player) -> None:
+        """Update the MIDI status indicator button."""
+        if player is not None and player._midi_out is not None:
+            port = getattr(player, "_port_name", "MIDI")
+            self._midi_status_btn.setText("♪")
+            self._midi_status_btn.setToolTip(
+                f"MIDI 音訊預覽：已連接\n{port}\n點擊測試音效\nAudio preview: Connected"
+            )
+            self._midi_status_btn.setStyleSheet(
+                "QPushButton { padding: 0; border-radius: 6px; font-size: 14px; "
+                "background-color: #1A1A2E; color: #00F0FF; border: none; }"
+                "QPushButton:hover { background-color: #2A2A3E; }"
+            )
+        else:
+            self._midi_status_btn.setText("♪")
+            self._midi_status_btn.setToolTip(
+                "MIDI 音訊預覽：無法連接\n找不到 MIDI 輸出裝置\nAudio preview: Unavailable"
+            )
+            self._midi_status_btn.setStyleSheet(
+                "QPushButton { padding: 0; border-radius: 6px; font-size: 14px; "
+                "background-color: #1A1A2E; color: #FF4444; border: none; }"
+                "QPushButton:hover { background-color: #2A2A3E; }"
+            )
+
+    def _on_midi_status_clicked(self) -> None:
+        """Test MIDI sound on click."""
+        player = self.ensure_preview_player()
+        self._update_midi_status(player)
+        if player is not None:
+            player.preview_note(60, velocity=100, duration_ms=300)  # C4 test tone
 
     def _quantize_selection(self) -> None:
         """Quantize selected notes to the current step grid."""
@@ -1475,8 +1538,12 @@ class EditorView(QWidget):
         self._sequence._notes.sort(key=lambda n: n.time_beats)
         self._update_ui_state()
 
-    def _ensure_preview_player(self):
-        """Lazily create the MidiOutputPlayer for piano preview."""
+    def ensure_preview_player(self):
+        """Lazily create the MidiOutputPlayer for piano/editor audio preview.
+
+        Public so that app_shell can access the preview MIDI output for
+        recording audio feedback.
+        """
         if self._preview_player is not None:
             return self._preview_player
         try:
@@ -1490,8 +1557,11 @@ class EditorView(QWidget):
                 self._preview_player = player
                 # Apply persisted speed
                 player.set_speed(self._playback_speed)
+                log.info("Editor preview player created: %s", player._port_name)
+            else:
+                log.warning("Editor preview player unavailable — no MIDI output port found")
         except Exception:
-            log.debug("Failed to create preview player", exc_info=True)
+            log.warning("Failed to create editor preview player", exc_info=True)
         return self._preview_player
 
     def _on_preview_progress(self, current: float, total: float) -> None:
@@ -1546,7 +1616,7 @@ class EditorView(QWidget):
         if self._sequence.note_count == 0:
             return
 
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             from ...core.midi_file_player import PlaybackState
 
@@ -1573,13 +1643,13 @@ class EditorView(QWidget):
 
     def _on_loop_toggled(self, checked: bool) -> None:
         """Handle loop button toggle."""
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             player.set_loop(checked)
 
     def _on_metronome_toggled(self, checked: bool) -> None:
         """Handle metronome button toggle."""
-        player = self._ensure_preview_player()
+        player = self.ensure_preview_player()
         if player is not None:
             player.set_metronome(checked)
 
