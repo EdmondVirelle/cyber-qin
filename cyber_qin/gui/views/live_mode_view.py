@@ -202,13 +202,14 @@ class LiveModeView(QWidget):
         self._view_mapping_btn.clicked.connect(self._on_view_mapping)
         row2.addWidget(self._view_mapping_btn)
 
-        row2.addStretch()
-
         self._scheme_desc = QLabel("")
         self._scheme_desc.setStyleSheet(
             f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
         )
-        row2.addWidget(self._scheme_desc)
+        self._scheme_desc.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        row2.addWidget(self._scheme_desc, 1)
 
         device_card_layout.addLayout(row2)
 

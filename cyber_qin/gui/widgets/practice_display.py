@@ -499,38 +499,46 @@ class PracticeDisplay(QWidget):
                 QRectF(px - radius, hit_y - radius, radius * 2, radius * 2),
             )
 
-        # ── Falling notes (lane-based, 3D perspective) ──
+        # ── Falling notes (lane-based, 3D perspective trapezoids) ──
         note_w_base = lw * _NOTE_LANE_FILL if n_lanes > 0 else 36
+        half_w = note_w_base / 2
         for pn in self._notes:
             if pn.time_seconds in self._hit_note_times:
                 continue
 
-            ny = self._time_to_y(pn.time_seconds)
-            if ny > h + 40 or ny < vanish_y - 10:
+            bot_y = self._time_to_y(pn.time_seconds)
+            if bot_y > h + 40 or bot_y < vanish_y - 10:
                 continue
 
-            scale = self._perspective_at_y(ny)
+            scale = self._perspective_at_y(bot_y)
             if scale < 0.05:
                 continue
 
             base_x = self._note_to_x(pn.note)
-            px = self._apply_perspective_x(base_x, ny)
 
-            # Scale note dimensions with perspective
-            nw = note_w_base * scale
+            # Note height (perspective-scaled)
             nh = max(
                 _NOTE_HEIGHT * scale,
                 pn.duration_seconds * _FALL_SPEED * 0.5 * scale,
             )
+            top_y = bot_y - nh
 
-            # Note body (rounded rect)
-            rect = QRectF(px - nw / 2, ny - nh, nw, nh)
+            # Compute trapezoid corners with independent perspective
+            bl_x = self._apply_perspective_x(base_x - half_w, bot_y)
+            br_x = self._apply_perspective_x(base_x + half_w, bot_y)
+            tl_x = self._apply_perspective_x(base_x - half_w, top_y)
+            tr_x = self._apply_perspective_x(base_x + half_w, top_y)
+
+            # Note body (trapezoid)
             path = QPainterPath()
-            corner = max(2, 4 * scale)
-            path.addRoundedRect(rect, corner, corner)
+            path.moveTo(tl_x, top_y)
+            path.lineTo(tr_x, top_y)
+            path.lineTo(br_x, bot_y)
+            path.lineTo(bl_x, bot_y)
+            path.closeSubpath()
 
             # Color intensifies near hit line
-            dist_to_hit = abs(ny - hit_y)
+            dist_to_hit = abs(bot_y - hit_y)
             if dist_to_hit < 30:
                 color = QColor(_HIT_LINE_COLOR)
                 color.setAlphaF(0.95)
@@ -546,14 +554,21 @@ class PracticeDisplay(QWidget):
             painter.setPen(QPen(border, max(0.5, scale)))
             painter.drawPath(path)
 
-            # Glow for notes approaching the hit zone
+            # Glow for notes approaching the hit zone (expanded trapezoid)
             if dist_to_hit < 80:
                 glow_a = (1.0 - dist_to_hit / 80) * 0.25
                 note_glow = QColor(_NOTE_COLOR)
                 note_glow.setAlphaF(glow_a)
-                gr = QRectF(px - nw / 2 - 3, ny - nh - 3, nw + 6, nh + 6)
+                g_bl = self._apply_perspective_x(base_x - half_w - 3, bot_y + 3)
+                g_br = self._apply_perspective_x(base_x + half_w + 3, bot_y + 3)
+                g_tl = self._apply_perspective_x(base_x - half_w - 3, top_y - 3)
+                g_tr = self._apply_perspective_x(base_x + half_w + 3, top_y - 3)
                 gp = QPainterPath()
-                gp.addRoundedRect(gr, corner + 2, corner + 2)
+                gp.moveTo(g_tl, top_y - 3)
+                gp.lineTo(g_tr, top_y - 3)
+                gp.lineTo(g_br, bot_y + 3)
+                gp.lineTo(g_bl, bot_y + 3)
+                gp.closeSubpath()
                 painter.fillPath(gp, note_glow)
 
         # ── Consumed note burst effects ──
@@ -647,9 +662,9 @@ class PracticeDisplay(QWidget):
             painter.setFont(QFont("Microsoft JhengHei", font_size, QFont.Weight.Bold))
 
             for i, midi in enumerate(self._lane_notes):
-                lane_center = _LANE_MARGIN + (i + 0.5) * lw
+                lane_left = _LANE_MARGIN + i * lw
                 label_rect = QRectF(
-                    lane_center - lw / 2 + 2,
+                    lane_left + 2,
                     label_top,
                     lw - 4,
                     _LANE_LABEL_HEIGHT,
@@ -658,11 +673,41 @@ class PracticeDisplay(QWidget):
                 # Get label text: prefer keyboard key label, fallback to note name
                 if self._key_labels and midi in self._key_labels:
                     label = self._key_labels[midi]
+                    # Abbreviate modifiers for narrow lanes
+                    label = label.replace("Shift+", "S+").replace("Ctrl+", "C+")
                 else:
                     label = _midi_note_name(midi)
 
+                # Check for active flash in this lane
+                flash_intensity = 0.0
+                flash_color = None
+                for fl in self._flashes:
+                    if abs(fl.lane_left - lane_left) < 1:
+                        intensity = fl.life / _FLASH_DURATION
+                        if intensity > flash_intensity:
+                            flash_intensity = intensity
+                            flash_color = fl.color
+
+                if flash_intensity > 0 and flash_color is not None:
+                    # Bright gradient background behind label
+                    glow_bg = QLinearGradient(
+                        lane_left, label_top,
+                        lane_left, label_top + _LANE_LABEL_HEIGHT,
+                    )
+                    gc = QColor(flash_color)
+                    gc.setAlphaF(flash_intensity * 0.4)
+                    glow_bg.setColorAt(0.0, gc)
+                    gc_dim = QColor(flash_color)
+                    gc_dim.setAlphaF(flash_intensity * 0.1)
+                    glow_bg.setColorAt(1.0, gc_dim)
+                    painter.fillRect(label_rect, glow_bg)
+                    # Bright white text
+                    text_alpha = int(200 + 55 * flash_intensity)
+                    painter.setPen(QColor(255, 255, 255, min(255, text_alpha)))
+                else:
+                    painter.setPen(QColor(180, 200, 220, 200))
+
                 # Draw label centered in lane
-                painter.setPen(QColor(180, 200, 220, 200))
                 painter.drawText(
                     label_rect,
                     Qt.AlignmentFlag.AlignCenter,

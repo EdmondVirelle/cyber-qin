@@ -119,11 +119,11 @@ class TestPracticeViewInitialState:
     def test_desc_label_shows_gameplay_desc(self, practice_view):
         assert practice_view._desc_lbl.text() == translator.tr("practice.desc")
 
-    def test_mode_combo_defaults_to_midi(self, practice_view):
-        assert practice_view._mode_combo.currentData() == "midi"
+    def test_mode_combo_defaults_to_keyboard(self, practice_view):
+        assert practice_view._mode_combo.currentData() == "keyboard"
 
-    def test_scheme_combo_hidden_initially(self, practice_view):
-        assert practice_view._scheme_combo.isHidden()
+    def test_scheme_combo_visible_initially(self, practice_view):
+        assert not practice_view._scheme_combo.isHidden()
 
     def test_content_stack_has_three_pages(self, practice_view):
         assert practice_view._content_stack.count() == 3
@@ -595,10 +595,11 @@ class TestPracticeViewModeScheme:
         practice_view._mode_combo.setCurrentIndex(1)  # keyboard
         assert not practice_view._scheme_combo.isHidden()
 
-    def test_switching_back_to_midi_hides_scheme_combo(self, practice_view):
+    def test_switching_back_to_midi_keeps_scheme_combo_visible(self, practice_view):
         practice_view._mode_combo.setCurrentIndex(1)  # keyboard
         practice_view._mode_combo.setCurrentIndex(0)  # midi
-        assert practice_view._scheme_combo.isHidden()
+        # Scheme combo stays visible in both modes (affects arrangement)
+        assert not practice_view._scheme_combo.isHidden()
 
     def test_keyboard_mode_sets_mapping(self, practice_view):
         """Switching to keyboard mode should call set_keyboard_mapping."""

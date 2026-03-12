@@ -250,6 +250,7 @@ class NoteRoll(QWidget):
     def set_midi_range(self, midi_min: int, midi_max: int) -> None:
         self._midi_min = midi_min
         self._midi_max = midi_max
+        self._pitch_range = midi_max - midi_min + 1
         self.update()
 
     def set_active_track_color(self, color: str) -> None:

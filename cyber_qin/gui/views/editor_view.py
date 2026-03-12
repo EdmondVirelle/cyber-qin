@@ -128,6 +128,32 @@ class EditorView(QWidget):
         # Deferred autosave recovery check (after widget is shown)
         QTimer.singleShot(500, self._check_autosave_recovery)
 
+    def set_mapper(self, mapper) -> None:
+        """Set the key mapper — updates the piano to scheme-aware layout."""
+        from ...core.key_mapper import KeyMapper
+
+        if isinstance(mapper, KeyMapper):
+            self._mapper = mapper
+            self._piano.set_mapper(mapper)
+            self._rebuild_reverse_map()
+
+    def on_scheme_changed(self) -> None:
+        """Forward scheme change notification to the piano widget."""
+        self._piano.on_scheme_changed()
+        self._rebuild_reverse_map()
+
+    def _rebuild_reverse_map(self) -> None:
+        """Build reverse map from (key_letter, Modifier) → MIDI note."""
+        from ...core.constants import Modifier
+        from ...core.key_mapper import KeyMapper
+
+        mapper = getattr(self, "_mapper", None)
+        if mapper is not None and mapper.scheme is not None:
+            self._reverse_map = KeyMapper.build_reverse_map(mapper.scheme)
+        else:
+            self._reverse_map = {}
+        self._held_keys: set[int] = set()  # track held notes for visual feedback
+
     def set_player(self, player) -> None:
         """Set the player controller for playback cursor tracking."""
         self._player = player
@@ -195,7 +221,7 @@ class EditorView(QWidget):
         # Toolbar card
         toolbar_card = _ToolbarCard()
         toolbar_layout = QVBoxLayout(toolbar_card)
-        toolbar_layout.setContentsMargins(12, 8, 12, 8)
+        toolbar_layout.setContentsMargins(12, 6, 12, 6)
         toolbar_layout.setSpacing(6)
 
         # Row 1: Transport | Edit | File
@@ -205,8 +231,7 @@ class EditorView(QWidget):
         # Transport group
         self._record_btn = QPushButton()
         self._record_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._record_btn.setMinimumWidth(85)
-        self._record_btn.setMinimumHeight(36)
+        self._record_btn.setMinimumHeight(32)
         self._record_btn.setToolTip(
             "錄音模式：即時錄製 MIDI 輸入\n"
             "開啟後，彈奏 MIDI 鍵盤會自動記錄音符到編曲器\n"
@@ -214,7 +239,7 @@ class EditorView(QWidget):
         )
         self._record_btn.setStyleSheet(
             "QPushButton { background-color: #661111; color: #FF4444; font-weight: 700; "
-            "padding: 6px 12px; border-radius: 4px; }"
+            "padding: 4px 12px; border-radius: 6px; }"
             "QPushButton:hover { background-color: #882222; }"
             "QPushButton:pressed { background-color: #AA3333; }"
         )
@@ -223,25 +248,23 @@ class EditorView(QWidget):
         self._play_btn = QPushButton()
         self._play_btn.setProperty("class", "accent")
         self._play_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._play_btn.setMinimumWidth(70)
-        self._play_btn.setMinimumHeight(36)
+        self._play_btn.setMinimumHeight(32)
         self._play_btn.setToolTip(
             "播放/暫停：預覽編曲器中的音符\n"
             "空格鍵也可以控制播放\n"
             "Play/Pause: Preview notes in the editor"
         )
         self._play_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 12px; border-radius: 6px; font-weight: 600; }"
         )
         row1.addWidget(self._play_btn)
 
         self._stop_btn = QPushButton()
         self._stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._stop_btn.setMinimumWidth(70)
-        self._stop_btn.setMinimumHeight(36)
+        self._stop_btn.setMinimumHeight(32)
         self._stop_btn.setEnabled(False)
         self._stop_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 12px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:disabled { color: #555; }"
         )
         row1.addWidget(self._stop_btn)
@@ -259,11 +282,10 @@ class EditorView(QWidget):
         self._loop_btn = QPushButton("↻")
         self._loop_btn.setCheckable(True)
         self._loop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._loop_btn.setMinimumWidth(40)
-        self._loop_btn.setMinimumHeight(36)
+        self._loop_btn.setFixedSize(32, 32)
         self._loop_btn.setToolTip(translator.tr("editor.loop.tooltip") + "\n" + "Shortcut: L")
         self._loop_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"
+            "QPushButton { padding: 0; border-radius: 6px; font-weight: 600; background-color: #1A1A2E; }"
             "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
         )
         row1.addWidget(self._loop_btn)
@@ -271,20 +293,19 @@ class EditorView(QWidget):
         # Metronome toggle button
         self._metronome_btn = QPushButton("♩")
         self._metronome_btn.setCheckable(True)
-        self._metronome_btn.setChecked(True)  # Enabled by default
+        self._metronome_btn.setChecked(False)  # Disabled by default — instant playback
         self._metronome_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._metronome_btn.setMinimumWidth(40)
-        self._metronome_btn.setMinimumHeight(36)
+        self._metronome_btn.setFixedSize(32, 32)
         self._metronome_btn.setToolTip(
             translator.tr("editor.metronome.tooltip") + "\n" + "Shortcut: M"
         )
         self._metronome_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; background-color: #1A1A2E; }"
+            "QPushButton { padding: 0; border-radius: 6px; font-weight: 600; background-color: #1A1A2E; }"
             "QPushButton:checked { background-color: #D4AF37; color: #0F0F23; }"
         )
         row1.addWidget(self._metronome_btn)
 
-        row1.addWidget(_VSeparator())
+        row1.addSpacing(16)
 
         # Edit group
         self._undo_btn = IconButton("undo", size=32)
@@ -299,119 +320,116 @@ class EditorView(QWidget):
         self._clear_btn.setToolTip("清除全部")
         row1.addWidget(self._clear_btn)
 
-        row1.addWidget(_VSeparator())
+        row1.addSpacing(16)
 
         self._pencil_btn = QPushButton()
         self._pencil_btn.setCheckable(True)
         self._pencil_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._pencil_btn.setMinimumWidth(70)
-        self._pencil_btn.setMinimumHeight(36)
+        self._pencil_btn.setMinimumHeight(32)
         self._pencil_btn.setToolTip(
             "繪圖模式：用滑鼠點擊編曲器新增音符\n"
             "啟用後可以直接在鋼琴卷軸上畫音符\n"
             "Drawing Mode: Click to add notes on the piano roll"
         )
         self._pencil_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
             "QPushButton:checked { background-color: #00F0FF; color: #0A0E14; font-weight: 700; }"
             "QPushButton:checked:hover { background-color: #33F3FF; }"
         )
         row1.addWidget(self._pencil_btn)
 
-        row1.addWidget(_VSeparator())
+        row1.addStretch()
 
         # Smart tools group
-        self._arrange_btn = QPushButton("🎼 Arrange")
+        self._arrange_btn = QPushButton()
         self._arrange_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._arrange_btn.setMinimumHeight(36)
+        self._arrange_btn.setMinimumHeight(32)
         self._arrange_btn.setToolTip(
             "智能編排：自動移調與折疊音符到可演奏範圍\n"
             "Smart Arrangement: Auto-transpose and fold notes"
         )
         self._arrange_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._arrange_btn)
 
         self._fx_btn = QPushButton()
         self._fx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._fx_btn.setMinimumHeight(36)
+        self._fx_btn.setMinimumHeight(32)
         self._fx_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._fx_btn)
 
         self._generate_btn = QPushButton()
         self._generate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._generate_btn.setMinimumHeight(36)
+        self._generate_btn.setMinimumHeight(32)
         self._generate_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._generate_btn)
 
-        row1.addWidget(_VSeparator())
-
-        # Sidebar toggle
-        self._sidebar_toggle_btn = IconButton("menu", size=32)
-        self._sidebar_toggle_btn.setCheckable(True)
-        self._sidebar_toggle_btn.setChecked(True)  # Default: visible
-        row1.addWidget(self._sidebar_toggle_btn)
-
-        row1.addStretch()
+        row1.addSpacing(16)
 
         # File group
         self._save_btn = QPushButton()
         self._save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._save_btn.setMinimumWidth(65)
-        self._save_btn.setMinimumHeight(36)
+        self._save_btn.setMinimumHeight(32)
         self._save_btn.setToolTip("Ctrl+S")
         self._save_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._save_btn)
 
         self._load_btn = QPushButton()
         self._load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._load_btn.setMinimumWidth(65)
-        self._load_btn.setMinimumHeight(36)
+        self._load_btn.setMinimumHeight(32)
         self._load_btn.setToolTip(
             "載入 MIDI 檔案到編曲器\n支援標準 MIDI 格式 (.mid)\nLoad MIDI file into the editor"
         )
         self._load_btn.setStyleSheet(
-            "QPushButton { padding: 6px 10px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._load_btn)
 
         self._export_btn = QPushButton()
         self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._export_btn.setMinimumWidth(65)
-        self._export_btn.setMinimumHeight(36)
+        self._export_btn.setMinimumHeight(32)
         self._export_btn.setToolTip("Ctrl+E")
         self._export_btn.setStyleSheet(
-            "QPushButton { padding: 6px 12px; border-radius: 4px; font-weight: 600; }"
+            "QPushButton { padding: 4px 10px; border-radius: 6px; font-weight: 600; }"
             "QPushButton:hover { background-color: #1A1F2E; }"
         )
         row1.addWidget(self._export_btn)
 
-        row1.addWidget(_VSeparator())
+        row1.addSpacing(8)
 
-        self._help_btn = IconButton("help", size=32)
+        self._help_btn = IconButton("help", size=28)
         self._help_btn.setToolTip("操作指南")
         row1.addWidget(self._help_btn)
 
+        row1.addSpacing(8)
+
+        # Sidebar toggle
+        self._sidebar_toggle_btn = IconButton("menu", size=28)
+        self._sidebar_toggle_btn.setCheckable(True)
+        self._sidebar_toggle_btn.setChecked(True)  # Default: visible
+        row1.addWidget(self._sidebar_toggle_btn)
+
         toolbar_layout.addLayout(row1)
 
-        # Row 2: Duration | Time Sig | BPM | Snap | Stats
+        # ── Row 2: Composition parameters ──
         row2 = QHBoxLayout()
-        row2.setSpacing(8)
+        row2.setSpacing(6)
 
         self._dur_lbl = QLabel()
+        self._dur_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
         row2.addWidget(self._dur_lbl)
 
         self._duration_combo = QComboBox()
@@ -425,9 +443,8 @@ class EditorView(QWidget):
         self._duration_combo.setCurrentText("1/4")
         row2.addWidget(self._duration_combo)
 
-        row2.addSpacing(8)
-
         self._ts_lbl = QLabel()
+        self._ts_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
         row2.addWidget(self._ts_lbl)
 
         self._ts_combo = QComboBox()
@@ -439,23 +456,22 @@ class EditorView(QWidget):
         self._ts_combo.setCurrentText("4/4")
         row2.addWidget(self._ts_combo)
 
-        row2.addSpacing(8)
-
         self._bpm_lbl = QLabel()
+        self._bpm_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
         row2.addWidget(self._bpm_lbl)
 
         self._tempo_spin = QSpinBox()
         self._tempo_spin.setRange(40, 300)
         self._tempo_spin.setValue(120)
-        self._tempo_spin.setMinimumWidth(80)
+        self._tempo_spin.setFixedWidth(70)
         self._tempo_spin.setToolTip(
             "速度：每分鐘節拍數 (BPM)\n影響播放與匯出的速度\nTempo: Beats Per Minute (40-300)"
         )
         row2.addWidget(self._tempo_spin)
 
-        row2.addSpacing(8)
+        row2.addSpacing(16)
 
-        self._snap_cb = QCheckBox("Snap")
+        self._snap_cb = QCheckBox()
         self._snap_cb.setChecked(True)
         self._snap_cb.setToolTip(
             "網格對齊：移動音符時自動對齊到網格\n"
@@ -465,7 +481,6 @@ class EditorView(QWidget):
         self._snap_cb.setStyleSheet("background: transparent;")
         row2.addWidget(self._snap_cb)
 
-        # Grid precision selector
         self._grid_precision_combo = QComboBox()
         self._grid_precision_combo.addItem("1/4", 4)
         self._grid_precision_combo.addItem("1/8", 8)
@@ -479,21 +494,21 @@ class EditorView(QWidget):
             "1/128 = 超精細，1/4 = 粗糙\n"
             "Grid Precision: Snap to specified note value"
         )
-        self._grid_precision_combo.setFixedWidth(70)
+        self._grid_precision_combo.setFixedWidth(80)
         self._grid_precision_combo.currentIndexChanged.connect(self._on_grid_precision_changed)
         row2.addWidget(self._grid_precision_combo)
 
-        row2.addSpacing(8)
+        row2.addSpacing(16)
 
-        # Zoom slider
+        # Zoom slider (icon label instead of text)
         self._zoom_lbl = QLabel()
-        self._zoom_lbl.setStyleSheet("background: transparent;")
+        self._zoom_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
         row2.addWidget(self._zoom_lbl)
 
         self._zoom_slider = QSlider(Qt.Orientation.Horizontal)
-        self._zoom_slider.setRange(20, 400)  # _MIN_ZOOM to _MAX_ZOOM
-        self._zoom_slider.setValue(80)  # _PIXELS_PER_BEAT
-        self._zoom_slider.setFixedWidth(120)
+        self._zoom_slider.setRange(20, 400)
+        self._zoom_slider.setValue(80)
+        self._zoom_slider.setFixedWidth(100)
         self._zoom_slider.setToolTip(
             "水平縮放：調整時間軸顯示比例\n"
             "20 = 最遠, 80 = 預設, 400 = 最近\n"
@@ -502,7 +517,39 @@ class EditorView(QWidget):
         self._zoom_slider.valueChanged.connect(self._on_zoom_slider_changed)
         row2.addWidget(self._zoom_slider)
 
-        row2.addSpacing(8)
+        row2.addSpacing(16)
+
+        # WWM 36-key editor mode toggle
+        self._wwm_mode_btn = QPushButton(translator.tr("editor.wwm_mode"))
+        self._wwm_mode_btn.setCheckable(True)
+        self._wwm_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._wwm_mode_btn.setMinimumHeight(26)
+        self._wwm_mode_btn.setToolTip(
+            "燕雲十六聲編曲模式：只顯示 36 鍵範圍 (C3-B5)\n"
+            "方便製作遊戲內音樂，放大可演奏區域\n"
+            "WWM 36-Key Mode: Zoom to playable range (MIDI 48-83)"
+        )
+        self._wwm_mode_btn.setStyleSheet(
+            "QPushButton { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+            "QPushButton:checked { background-color: #D4AF37; color: #0A0E14; font-weight: 700; }"
+            "QPushButton:checked:hover { background-color: #E0C060; }"
+        )
+        row2.addWidget(self._wwm_mode_btn)
+
+        row2.addStretch()
+
+        self._note_count_lbl = QLabel()
+        self._note_count_lbl.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;"
+        )
+        row2.addWidget(self._note_count_lbl)
+
+        toolbar_layout.addLayout(row2)
+
+        # ── Row 3: Playback & Display ──
+        row3 = QHBoxLayout()
+        row3.setSpacing(6)
 
         self._auto_tune_cb = QCheckBox()
         self._auto_tune_cb.setToolTip(
@@ -511,35 +558,35 @@ class EditorView(QWidget):
             "Auto-Tune: Align notes to playable range"
         )
         self._auto_tune_cb.setStyleSheet("background: transparent;")
-        row2.addWidget(self._auto_tune_cb)
-
-        row2.addSpacing(8)
+        row3.addWidget(self._auto_tune_cb)
 
         self._vel_lbl = QLabel()
-        row2.addWidget(self._vel_lbl)
+        self._vel_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        row3.addWidget(self._vel_lbl)
 
         self._velocity_spin = QSpinBox()
         self._velocity_spin.setRange(1, 127)
         self._velocity_spin.setValue(100)
         self._velocity_spin.setToolTip("選取音符的力度 (1-127)")
-        self._velocity_spin.setMinimumWidth(80)
+        self._velocity_spin.setFixedWidth(65)
         self._velocity_spin.setEnabled(False)
-        row2.addWidget(self._velocity_spin)
+        row3.addWidget(self._velocity_spin)
 
-        row2.addSpacing(8)
+        row3.addSpacing(16)
 
-        # Follow mode combo
-        follow_lbl = QLabel("跟隨 Follow")
-        follow_lbl.setStyleSheet("background: transparent;")
-        row2.addWidget(follow_lbl)
+        # Follow mode
+        follow_lbl = QLabel()
+        follow_lbl.setStyleSheet(f"color: {TEXT_SECONDARY}; background: transparent; font-size: 11px;")
+        self._follow_lbl = follow_lbl
+        row3.addWidget(follow_lbl)
 
         self._follow_mode_combo = QComboBox()
-        self._follow_mode_combo.addItem("關閉 OFF", 0)
-        self._follow_mode_combo.addItem("翻頁 PAGE", 1)
-        self._follow_mode_combo.addItem("居中 CONTINUOUS", 2)
-        self._follow_mode_combo.addItem("智能 SMART", 3)
-        self._follow_mode_combo.setCurrentIndex(3)  # Default to SMART
-        self._follow_mode_combo.setFixedWidth(100)
+        self._follow_mode_combo.addItem(translator.tr("editor.follow.off"), 0)
+        self._follow_mode_combo.addItem(translator.tr("editor.follow.page"), 1)
+        self._follow_mode_combo.addItem(translator.tr("editor.follow.center"), 2)
+        self._follow_mode_combo.addItem(translator.tr("editor.follow.smart"), 3)
+        self._follow_mode_combo.setCurrentIndex(3)
+        self._follow_mode_combo.setFixedWidth(90)
         self._follow_mode_combo.setToolTip(
             "播放跟隨模式：\n"
             "關閉 = 不自動滾動\n"
@@ -548,9 +595,7 @@ class EditorView(QWidget):
             "智能 = 智能門檻跟隨（預設）"
         )
         self._follow_mode_combo.currentIndexChanged.connect(self._on_follow_mode_changed)
-        row2.addWidget(self._follow_mode_combo)
-
-        row2.addSpacing(8)
+        row3.addWidget(self._follow_mode_combo)
 
         self._speed_ctrl = SpeedControl()
         self._speed_ctrl.setToolTip(
@@ -558,11 +603,9 @@ class EditorView(QWidget):
             "0.5x = 慢速, 1.0x = 正常, 2.0x = 快速\n"
             "Playback Speed: Adjust preview playback rate"
         )
-        row2.addWidget(self._speed_ctrl)
+        row3.addWidget(self._speed_ctrl)
 
-        row2.addSpacing(8)
-
-        row2.addSpacing(8)
+        row3.addSpacing(16)
 
         self._shortcuts_cb = QCheckBox()
         self._shortcuts_cb.setChecked(True)
@@ -572,74 +615,61 @@ class EditorView(QWidget):
             "Keyboard Shortcuts: Enable editor keyboard shortcuts"
         )
         self._shortcuts_cb.setStyleSheet("background: transparent;")
-        row2.addWidget(self._shortcuts_cb)
+        row3.addWidget(self._shortcuts_cb)
 
-        row2.addSpacing(8)
+        row3.addStretch()
 
-        # Ghost notes toggle
-        self._ghost_btn = QPushButton("👻 Ghost")
+        # Display toggles — compact icon+label buttons
+        toggle_style = (
+            "QPushButton { padding: 2px 6px; border-radius: 3px; font-size: 11px; }"
+            "QPushButton:hover { background-color: #1A1F2E; }"
+        )
+
+        self._ghost_btn = QPushButton()
         self._ghost_btn.setCheckable(True)
         self._ghost_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._ghost_btn.setMinimumHeight(28)
+        self._ghost_btn.setMinimumHeight(24)
         self._ghost_btn.setToolTip(
             "幽靈音符：顯示編排前的原始位置\nGhost Notes: Show pre-arrangement positions"
         )
         self._ghost_btn.setStyleSheet(
-            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
-            "QPushButton:checked { background-color: #A06BFF; color: #0A0E14; }"
+            toggle_style + "QPushButton:checked { background-color: #A06BFF; color: #0A0E14; }"
         )
-        row2.addWidget(self._ghost_btn)
+        row3.addWidget(self._ghost_btn)
 
-        # Ghost opacity slider
         self._ghost_opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self._ghost_opacity_slider.setRange(10, 80)
         self._ghost_opacity_slider.setValue(40)
-        self._ghost_opacity_slider.setFixedWidth(60)
+        self._ghost_opacity_slider.setFixedWidth(50)
         self._ghost_opacity_slider.setToolTip("Ghost note opacity")
         self._ghost_opacity_slider.setVisible(False)
         self._ghost_opacity_slider.valueChanged.connect(self._on_ghost_opacity_changed)
-        row2.addWidget(self._ghost_opacity_slider)
+        row3.addWidget(self._ghost_opacity_slider)
 
-        row2.addSpacing(4)
-
-        # Automation toggle
-        self._automation_btn = QPushButton("📈 Auto")
+        self._automation_btn = QPushButton()
         self._automation_btn.setCheckable(True)
         self._automation_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._automation_btn.setMinimumHeight(28)
+        self._automation_btn.setMinimumHeight(24)
         self._automation_btn.setToolTip(
             "自動化曲線：調整力度/速度隨時間變化\n"
             "Automation Lane: Time-varying velocity/tempo curves"
         )
         self._automation_btn.setStyleSheet(
-            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
-            "QPushButton:checked { background-color: #4ECDC4; color: #0A0E14; }"
+            toggle_style + "QPushButton:checked { background-color: #4ECDC4; color: #0A0E14; }"
         )
-        row2.addWidget(self._automation_btn)
+        row3.addWidget(self._automation_btn)
 
-        row2.addSpacing(4)
-
-        # Score view toggle
-        self._score_btn = QPushButton("🎵 Score")
+        self._score_btn = QPushButton()
         self._score_btn.setCheckable(True)
         self._score_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._score_btn.setMinimumHeight(28)
+        self._score_btn.setMinimumHeight(24)
         self._score_btn.setToolTip("樂譜顯示：標準五線譜視圖\nScore View: Standard music notation")
         self._score_btn.setStyleSheet(
-            "QPushButton { padding: 4px 8px; border-radius: 4px; font-size: 11px; }"
-            "QPushButton:checked { background-color: #D4A853; color: #0A0E14; }"
+            toggle_style + "QPushButton:checked { background-color: #D4A853; color: #0A0E14; }"
         )
-        row2.addWidget(self._score_btn)
+        row3.addWidget(self._score_btn)
 
-        row2.addStretch()
-
-        self._note_count_lbl = QLabel("0 音符")
-        self._note_count_lbl.setStyleSheet(
-            f"color: {TEXT_SECONDARY}; background: transparent; font-size: 12px;"
-        )
-        row2.addWidget(self._note_count_lbl)
-
-        toolbar_layout.addLayout(row2)
+        toolbar_layout.addLayout(row3)
         content.addWidget(toolbar_card)
 
         # ── Main editor area: [TrackPanel | PitchRuler | NoteRoll] ──
@@ -727,10 +757,18 @@ class EditorView(QWidget):
         self._ts_lbl.setText(translator.tr("editor.time_sig"))
         self._bpm_lbl.setText(translator.tr("editor.bpm"))
         self._snap_cb.setText(translator.tr("editor.snap"))
-        self._zoom_lbl.setText("縮放 Zoom")  # Simple label, no translation key yet
+        self._zoom_lbl.setText(translator.tr("editor.zoom"))
+        self._follow_lbl.setText(translator.tr("editor.follow"))
         self._auto_tune_cb.setText(translator.tr("live.auto_tune"))
         self._vel_lbl.setText(translator.tr("editor.velocity"))
         self._shortcuts_cb.setText(translator.tr("editor.shortcuts"))
+        self._wwm_mode_btn.setText(translator.tr("editor.wwm_mode"))
+
+        # Update follow mode combo items
+        self._follow_mode_combo.setItemText(0, translator.tr("editor.follow.off"))
+        self._follow_mode_combo.setItemText(1, translator.tr("editor.follow.page"))
+        self._follow_mode_combo.setItemText(2, translator.tr("editor.follow.center"))
+        self._follow_mode_combo.setItemText(3, translator.tr("editor.follow.smart"))
 
         # Stateful record button
         if self._is_recording:
@@ -770,6 +808,7 @@ class EditorView(QWidget):
         self._ghost_btn.toggled.connect(self._on_ghost_toggled)
         self._automation_btn.toggled.connect(self._on_automation_toggled)
         self._score_btn.toggled.connect(self._on_score_toggled)
+        self._wwm_mode_btn.toggled.connect(self._on_wwm_mode_toggled)
         self._duration_combo.currentTextChanged.connect(self._on_duration_changed)
         self._ts_combo.currentTextChanged.connect(self._on_ts_changed)
         self._tempo_spin.valueChanged.connect(self._on_tempo_changed)
@@ -910,6 +949,19 @@ class EditorView(QWidget):
         precision = self._grid_precision_combo.itemData(index)
         if precision:
             self._note_roll.set_grid_precision(precision)
+
+    def _on_wwm_mode_toggled(self, checked: bool) -> None:
+        """Toggle WWM 36-key editor mode (zoom to MIDI 48-83)."""
+        if checked:
+            # Zoom to WWM 36-key range: MIDI 48 (C3) to 83 (B5)
+            self._note_roll.set_midi_range(48, 83)
+            self._pitch_ruler.set_midi_range(48, 83)
+        else:
+            # Restore full 88-key range
+            from ...core.constants import EDITOR_MIDI_MAX, EDITOR_MIDI_MIN
+
+            self._note_roll.set_midi_range(EDITOR_MIDI_MIN, EDITOR_MIDI_MAX)
+            self._pitch_ruler.set_midi_range(EDITOR_MIDI_MIN, EDITOR_MIDI_MAX)
 
     def _on_zoom_slider_changed(self, value: int) -> None:
         """Handle zoom slider value change."""
@@ -2032,14 +2084,90 @@ class EditorView(QWidget):
             self._on_play()
             return
 
-        # L → toggle loop
-        if key == Qt.Key.Key_L:
+        # ── Game key input: match against scheme keybindings ──
+        if not event.isAutoRepeat() and self._try_game_key_input(key, ctrl, shift):
+            return
+
+        # L → toggle loop (not a game key)
+        if not ctrl and not shift and key == Qt.Key.Key_L:
             self._loop_btn.setChecked(not self._loop_btn.isChecked())
             return
 
-        # M → toggle metronome
-        if key == Qt.Key.Key_M:
-            self._metronome_btn.setChecked(not self._metronome_btn.isChecked())
+        super().keyPressEvent(event)
+
+    def _resolve_game_key(self, key: int, ctrl: bool, shift: bool) -> int | None:
+        """Resolve a Qt key code + modifiers to a MIDI note via the scheme reverse map."""
+        from ...core.constants import Modifier
+
+        reverse_map: dict = getattr(self, "_reverse_map", {})
+        if not reverse_map:
+            return None
+
+        # Convert Qt key code to key letter
+        if Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
+            key_letter = chr(key)  # Key_A=65 → 'A'
+        elif Qt.Key.Key_0 <= key <= Qt.Key.Key_9:
+            key_letter = chr(key)
+        elif key == Qt.Key.Key_Minus:
+            key_letter = "MINUS"
+        elif key == Qt.Key.Key_Equal:
+            key_letter = "EQUALS"
+        else:
+            return None
+
+        # Determine modifier
+        if ctrl and shift:
+            return None  # No game key uses Ctrl+Shift
+        elif ctrl:
+            mod = Modifier.CTRL
+        elif shift:
+            mod = Modifier.SHIFT
+        else:
+            mod = Modifier.NONE
+
+        return reverse_map.get((key_letter, mod))
+
+    def _try_game_key_input(self, key: int, ctrl: bool, shift: bool) -> bool:
+        """Try to match a key press against scheme keybindings for note input.
+
+        Returns True if the key was consumed (note inserted).
+        """
+        midi_note = self._resolve_game_key(key, ctrl, shift)
+        if midi_note is None:
+            return False
+
+        # Insert note into the track (without the short preview)
+        flash_beat = self._sequence.cursor_beats
+        self._sequence.add_note(midi_note)
+        self._update_ui_state()
+        self._note_roll.flash_at_beat(flash_beat)
+
+        # Held sound — note_on stays until key release
+        self._on_piano_key_pressed(midi_note)
+
+        # Piano visual + track which notes are held by keyboard
+        self._piano.note_on(midi_note)
+        held = getattr(self, "_held_keys", set())
+        held.add(midi_note)
+        return True
+
+    def keyReleaseEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802
+        if event is None or event.isAutoRepeat():
+            return
+        held: set = getattr(self, "_held_keys", set())
+        if not held:
+            super().keyReleaseEvent(event)
             return
 
-        super().keyPressEvent(event)
+        key = event.key()
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+        midi_note = self._resolve_game_key(key, ctrl, shift)
+        if midi_note is not None and midi_note in held:
+            held.discard(midi_note)
+            self._on_piano_key_released(midi_note)
+            self._piano.note_off(midi_note)
+            return
+
+        super().keyReleaseEvent(event)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import bisect
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen
 from PyQt6.QtWidgets import (
@@ -19,7 +21,7 @@ from ...core.beat_sequence import BeatNote
 from ...core.key_mapper import KeyMapper
 from ...core.mapping_schemes import default_scheme_id, get_scheme, list_schemes
 from ...core.midi_file_player import MidiFileInfo
-from ...core.practice_engine import PracticeScorer, PracticeStats, notes_to_practice
+from ...core.practice_engine import HitGrade, PracticeScorer, PracticeStats, notes_to_practice
 from ...core.smart_arrangement import smart_arrange
 from ...core.translator import translator
 from ..theme import (
@@ -428,6 +430,36 @@ class _PracticeResultsPage(QWidget):
         self._change_btn.setText(translator.tr("practice.change_track"))
 
 
+# ── Scheme-aware note snapping ────────────────────────────────────
+
+
+def _snap_to_scheme(notes: list[BeatNote], playable: list[int]) -> list[BeatNote]:
+    """Snap each note's pitch to the nearest playable MIDI value in the scheme.
+
+    For chromatic schemes (all semitones mapped) this is a no-op.
+    For schemes with gaps, out-of-mapping notes get rounded to the closest valid pitch.
+    """
+    if not playable:
+        return list(notes)
+    playable_set = set(playable)
+    result: list[BeatNote] = []
+    for n in notes:
+        if n.note in playable_set:
+            result.append(n)
+        else:
+            idx = bisect.bisect_left(playable, n.note)
+            candidates = []
+            if idx > 0:
+                candidates.append(playable[idx - 1])
+            if idx < len(playable):
+                candidates.append(playable[idx])
+            nearest = min(candidates, key=lambda p: abs(p - n.note)) if candidates else n.note
+            result.append(
+                BeatNote(n.time_beats, n.duration_beats, nearest, n.velocity, n.track)
+            )
+    return result
+
+
 # ── Main practice view ────────────────────────────────────────────
 
 
@@ -442,6 +474,7 @@ class PracticeView(QWidget):
     practice_started = pyqtSignal()  # practice session began
     practice_stopped = pyqtSignal()  # user stopped or changed track
     practice_finished = pyqtSignal()  # session ended naturally (all notes passed)
+    hit_sound_requested = pyqtSignal(int, int)  # note, velocity — keyboard hit sound
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -513,7 +546,6 @@ class PracticeView(QWidget):
         for scheme in list_schemes():
             self._scheme_combo.addItem(scheme.translated_name(), scheme.id)
         self._scheme_combo.setFixedWidth(200)
-        self._scheme_combo.setVisible(False)
         self._scheme_combo.currentIndexChanged.connect(self._on_scheme_changed)
         header_row.addWidget(self._scheme_combo)
 
@@ -611,7 +643,15 @@ class PracticeView(QWidget):
 
         layout.addWidget(self._content_stack, 1)
 
+        # Default to keyboard mode with wwm_36 scheme
+        self._mode_combo.setCurrentIndex(1)
+
     # ── Public API ──
+
+    @property
+    def active_scheme_id(self) -> str:
+        """Return the currently selected scheme ID for practice."""
+        return self._scheme_combo.currentData() or default_scheme_id()
 
     def set_library_tracks(self, tracks: list[MidiFileInfo]) -> None:
         """Update the empty-state track list from library data."""
@@ -627,12 +667,14 @@ class PracticeView(QWidget):
         self._tempo_bpm = tempo_bpm
 
         # Fold out-of-range notes into the current scheme's playable range
-        scheme_id = self._scheme_combo.currentData() or default_scheme_id()
-        scheme = get_scheme(scheme_id)
+        scheme = get_scheme(self.active_scheme_id)
         midi_min, midi_max = scheme.midi_range
         arranged = smart_arrange(notes, note_min=midi_min, note_max=midi_max)
 
-        practice_notes = notes_to_practice(arranged.notes, tempo_bpm)
+        # Snap to scheme-playable pitches (no-op for chromatic schemes)
+        playable = sorted(scheme.mapping.keys())
+        snapped = _snap_to_scheme(arranged.notes, playable)
+        practice_notes = notes_to_practice(snapped, tempo_bpm)
         self._scorer = PracticeScorer(practice_notes)
         self._scorer.start()
         self._display.set_speed(self._speed)
@@ -680,8 +722,15 @@ class PracticeView(QWidget):
             self.start_practice(self._notes, self._tempo_bpm)
 
     def on_user_note(self, note: int) -> None:
-        """Called when user plays a note (from MIDI input or keyboard)."""
+        """Called when user plays a note (from MIDI input or keyboard).
+
+        Scoring only — sound is handled by the caller (MIDI path or keyboard path).
+        """
         if not self._scorer or not self._display.is_playing:
+            return
+        # Only accept notes that exist in the active scheme's mapping
+        scheme = get_scheme(self.active_scheme_id)
+        if note not in scheme.mapping:
             return
         current_time = self._display.current_time
         hit = self._scorer.on_user_note(note, current_time)
@@ -696,6 +745,8 @@ class PracticeView(QWidget):
     def _on_display_note_hit(self, note: int, time: float) -> None:
         """Handle note hit from keyboard input in display."""
         self.on_user_note(note)
+        # Keyboard presses always produce sound (matches in-game behavior)
+        self.hit_sound_requested.emit(note, 80)
 
     def _on_practice_ended(self) -> None:
         """Session ended naturally (all notes passed)."""
@@ -717,7 +768,7 @@ class PracticeView(QWidget):
 
     def _on_mode_changed(self, index: int) -> None:
         is_keyboard = self._mode_combo.currentData() == "keyboard"
-        self._scheme_combo.setVisible(is_keyboard)
+        # Scheme combo stays visible in both modes (affects note arrangement + input)
         if is_keyboard:
             self._update_keyboard_mapping()
         else:

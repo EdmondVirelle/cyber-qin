@@ -70,6 +70,7 @@ class Sidebar(QWidget):
 
         self._practice_btn = AnimatedNavButton("practice", "練習")
         self._practice_btn.clicked.connect(lambda: self._on_nav_click(3))
+        self._practice_btn.setVisible(False)  # Hidden for next build — re-enable later
         layout.addWidget(self._practice_btn)
         self._buttons.append(self._practice_btn)
 

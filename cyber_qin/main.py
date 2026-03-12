@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QProxyStyle, QStyle
 
 from .utils.admin import is_admin, request_elevation
 
@@ -21,6 +21,17 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("賽博琴仙")
     app.setOrganizationName("CyberQin")
+
+    # Instant tooltip display (0ms delay instead of default ~700ms)
+    class _InstantTooltipStyle(QProxyStyle):
+        def styleHint(self, hint, option=None, widget=None, returnData=None):  # noqa: N802, N803
+            if hint == QStyle.StyleHint.SH_ToolTip_WakeUpDelay:
+                return 0
+            if hint == QStyle.StyleHint.SH_ToolTip_FallAsleepDelay:
+                return 0
+            return super().styleHint(hint, option, widget, returnData)
+
+    app.setStyle(_InstantTooltipStyle())
 
     # Set window icon (for dev mode; PyInstaller uses icon.ico from spec)
     icon_path = Path(__file__).resolve().parent.parent / "assets" / "icon.ico"

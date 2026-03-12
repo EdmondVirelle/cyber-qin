@@ -10,6 +10,7 @@ to avoid module-level Qt imports.
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 import time
 from typing import TYPE_CHECKING
@@ -18,6 +19,63 @@ if TYPE_CHECKING:
     from .midi_file_player import MidiFileEvent
 
 log = logging.getLogger(__name__)
+
+
+# ── Windows Multimedia MIDI fallback ──────────────────────────
+
+
+class _WinmmMidiOut:
+    """Minimal rtmidi-compatible MIDI output wrapper using Windows winmm.dll."""
+
+    def __init__(self, handle, winmm) -> None:
+        self._handle = handle
+        self._winmm = winmm
+
+    def send_message(self, msg: list[int]) -> None:
+        if not msg or self._handle is None:
+            return
+        dword = msg[0]
+        if len(msg) > 1:
+            dword |= msg[1] << 8
+        if len(msg) > 2:
+            dword |= msg[2] << 16
+        self._winmm.midiOutShortMsg(self._handle, dword)
+
+    def close_port(self) -> None:
+        if self._handle is not None:
+            self._winmm.midiOutReset(self._handle)
+            self._winmm.midiOutClose(self._handle)
+            self._handle = None
+
+    def delete(self) -> None:
+        pass
+
+
+def _open_winmm_port():
+    """Open Windows MIDI Mapper via winmm.dll. Returns _WinmmMidiOut or None."""
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+
+        winmm = ctypes.windll.winmm
+        handle = ctypes.c_void_p()
+        # MIDI_MAPPER = 0xFFFFFFFF (auto-selects default synth)
+        result = winmm.midiOutOpen(
+            ctypes.byref(handle),
+            ctypes.c_uint(0xFFFFFFFF),
+            ctypes.c_void_p(0),
+            ctypes.c_void_p(0),
+            ctypes.c_uint(0),
+        )
+        if result != 0:
+            log.debug("midiOutOpen failed: MMRESULT %d", result)
+            return None
+        return _WinmmMidiOut(handle, winmm)
+    except Exception:
+        log.debug("winmm MIDI open failed", exc_info=True)
+        return None
+
 
 # ── Lazy Qt class ──────────────────────────────────────────
 
@@ -73,27 +131,37 @@ def _ensure_qt_class():
 
         def _open_port(self) -> None:
             """Try to open the first available MIDI output port."""
+            # Try rtmidi first
             try:
                 import rtmidi
 
                 out = rtmidi.MidiOut()
                 ports = out.get_ports()
-                if not ports:
-                    log.warning("No MIDI output ports available")
-                    out.delete()
+                if ports:
+                    target_idx = 0
+                    for i, name in enumerate(ports):
+                        if "wavetable" in name.lower() or "gs" in name.lower():
+                            target_idx = i
+                            break
+                    out.open_port(target_idx)
+                    self._midi_out = out
+                    self._port_name = ports[target_idx]
+                    log.info("MIDI output opened (rtmidi): %s", self._port_name)
                     return
-                # Prefer Windows GS Wavetable Synth if present
-                target_idx = 0
-                for i, name in enumerate(ports):
-                    if "wavetable" in name.lower() or "gs" in name.lower():
-                        target_idx = i
-                        break
-                out.open_port(target_idx)
-                self._midi_out = out
-                self._port_name = ports[target_idx]
-                log.info("MIDI output opened: %s", self._port_name)
+                out.delete()
+                log.debug("rtmidi found no MIDI output ports")
             except Exception:
-                log.warning("Failed to open MIDI output port", exc_info=True)
+                log.debug("rtmidi output unavailable", exc_info=True)
+
+            # Fallback: Windows Multimedia API (always available on Windows)
+            wrapper = _open_winmm_port()
+            if wrapper is not None:
+                self._midi_out = wrapper
+                self._port_name = "Microsoft MIDI Mapper (winmm)"
+                log.info("MIDI output opened (winmm fallback): %s", self._port_name)
+                return
+
+            log.warning("No MIDI output available — editor preview will have no sound")
 
         def preview_note(
             self,

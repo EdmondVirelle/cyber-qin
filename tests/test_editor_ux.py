@@ -398,8 +398,10 @@ class TestMidiOutputPlayer:
 
             mod._MidiOutputPlayerClass = None
 
-            player = mod.create_midi_output_player()
-            assert player is None
+            # Also disable winmm fallback so no port is found
+            with patch.object(mod, "_open_winmm_port", return_value=None):
+                player = mod.create_midi_output_player()
+                assert player is None
 
     def test_create_succeeds_with_port(self):
         """If MIDI output ports exist, create returns a player."""

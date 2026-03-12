@@ -182,6 +182,7 @@ class AppShell(QMainWindow):
 
         # View 2: Editor
         self._editor_view = EditorView()
+        self._editor_view.set_mapper(self._mapper)
 
         # View 3: Practice Mode
         self._practice_view = PracticeView()
@@ -271,6 +272,9 @@ class AppShell(QMainWindow):
         self._practice_view.practice_stopped.connect(self._on_practice_audio_stop)
         self._practice_view.practice_finished.connect(self._on_practice_audio_stop)
         self._practice_view.speed_changed.connect(self._on_practice_speed_changed)
+
+        # Keyboard hit sound → MIDI synth
+        self._practice_view.hit_sound_requested.connect(self._on_practice_hit_sound)
 
         # Pass player to editor for playback cursor tracking
         self._editor_view.set_player(self._player)
@@ -382,6 +386,8 @@ class AppShell(QMainWindow):
             tempo_bpm=120.0,
         )
         self._player.stop()
+        # Disable countdown for editor playback — play immediately
+        self._player.worker.set_metronome(False)
         self._player.worker.load(events, info)
         self._now_playing.set_track_info(info.name, info.duration_seconds)
         self._player.play()
@@ -394,6 +400,7 @@ class AppShell(QMainWindow):
         except KeyError:
             return
         self._now_playing.mini_piano.set_midi_range(scheme.midi_range)
+        self._editor_view.on_scheme_changed()
 
     def _on_play_file(self, file_path: str) -> None:
         """Load and play a MIDI file from the library."""
@@ -587,10 +594,18 @@ class AppShell(QMainWindow):
             log.exception("Failed to load practice file %s", file_path)
 
     def _on_practice_note_event(self, event_type: str, note: int, velocity: int) -> None:
-        """Forward live MIDI events to practice mode for scoring + hit sound."""
+        """Forward live MIDI events to practice mode for scoring + hit sound.
+
+        Only notes that exist in the active scheme's mapping are accepted,
+        matching the actual game behaviour (unmapped MIDI notes are ignored).
+        """
         if self._stack.currentIndex() == 3 and event_type == "note_on":
+            # Filter by active practice scheme
+            scheme = get_scheme(self._practice_view.active_scheme_id)
+            if note not in scheme.mapping:
+                return
             self._practice_view.on_user_note(note)
-            # Play feedback sound for user's note hit
+            # Always play sound for valid notes (matches in-game key press)
             if self._practice_player is not None:
                 self._practice_player.preview_note(note, velocity=velocity, duration_ms=150)
 
@@ -611,6 +626,11 @@ class AppShell(QMainWindow):
         """Sync practice audio speed with display speed."""
         if self._practice_player is not None:
             self._practice_player.set_speed(speed)
+
+    def _on_practice_hit_sound(self, note: int, velocity: int) -> None:
+        """Play feedback sound for keyboard-mode hits."""
+        if self._practice_player is not None:
+            self._practice_player.preview_note(note, velocity=velocity, duration_ms=150)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         # Save window state to config (geometry as base64 string for JSON compatibility)
