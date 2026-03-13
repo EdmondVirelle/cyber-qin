@@ -97,6 +97,9 @@ class LiveModeView(QWidget):
         self._setup_timers()
         self._restore_settings()
 
+        # Show F6 panic stop hint on startup
+        self._log.log(translator.tr("hint.f6_panic"))
+
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -306,6 +309,10 @@ class LiveModeView(QWidget):
         self._transpose_lbl.setText(translator.tr("live.transpose") + ":")
         self._scheme_lbl.setText(translator.tr("live.mapping") + ":")
         self._view_mapping_btn.setText(translator.tr("live.view_mapping"))
+
+        # Add hint to log when language changes (if it's empty, or just append it)
+        # We append it so the user sees it in the new language
+        self._log.log(translator.tr("hint.f6_panic"))
 
         # Record button stateful
         if self._record_btn.text() == "錄音" or self._record_btn.text() == translator.tr(
