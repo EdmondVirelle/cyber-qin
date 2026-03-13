@@ -68,7 +68,7 @@
 
 1. **下載** 最新版 ZIP 檔，來自 [GitHub Releases](https://github.com/EdmondVirelle/cyber-qin/releases)
 2. **解壓縮** 請使用 [7-Zip](https://www.7-zip.org/)（Windows 內建解壓縮工具對中文路徑可能失敗）
-3. **執行** `賽博琴仙.exe` — 會自動要求系統管理員權限
+3. **執行** `CyberQin.exe` — 會自動要求系統管理員權限
 4. **連接** USB MIDI 鍵盤
 5. **選擇** 在即時演奏模式的下拉選單中選擇你的 MIDI 裝置
 6. **設定** 選擇對應遊戲的鍵位方案（如「燕雲十六聲 36鍵」）
@@ -85,7 +85,7 @@
 1. 前往 [GitHub Releases](https://github.com/EdmondVirelle/cyber-qin/releases)
 2. 下載最新的 `賽博琴仙-v*.zip`
 3. **用 7-Zip 解壓縮** — Windows 內建解壓縮工具常常失敗，因為資料夾名稱「賽博琴仙」包含中文字。7-Zip 能正確處理 Unicode 路徑。
-4. 執行 `賽博琴仙.exe`
+4. 執行 `CyberQin.exe`
 
 > **Windows Defender 可能會標記此執行檔**，因為它沒有商業程式碼簽章。這是誤報。你可以將資料夾加入 Windows Defender 排除清單，或者從原始碼自行編譯。
 
@@ -125,7 +125,7 @@ cyber-qin
 # 一鍵打包腳本（自動偵測 Python 3.13、建立 venv、打包）
 python scripts/build.py
 
-# 輸出：dist/賽博琴仙/賽博琴仙.exe（約 95 MB）
+# 輸出：dist/CyberQin/CyberQin.exe（約 95 MB）
 ```
 
 打包腳本會：

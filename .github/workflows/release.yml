@@ -27,29 +27,111 @@ jobs:
         run: pyinstaller cyber_qin.spec --clean -y
 
       - name: Create zip archive
-        run: Compress-Archive -Path "dist/賽博琴仙/*" -DestinationPath "dist/賽博琴仙-${{ github.ref_name }}.zip"
+        run: Compress-Archive -Path "dist/CyberQin/*" -DestinationPath "dist/CyberQin-${{ github.ref_name }}-Windows-x64.zip"
         shell: pwsh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 賽博琴仙-${{ github.ref_name }}
-          path: dist/賽博琴仙/
+          name: CyberQin-${{ github.ref_name }}
+          path: dist/CyberQin/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/賽博琴仙-${{ github.ref_name }}.zip
+          files: dist/CyberQin-${{ github.ref_name }}-Windows-x64.zip
           body: |
-            ## Release 說明 (${{ github.ref_name }})
-            ### 安裝須知
+            ## 🎵 Cyber Qin (賽博琴仙) — ${{ github.ref_name }}
 
-            請使用 [**7-Zip**](https://www.7-zip.org/) 解壓縮。
-            Windows 內建解壓工具可能無法正確處理 Unicode 路徑，導致程式啟動失敗。
+            ### English
 
-            ### 免責聲明
+            An open-source MIDI keyboard mapper designed for the 36-key music mode in *Where Winds Meet* (燕雲十六聲). Connect your MIDI keyboard (e.g. Roland FP-30X) and play music in-game in real time.
 
-            - 本工具為開源個人專案，供 MIDI 音樂演奏愛好者交流學習使用。
-            - 在遊戲中使用第三方工具可能不符合該遊戲之服務條款，請使用者自行評估風險。
-            - 開發者不對因使用本工具導致的帳號處分或任何損失承擔責任。
-            - 下載或執行本程式即表示您理解並接受上述事項。
+            **Key Features:**
+            - **Live Performance** — Map your MIDI keyboard directly to game keys with <2ms latency
+            - **MIDI File Playback** — Load `.mid` files for automated performance
+            - **Arranger** — Built-in editor with recording, step input, and MIDI audio preview
+            - **Multiple Mapping Schemes** — Support for different key layouts and transposition
+            - **Multilingual UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
+
+            **Installation:**
+            Please use [7-Zip](https://www.7-zip.org/) to extract the archive. The built-in Windows extractor may fail to handle Unicode paths, which can prevent the application from launching.
+
+            **Disclaimer:**
+            This is an open-source personal project intended for MIDI music enthusiasts to learn and share. Using third-party tools in-game may violate the game's Terms of Service. Users assume all associated risks. The developer is not responsible for any account penalties or losses resulting from use of this tool. By downloading or running this software, you acknowledge and accept the above terms.
+
+            ---
+
+            ### 繁體中文
+
+            開源 MIDI 鍵盤映射工具，專為《燕雲十六聲》36 鍵音樂模式設計。連接你的 MIDI 鍵盤（如 Roland FP-30X），即可在遊戲中即時演奏。
+
+            **主要功能：**
+            - **即時演奏** — 將 MIDI 鍵盤直接映射到遊戲按鍵，延遲低於 2ms
+            - **MIDI 檔案播放** — 載入 `.mid` 檔案進行自動演奏
+            - **編曲器** — 內建編輯器，支援錄製、逐步輸入與 MIDI 音訊預覽
+            - **多種鍵位方案** — 支援不同鍵位配置與移調
+            - **多語言介面** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
+
+            **安裝說明：**
+            請使用 [7-Zip](https://www.7-zip.org/) 解壓縮。Windows 內建的解壓縮工具可能無法處理 Unicode 路徑，導致程式無法啟動。
+
+            **免責聲明：**
+            本軟體為開源個人專案，僅供 MIDI 音樂愛好者學習與交流使用。在遊戲中使用第三方工具可能違反遊戲的服務條款，使用者需自行承擔所有相關風險。開發者不對因使用本工具而導致的任何帳號處罰或損失負責。下載或執行本軟體即代表您已理解並接受以上條款。
+
+            ---
+
+            ### 简体中文
+
+            开源 MIDI 键盘映射工具，专为《燕云十六声》36 键音乐模式设计。连接你的 MIDI 键盘（如 Roland FP-30X），即可在游戏中实时演奏。
+
+            **主要功能：**
+            - **实时演奏** — 将 MIDI 键盘直接映射到游戏按键，延迟低于 2ms
+            - **MIDI 文件播放** — 加载 `.mid` 文件进行自动演奏
+            - **编曲器** — 内置编辑器，支持录制、逐步输入与 MIDI 音频预览
+            - **多种键位方案** — 支持不同键位配置与移调
+            - **多语言界面** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
+
+            **安装说明：**
+            请使用 [7-Zip](https://www.7-zip.org/) 解压缩。Windows 内置的解压缩工具可能无法处理 Unicode 路径，导致程序无法启动。
+
+            **免责声明：**
+            本软件为开源个人项目，仅供 MIDI 音乐爱好者学习与交流使用。在游戏中使用第三方工具可能违反游戏的服务条款，使用者需自行承担所有相关风险。开发者不对因使用本工具而导致的任何账号处罚或损失负责。下载或运行本软件即代表您已理解并接受以上条款。
+
+            ---
+
+            ### 日本語
+
+            オープンソースの MIDI キーボードマッパー。『燕雲十六声（Where Winds Meet）』の36鍵音楽モード向けに設計されています。MIDI キーボード（例：Roland FP-30X）を接続して、ゲーム内でリアルタイムに演奏できます。
+
+            **主な機能：**
+            - **ライブ演奏** — MIDI キーボードをゲームキーに直接マッピング、遅延 2ms 未満
+            - **MIDI ファイル再生** — `.mid` ファイルを読み込んで自動演奏
+            - **アレンジャー** — 録音、ステップ入力、MIDI オーディオプレビュー付きの内蔵エディタ
+            - **複数キーマッピング** — 異なるキー配列と移調に対応
+            - **多言語 UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
+
+            **インストール：**
+            アーカイブの解凍には [7-Zip](https://www.7-zip.org/) をご使用ください。Windows 標準の解凍ツールでは Unicode パスの処理に失敗し、アプリケーションが起動できない場合があります。
+
+            **免責事項：**
+            本ソフトウェアは MIDI 音楽愛好家の学習・共有を目的としたオープンソースの個人プロジェクトです。ゲーム内でサードパーティツールを使用すると、ゲームの利用規約に違反する可能性があります。ユーザーはすべての関連リスクを自ら負うものとします。開発者は本ツールの使用に起因するアカウント処罰やいかなる損失についても責任を負いません。本ソフトウェアをダウンロードまたは実行した時点で、上記の条項に同意したものとみなされます。
+
+            ---
+
+            ### 한국어
+
+            오픈소스 MIDI 키보드 매퍼로, 《연운십육성 (Where Winds Meet)》의 36건 음악 모드를 위해 설계되었습니다. MIDI 키보드(예: Roland FP-30X)를 연결하여 게임 내에서 실시간으로 연주할 수 있습니다.
+
+            **주요 기능:**
+            - **라이브 연주** — MIDI 키보드를 게임 키에 직접 매핑, 2ms 미만의 지연 시간
+            - **MIDI 파일 재생** — `.mid` 파일을 불러와 자동 연주
+            - **어레인저** — 녹음, 스텝 입력, MIDI 오디오 미리듣기가 포함된 내장 에디터
+            - **다중 키 매핑** — 다양한 키 레이아웃 및 조옮김 지원
+            - **다국어 UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
+
+            **설치 안내:**
+            압축 해제 시 [7-Zip](https://www.7-zip.org/)을 사용해 주세요. Windows 기본 압축 해제 도구는 유니코드 경로를 처리하지 못하여 응용 프로그램이 실행되지 않을 수 있습니다.
+
+            **면책 조항:**
+            본 소프트웨어는 MIDI 음악 애호가의 학습 및 공유를 위한 오픈소스 개인 프로젝트입니다. 게임 내에서 서드파티 도구를 사용하면 게임 서비스 약관을 위반할 수 있습니다. 사용자는 관련된 모든 위험을 스스로 부담합니다. 개발자는 본 도구 사용으로 인한 계정 제재 또는 어떠한 손실에 대해서도 책임지지 않습니다. 본 소프트웨어를 다운로드하거나 실행하면 위 조항에 동의한 것으로 간주됩니다.

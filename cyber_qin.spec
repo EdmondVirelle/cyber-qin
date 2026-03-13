@@ -108,7 +108,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="賽博琴仙",
+    name="CyberQin",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -130,5 +130,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="賽博琴仙",
+    name="CyberQin",
 )

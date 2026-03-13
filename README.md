@@ -68,7 +68,7 @@ The entire UI supports 5 languages, switchable at any time via the bottom-left l
 
 1. **Download** the latest release ZIP from [GitHub Releases](https://github.com/EdmondVirelle/cyber-qin/releases)
 2. **Extract** using [7-Zip](https://www.7-zip.org/) (Windows built-in extractor may fail on Unicode paths)
-3. **Run** `賽博琴仙.exe` — it will automatically request Administrator privileges
+3. **Run** `CyberQin.exe` — it will automatically request Administrator privileges
 4. **Connect** your USB MIDI keyboard
 5. **Select** your MIDI device in the Live Mode dropdown
 6. **Choose** the mapping scheme for your game (e.g., "燕雲十六聲 36鍵")
@@ -85,7 +85,7 @@ The entire UI supports 5 languages, switchable at any time via the bottom-left l
 1. Go to [GitHub Releases](https://github.com/EdmondVirelle/cyber-qin/releases)
 2. Download the latest `賽博琴仙-v*.zip`
 3. **Extract with 7-Zip** — the Windows built-in extractor often fails because the folder name `賽博琴仙` contains CJK characters. 7-Zip handles Unicode paths correctly.
-4. Run `賽博琴仙.exe`
+4. Run `CyberQin.exe`
 
 > **Windows Defender may flag the executable** because it lacks a commercial code certificate. This is a false positive. You can add the folder to Windows Defender exclusions, or build from source.
 
@@ -125,7 +125,7 @@ cyber-qin
 # One-click build script (auto-detects Python 3.13, creates venv, packages)
 python scripts/build.py
 
-# Output: dist/賽博琴仙/賽博琴仙.exe (~95 MB)
+# Output: dist/CyberQin/CyberQin.exe (~95 MB)
 ```
 
 The build script will:
