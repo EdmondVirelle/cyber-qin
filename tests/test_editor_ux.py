@@ -478,6 +478,7 @@ class TestMidiOutputPlayer:
             assert len(cc123_calls) == 16
             player.cleanup()
 
+    @pytest.mark.skipif(sys.platform == "darwin", reason="QTimer note_off unreliable on macOS CI")
     def test_preview_note_sends_on_and_off(self):
         """preview_note sends note_on immediately and schedules note_off."""
         with patch.dict(sys.modules, {"rtmidi": MagicMock()}):

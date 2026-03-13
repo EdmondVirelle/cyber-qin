@@ -148,7 +148,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 賽博琴仙-windows-x64-${{ github.sha }}
-          path: dist/賽博琴仙/
+          name: CyberQin-windows-x64-${{ github.sha }}
+          path: dist/CyberQin/
           retention-days: 7
           compression-level: 6
