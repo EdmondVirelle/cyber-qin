@@ -86,6 +86,8 @@ a = Analysis(
         # ── utils ──
         "cyber_qin.utils.admin",
         "cyber_qin.utils.ime",
+        # ── v2.9.2 ──
+        "cyber_qin.core.global_hotkey",
     ],
     hookspath=[],
     hooksconfig={},

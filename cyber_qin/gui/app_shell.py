@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 
 from ..core.auto_tune import auto_tune
 from ..core.config import get_config
+from ..core.global_hotkey import GlobalHotkey
 from ..core.key_mapper import KeyMapper
 from ..core.key_simulator import KeySimulator
 from ..core.mapping_schemes import get_scheme
@@ -161,6 +162,11 @@ class AppShell(QMainWindow):
         self._connect_signals()
         self._setup_shortcuts()
         self._restore_window_state()
+
+        # Global hotkey: F6 panic stop (works even when game has focus)
+        self._hotkey = GlobalHotkey(self)
+        self._hotkey.triggered.connect(self._on_panic_stop)
+        self._hotkey.start()
 
         # Share the single MIDI output with the editor (Windows only allows
         # one client to open GS Wavetable Synth at a time).
@@ -503,6 +509,13 @@ class AppShell(QMainWindow):
         self._player.stop()
         self._now_playing.reset()
 
+    def _on_panic_stop(self) -> None:
+        """F6 global hotkey handler — stop everything and release all keys."""
+        self._player.stop()
+        self._simulator.release_all()
+        self._now_playing.reset()
+        self._live_view.log_viewer.log("  ⏹ F6 Panic Stop")
+
     def _on_any_note_event(self, event_type: str, note: int, velocity: int) -> None:
         """Update the mini piano from any source (live or file)."""
         mini = self._now_playing.mini_piano
@@ -690,5 +703,6 @@ class AppShell(QMainWindow):
         self._player.cleanup()
         if self._practice_player is not None:
             self._practice_player.cleanup()
+        self._hotkey.stop()
         self._live_view.cleanup()
         super().closeEvent(event)
