@@ -52,6 +52,7 @@ jobs:
             - **MIDI File Playback** — Load `.mid` files for automated performance
             - **Arranger** — Built-in editor with recording, step input, and MIDI audio preview
             - **Multiple Mapping Schemes** — Support for different key layouts and transposition
+            - **🆕 F6 Panic Stop** — Press F6 anytime (even while the game is focused) to instantly stop playback and release all keys
             - **Multilingual UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
 
             **Installation:**
@@ -71,6 +72,7 @@ jobs:
             - **MIDI 檔案播放** — 載入 `.mid` 檔案進行自動演奏
             - **編曲器** — 內建編輯器，支援錄製、逐步輸入與 MIDI 音訊預覽
             - **多種鍵位方案** — 支援不同鍵位配置與移調
+            - **🆕 F6 緊急停止** — 隨時按下 F6（即使遊戲視窗在前景）立即停止播放並釋放所有按鍵
             - **多語言介面** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
 
             **安裝說明：**
@@ -90,6 +92,7 @@ jobs:
             - **MIDI 文件播放** — 加载 `.mid` 文件进行自动演奏
             - **编曲器** — 内置编辑器，支持录制、逐步输入与 MIDI 音频预览
             - **多种键位方案** — 支持不同键位配置与移调
+            - **🆕 F6 紧急停止** — 随时按下 F6（即使游戏窗口在前台）立即停止播放并释放所有按键
             - **多语言界面** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
 
             **安装说明：**
@@ -109,6 +112,7 @@ jobs:
             - **MIDI ファイル再生** — `.mid` ファイルを読み込んで自動演奏
             - **アレンジャー** — 録音、ステップ入力、MIDI オーディオプレビュー付きの内蔵エディタ
             - **複数キーマッピング** — 異なるキー配列と移調に対応
+            - **🆕 F6 パニックストップ** — いつでも F6 キーを押すと（ゲームがフォーカスされていても）再生を即座に停止し、すべてのキーを解放します
             - **多言語 UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
 
             **インストール：**
@@ -128,6 +132,7 @@ jobs:
             - **MIDI 파일 재생** — `.mid` 파일을 불러와 자동 연주
             - **어레인저** — 녹음, 스텝 입력, MIDI 오디오 미리듣기가 포함된 내장 에디터
             - **다중 키 매핑** — 다양한 키 레이아웃 및 조옮김 지원
+            - **🆕 F6 패닉 스톱** — 언제든지 F6 키를 누르면(게임이 포커스 되어 있어도) 즉시 재생을 중지하고 모든 키를 해제합니다
             - **다국어 UI** — English / 繁體中文 / 简体中文 / 日本語 / 한국어
 
             **설치 안내:**
