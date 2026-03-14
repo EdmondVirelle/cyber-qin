@@ -76,8 +76,11 @@ class GlobalHotkey(QObject):
             try:
                 import ctypes
 
-                ctypes.windll.user32.PostThreadMessageW(
-                    self._thread_id, 0x0012, 0, 0  # WM_QUIT
+                ctypes.windll.user32.PostThreadMessageW(  # type: ignore[attr-defined]
+                    self._thread_id,
+                    0x0012,
+                    0,
+                    0,  # WM_QUIT
                 )
             except Exception:
                 pass
@@ -96,8 +99,8 @@ class GlobalHotkey(QObject):
         import ctypes
         import ctypes.wintypes
 
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
+        user32 = ctypes.windll.user32      # type: ignore[attr-defined]
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
 
         self._thread_id = kernel32.GetCurrentThreadId()
 
