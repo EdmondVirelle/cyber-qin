@@ -381,7 +381,7 @@ MIDI 鍵盤 → USB → python-rtmidi（C++ 執行緒）→ KeyMapper → SendIn
 
 ## 鍵位方案
 
-五個內建方案涵蓋不同遊戲和鍵數：
+七個內建方案涵蓋不同遊戲和鍵數：
 
 ### 燕雲十六聲 36 鍵
 
@@ -396,6 +396,14 @@ MIDI 鍵盤 → USB → python-rtmidi（C++ 執行緒）→ KeyMapper → SendIn
 ### FF14 37 鍵
 
 針對 Final Fantasy XIV 吟遊詩人演奏系統優化的全音階配置。使用數字列、QWER 列、ASDF 列。Ctrl 修飾鍵用於升降記號。
+
+### 心動小鎮 37 鍵
+
+三個八度的獨立按鍵配置（無修飾鍵）。下排 `,./OPK[]` 對應 C3–B3，中排 `ZXCVBNM` 對應 C4–B4，上排 `QWERTYUI` 對應 C5–C6。
+
+### 新手 36 鍵
+
+四行純鍵盤配置：ZXCVBNM / ASDFGHJKL / QWERTYUIOP / 1234567890，無修飾鍵。
 
 ### 通用 24 / 48 / 88 鍵
 

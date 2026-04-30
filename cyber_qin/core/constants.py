@@ -44,6 +44,15 @@ SCAN = {
     "P": 0x19,
     "K": 0x25,
     "L": 0x26,
+    # Punctuation (for 心動小鎮 and similar schemes)
+    ",": 0x33,
+    ".": 0x34,
+    "/": 0x35,
+    ";": 0x27,
+    "[": 0x1A,
+    "]": 0x1B,
+    "-": 0x0C,
+    "=": 0x0D,
     # Number row
     "1": 0x02,
     "2": 0x03,

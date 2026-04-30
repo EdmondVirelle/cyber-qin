@@ -197,7 +197,7 @@
 │   │   ├── beat_sequence.py    ← Beat-based 多軌編輯模型
 │   │   ├── project_file.py     ← 專案存檔（.cqp = JSON + gzip）
 │   │   ├── note_sequence.py    ← 秒制編輯模型（舊版）
-│   │   ├── mapping_schemes.py  ← 5 種鍵位方案
+│   │   ├── mapping_schemes.py  ← 7 種鍵位方案
 │   │   └── priority.py         ← 執行緒優先權 + 計時器精度
 │   │
 │   ├── gui/                ← 圖形介面

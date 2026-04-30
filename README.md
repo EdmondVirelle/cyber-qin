@@ -381,7 +381,7 @@ After starting a practice session, click **"Change Track"** in the header to ret
 
 ## Mapping Schemes
 
-Five built-in schemes cover different games and key counts:
+Seven built-in schemes cover different games and key counts:
 
 ### WWM 36-Key (燕雲十六聲)
 
@@ -396,6 +396,14 @@ Accidentals (sharps/flats) use **Shift** and **Ctrl** modifiers combined with th
 ### FF14 37-Key
 
 Diatonic layout optimized for Final Fantasy XIV's bard performance system. Uses number row, QWER row, and ASDF row. Ctrl modifier for accidentals.
+
+### Heartbeat Town 37-Key (心動小鎮)
+
+3-octave layout with individual keys (no modifiers). Bottom row `,./OPK[]` for C3–B3, middle row `ZXCVBNM` for C4–B4, top row `QWERTYUI` for C5–C6.
+
+### Beginner 36-Key
+
+4-row plain keyboard layout: ZXCVBNM / ASDFGHJKL / QWERTYUIOP / 1234567890, no modifiers.
 
 ### Generic 24 / 48 / 88-Key
 

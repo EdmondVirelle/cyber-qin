@@ -15,7 +15,7 @@ class TestRegistry:
     def test_list_schemes_returns_list(self):
         schemes = list_schemes()
         assert isinstance(schemes, list)
-        assert len(schemes) >= 6
+        assert len(schemes) >= 7
 
     def test_all_schemes_are_mapping_scheme(self):
         for scheme in list_schemes():
@@ -61,7 +61,7 @@ class TestSchemeIntegrity:
 
     @pytest.mark.parametrize("scheme", list_schemes(), ids=lambda s: s.id)
     def test_rows_times_keys_equals_key_count(self, scheme: MappingScheme):
-        if scheme.id == "ff14_37":
+        if scheme.id in ("ff14_37", "heartbeat_37"):
             return
         assert scheme.rows * scheme.keys_per_row == scheme.key_count, (
             f"{scheme.id}: {scheme.rows}×{scheme.keys_per_row} != {scheme.key_count}"

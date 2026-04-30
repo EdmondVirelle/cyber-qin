@@ -256,6 +256,85 @@ def _build_generic_48() -> MappingScheme:
     )
 
 
+def _build_heartbeat_37() -> MappingScheme:
+    """心動小鎮 37鍵 — 3 Octaves + High C, individual keys (no modifiers)."""
+    m: dict[int, KeyMapping] = {}
+
+    # --- Bottom row (C3-B3, lowest octave) ---
+    # White: , . / O P [ ]    Black: L ; 0 - =
+    bottom_keys = [
+        ",",  # C3  (48)
+        "L",  # C#3 (49)
+        ".",  # D3  (50)
+        ";",  # D#3 (51)
+        "/",  # E3  (52)
+        "O",  # F3  (53)
+        "0",  # F#3 (54)
+        "P",  # G3  (55)
+        "-",  # G#3 (56)
+        "[",  # A3  (57)
+        "=",  # A#3 (58)
+        "]",  # B3  (59)
+    ]
+    for i, key in enumerate(bottom_keys):
+        m[48 + i] = _km(key, Modifier.NONE)
+
+    # --- Middle row (C4-B4) ---
+    # White: Z X C V B N M    Black: S D G H J
+    mid_keys = [
+        "Z",  # C4  (60)
+        "S",  # C#4 (61)
+        "X",  # D4  (62)
+        "D",  # D#4 (63)
+        "C",  # E4  (64)
+        "V",  # F4  (65)
+        "G",  # F#4 (66)
+        "B",  # G4  (67)
+        "H",  # G#4 (68)
+        "N",  # A4  (69)
+        "J",  # A#4 (70)
+        "M",  # B4  (71)
+    ]
+    for i, key in enumerate(mid_keys):
+        m[60 + i] = _km(key, Modifier.NONE)
+
+    # --- Top row (C5-B5, highest octave) ---
+    # White: Q W E R T Y U    Black: 2 3 5 6 7
+    top_keys = [
+        "Q",  # C5  (72)
+        "2",  # C#5 (73)
+        "W",  # D5  (74)
+        "3",  # D#5 (75)
+        "E",  # E5  (76)
+        "R",  # F5  (77)
+        "5",  # F#5 (78)
+        "T",  # G5  (79)
+        "6",  # G#5 (80)
+        "Y",  # A5  (81)
+        "7",  # A#5 (82)
+        "U",  # B5  (83)
+    ]
+    for i, key in enumerate(top_keys):
+        m[72 + i] = _km(key, Modifier.NONE)
+
+    # High C (C6)
+    m[84] = _km("I", Modifier.NONE)
+
+    return MappingScheme(
+        id="heartbeat_37",
+        name="心動小鎮 37鍵",
+        game="心動小鎮",
+        key_count=37,
+        midi_range=(48, 84),
+        mapping=m,
+        description="3×12 佈局：,./(低) / ZXC(中) / QWE(高)，獨立按鍵無修飾",
+        rows=3,
+        keys_per_row=12,
+        name_key="scheme.heartbeat_37.name",
+        desc_key="scheme.heartbeat_37.desc",
+    )
+
+
 def _build_beginner_36() -> MappingScheme:
     """新手 36鍵 — no modifiers, pure keyboard keys only."""
     m: dict[int, KeyMapping] = {}
@@ -364,6 +443,7 @@ def _init_registry() -> None:
     for builder in [
         _build_wwm_36,
         _build_ff14_37,
+        _build_heartbeat_37,
         _build_beginner_36,
         _build_generic_24,
         _build_generic_48,
