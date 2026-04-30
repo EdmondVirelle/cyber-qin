@@ -78,6 +78,10 @@ class PianoDisplay(QWidget):
         self._keys_per_row: int = 12
         self._rebuild_layout()
 
+        # Out-of-range flash state: +1 = above, -1 = below, None = idle
+        self._oor_direction: int | None = None
+        self._oor_time: float = 0.0
+
         self._anim_timer = QTimer(self)
         self._anim_timer.timeout.connect(self._tick)
         self._anim_timer.setInterval(16)  # ~60fps
@@ -125,6 +129,12 @@ class PianoDisplay(QWidget):
         self._active_notes.add(midi_note)
         self._flash_notes[midi_note] = time.monotonic()
         self._fade_notes.pop(midi_note, None)
+        # Check out-of-range
+        all_notes = {n for row in self._rows for n in row}
+        if midi_note not in all_notes and self._rows:
+            highest = max(self._rows[0]) if self._rows[0] else 127
+            self._oor_direction = 1 if midi_note > highest else -1
+            self._oor_time = time.monotonic()
         if not self._anim_timer.isActive():
             self._anim_timer.start()
         self.update()
@@ -145,7 +155,7 @@ class PianoDisplay(QWidget):
         expired_fade = [n for n, t in self._fade_notes.items() if now - t > _FADE_DURATION]
         for n in expired_fade:
             del self._fade_notes[n]
-        if not self._flash_notes and not self._fade_notes:
+        if not self._flash_notes and not self._fade_notes and self._oor_direction is None:
             self._anim_timer.stop()
         self.update()
 
@@ -292,6 +302,20 @@ class PianoDisplay(QWidget):
                     Qt.AlignmentFlag.AlignCenter,
                     note_name,
                 )
+
+        # Out-of-range indicator flash
+        if self._oor_direction is not None:
+            elapsed = now - self._oor_time
+            if elapsed < 0.3:
+                alpha = int(180 * (1.0 - elapsed / 0.3))
+                oor_color = QColor(0xFF, 0x8C, 0x00, alpha)  # Orange
+                bar_h = 4
+                if self._oor_direction > 0:
+                    painter.fillRect(QRectF(0, 0, w, bar_h), oor_color)
+                else:
+                    painter.fillRect(QRectF(0, h - bar_h, w, bar_h), oor_color)
+            else:
+                self._oor_direction = None
 
         painter.end()
 

@@ -18,14 +18,14 @@ log = logging.getLogger(__name__)
 
 # Default configuration schema
 DEFAULT_CONFIG = {
-    "version": "1.0",
+    "version": "1.1",
     "midi": {
         "last_port": "",
         "preferred_device": "",  # User-selected preferred MIDI device
         "auto_connect": True,
     },
     "playback": {
-        "transpose": 0,  # Octaves
+        "transpose": 0,  # Semitones (-24 to +24)
         "scheme_id": "",  # Mapping scheme ID
     },
     "editor": {
@@ -76,6 +76,7 @@ class ConfigManager:
                     loaded = json.load(f)
                 # Merge with defaults (in case new keys were added)
                 self._config = self._merge_defaults(loaded)
+                self._run_migrations(loaded)
             except (json.JSONDecodeError, OSError) as e:
                 print(f"Warning: Failed to load config: {e}. Using defaults.")
                 self._config = copy.deepcopy(DEFAULT_CONFIG)
@@ -147,6 +148,24 @@ class ConfigManager:
         """Reset config to defaults."""
         self._config = copy.deepcopy(DEFAULT_CONFIG)
         self._save()
+
+    def _run_migrations(self, loaded: dict) -> None:
+        """Run config schema migrations based on version."""
+        version = loaded.get("version", "1.0")
+        changed = False
+
+        if version < "1.1":
+            # v1.0 → v1.1: transpose stored as octaves (-2..+2), convert to semitones
+            old_val = self._config.get("playback", {}).get("transpose", 0)
+            if isinstance(old_val, (int, float)) and old_val != 0:
+                self._config["playback"]["transpose"] = int(old_val) * 12
+                log.info("Config migration 1.0→1.1: transpose %s octaves → %s semitones",
+                         old_val, int(old_val) * 12)
+            self._config["version"] = "1.1"
+            changed = True
+
+        if changed:
+            self._save()
 
     # ── Migration helpers ───────────────────────────────
 

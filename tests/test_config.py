@@ -26,7 +26,7 @@ class TestConfigInit:
         """Should create default config.json if it doesn't exist."""
         assert (temp_config_dir / "config.json").exists()
         loaded = json.loads((temp_config_dir / "config.json").read_text(encoding="utf-8"))
-        assert loaded["version"] == "1.0"
+        assert loaded["version"] == "1.1"
         assert "midi" in loaded
         assert "playback" in loaded
 

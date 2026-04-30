@@ -85,8 +85,8 @@ EDITOR_MIDI_MIN = 21  # A0
 EDITOR_MIDI_MAX = 108  # C8
 EDITOR_MIDI_RANGE = range(EDITOR_MIDI_MIN, EDITOR_MIDI_MAX + 1)
 
-# Playable range for 燕雲十六聲 (C4-B5, highlighted in editor)
-PLAYABLE_MIDI_MIN = 60  # C4
+# Playable range for 燕雲十六聲 (C3-B5, highlighted in editor)
+PLAYABLE_MIDI_MIN = 48  # C3
 PLAYABLE_MIDI_MAX = 83  # B5
 PLAYABLE_MIDI_RANGE = range(PLAYABLE_MIDI_MIN, PLAYABLE_MIDI_MAX + 1)
 

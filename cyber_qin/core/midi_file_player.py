@@ -469,6 +469,11 @@ def _ensure_qt_classes():
                     self._position = evt.time_seconds
                     self._index += 1
 
+                    # Periodic re-sync to prevent timing drift on long playbacks
+                    if time.perf_counter() - start_wall > 30.0:
+                        start_wall = time.perf_counter()
+                        start_position = self._position
+
                     self.note_event.emit(evt.event_type, evt.note, evt.velocity)
                     self.progress_updated.emit(self._position, duration)
 

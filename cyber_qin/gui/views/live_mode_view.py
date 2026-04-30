@@ -23,7 +23,6 @@ from ...core.constants import (
     RECONNECT_INTERVAL,
     TRANSPOSE_MAX,
     TRANSPOSE_MIN,
-    TRANSPOSE_STEP,
 )
 from ...core.key_mapper import KeyMapper
 from ...core.key_simulator import KeySimulator
@@ -171,16 +170,30 @@ class LiveModeView(QWidget):
         self._transpose_lbl = QLabel()
         self._transpose_lbl.setStyleSheet("background: transparent;")
         row1.addWidget(self._transpose_lbl)
-        self._transpose_spin = QSpinBox()
-        self._transpose_spin.setRange(
-            TRANSPOSE_MIN // TRANSPOSE_STEP,
-            TRANSPOSE_MAX // TRANSPOSE_STEP,
+
+        self._transpose_down_btn = QPushButton("◀")
+        self._transpose_down_btn.setFixedWidth(30)
+        self._transpose_down_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._transpose_down_btn.clicked.connect(
+            lambda: self._transpose_spin.setValue(self._transpose_spin.value() - 1)
         )
+        row1.addWidget(self._transpose_down_btn)
+
+        self._transpose_spin = QSpinBox()
+        self._transpose_spin.setRange(TRANSPOSE_MIN, TRANSPOSE_MAX)  # -24..+24 semitones
         self._transpose_spin.setValue(0)
         self._transpose_spin.setMinimumWidth(100)
         self._transpose_spin.setSuffix(translator.tr("live.transpose.suffix"))
         self._transpose_spin.valueChanged.connect(self._on_transpose_changed)
         row1.addWidget(self._transpose_spin)
+
+        self._transpose_up_btn = QPushButton("▶")
+        self._transpose_up_btn.setFixedWidth(30)
+        self._transpose_up_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._transpose_up_btn.clicked.connect(
+            lambda: self._transpose_spin.setValue(self._transpose_spin.value() + 1)
+        )
+        row1.addWidget(self._transpose_up_btn)
 
         device_card_layout.addLayout(row1)
 
@@ -385,7 +398,7 @@ class LiveModeView(QWidget):
     def _restore_settings(self) -> None:
         transpose = self._config.get("playback.transpose", 0)
         self._transpose_spin.setValue(transpose)
-        self._mapper.transpose = transpose * TRANSPOSE_STEP
+        self._mapper.transpose = transpose  # Already in semitones
 
         # Restore scheme selection
         saved_scheme = self._config.get("playback.scheme_id", "")
@@ -585,16 +598,16 @@ class LiveModeView(QWidget):
             self._connect()
 
     def _on_transpose_changed(self, value: int) -> None:
-        self._mapper.transpose = value * TRANSPOSE_STEP
+        self._mapper.transpose = value  # Already in semitones
         self._config.set("playback.transpose", value)
-        self._log.log(f"移調: {value:+d} 八度 (MIDI offset {value * TRANSPOSE_STEP:+d})")
+        self._log.log(f"Transpose: {value:+d} st")
 
     # --- Event handlers called from AppShell ---
 
     def on_note_event(self, event_type: str, note: int, velocity: int) -> None:
         name = KeyMapper.note_name(note)
         mapping = self._mapper.lookup(note)
-        key_label = mapping.label if mapping else "(超出範圍)"
+        key_label = mapping.label if mapping else translator.tr("live.out_of_range")
 
         if event_type == "note_on":
             self._piano.note_on(note)

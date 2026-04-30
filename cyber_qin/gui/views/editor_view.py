@@ -1879,6 +1879,12 @@ class EditorView(QWidget):
             result.strategy_used,
         )
 
+        if result.notes_folded > 0:
+            msg = translator.tr("editor.arrange.folded", count=result.notes_folded)
+            self._note_count_lbl.setText(msg)
+            # Restore normal note count after 3 seconds
+            QTimer.singleShot(3000, self._update_ui_state)
+
     def _on_fx(self) -> None:
         """Open the MIDI FX dialog."""
         from ..dialogs.fx_dialog import FxDialog
